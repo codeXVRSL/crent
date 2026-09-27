@@ -1,26 +1,61 @@
 @import "tailwindcss";
 
+/* ---------- Outlier Desk design tokens ---------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #F6F8FA; --surface: #FFFFFF; --ink: #15202B; --muted: #56616E; --line: #DCE2E8;
+  --accent: #0E6E62; --accent-ink: #FFFFFF; --accent-soft: #E2F1EE;
+  --warn: #945600; --warn-soft: #FBF0DE;
+  --bad: #A33A2E; --bad-soft: #F8E6E3;
+  --good: #1F7A3A; --good-soft: #E3F3E7;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-serif: "Source Serif 4", Georgia, serif;
+  --font-mono-ui: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0F151B; --surface: #161E26; --ink: #E5EBF0; --muted: #95A2AF; --line: #29343F;
+    --accent: #52C4B1; --accent-ink: #0B1A17; --accent-soft: #143029;
+    --warn: #E6A84B; --warn-soft: #2D2313;
+    --bad: #E98476; --bad-soft: #2F1B18;
+    --good: #6FCF8E; --good-soft: #15291C;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0F151B; --surface: #161E26; --ink: #E5EBF0; --muted: #95A2AF; --line: #29343F;
+  --accent: #52C4B1; --accent-ink: #0B1A17; --accent-soft: #143029;
+  --warn: #E6A84B; --warn-soft: #2D2313;
+  --bad: #E98476; --bad-soft: #2F1B18;
+  --good: #6FCF8E; --good-soft: #15291C;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono-ui);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
+html, body { background: var(--bg); color: var(--ink); }
+body { font-family: var(--font-body); font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; letter-spacing: -0.01em; }
+.label { font-family: var(--font-mono-ui); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.num { font-family: var(--font-mono-ui); font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

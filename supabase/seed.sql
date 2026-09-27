@@ -1,0 +1,26 @@
+-- Niches (run automatically by `supabase db reset`; safe to re-run)
+insert into niches (slug, name) values
+  ('personal-finance','Personal finance'),
+  ('investing','Investing'),
+  ('side-hustles','Side hustles'),
+  ('fitness','Fitness'),
+  ('weight-loss','Weight loss'),
+  ('business-coaching','Business & coaching'),
+  ('marketing','Marketing & sales'),
+  ('mindset','Mindset & self-improvement'),
+  ('beauty-fashion','Beauty & fashion'),
+  ('food-cooking','Food & cooking'),
+  ('parenting','Parenting & family'),
+  ('faith','Faith & Christian living'),
+  ('real-estate','Real estate'),
+  ('tech-ai','Tech & AI'),
+  ('travel','Travel'),
+  ('education','Education & study'),
+  ('health-wellness','Health & wellness'),
+  ('relationships','Relationships'),
+  ('pets','Pets'),
+  ('gaming','Gaming'),
+  ('comedy','Comedy & entertainment'),
+  ('home-diy','Home & DIY'),
+  ('cars','Cars')
+on conflict (slug) do nothing;

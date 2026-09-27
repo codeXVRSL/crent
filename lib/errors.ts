@@ -1,0 +1,62 @@
+// Maps database error codes to messages people can act on.
+const MESSAGES: Record<string, string> = {
+  NOT_SIGNED_IN: 'Please sign in again.',
+  ROLE_ALREADY_SET: 'Your account type is already set.',
+  NOT_CREATOR: 'Only creator accounts can do this.',
+  NOT_CRE: 'Only researcher accounts can do this.',
+  NOT_ADMIN: 'Only admins can do this.',
+  NOT_ALLOWED: "You don't have access to do that.",
+  NOT_VERIFIED: 'Your verification must be approved before you can do this.',
+  ALREADY_VERIFIED: "You're already verified.",
+  ALREADY_PENDING: 'Your verification is already under review.',
+  PORTFOLIO_TOO_SMALL: 'Add at least 3 portfolio finds before submitting for verification.',
+  INVALID_MOBILE: 'Enter a Philippine mobile number like 09171234567 or +639171234567.',
+  INVALID_UPLOAD_PATH: 'Upload your ID photos again.',
+  REASON_REQUIRED: 'Add a reason so the person knows what to fix.',
+  NOT_PENDING: 'This verification was already reviewed.',
+  PRICE_OUT_OF_RANGE: 'Price per idea must be between $3 and $500.',
+  MAX_UNLOCKS_OUT_OF_RANGE: 'Max unlocks must be between 1 and 100.',
+  DEADLINE_OUT_OF_RANGE: 'Pick a deadline between 1 and 30 days from now.',
+  TOO_MANY_OPEN_BRIEFS: 'You have 10 open briefs. Close one before posting another.',
+  CONTACT_DETAILS_NOT_ALLOWED: 'Remove emails, phone numbers, links and social handles. Contact details stay private so both sides keep escrow protection.',
+  BRIEF_NOT_FOUND: "We couldn't find that brief.",
+  BRIEF_ALREADY_PAID: 'This brief is already paid for.',
+  DEADLINE_TOO_CLOSE: 'The deadline is too close to pay for this brief. Post a new one.',
+  BRIEF_NOT_OPEN: 'This brief is closed.',
+  TOO_MANY_PITCHES: "You've reached the pitch limit for this brief (5).",
+  INVALID_VIEWS: 'Views and median views must be greater than zero.',
+  MULTIPLIER_TOO_LOW: "The outlier score is below this brief's minimum.",
+  POSTED_DATE_IN_FUTURE: "The source posted date can't be in the future.",
+  SOURCE_TOO_OLD: 'The source video is older than this brief allows.',
+  TEASER_REVEALS_HOOK: 'Your teaser gives away the hook. Describe the angle without the exact words.',
+  INVALID_SOURCE_URL: 'Enter the full link to the source video, starting with https://',
+  DUPLICATE_SOURCE: 'Someone already pitched this video on this brief.',
+  PITCH_NOT_FOUND: "We couldn't find that pitch.",
+  PITCH_NOT_AVAILABLE: 'This pitch was withdrawn or already unlocked.',
+  NOT_BRIEF_OWNER: 'Only the creator who posted this brief can unlock pitches.',
+  NO_UNLOCKS_LEFT: "You've used all unlocks for this brief. Post a new brief to get more ideas.",
+  PAYOUT_METHOD_NOT_FOUND: 'Add a payout method first.',
+  PAYOUT_ALREADY_PENDING: 'You already have a payout in progress.',
+  BELOW_MIN_PAYOUT: 'You need at least $10.00 available to withdraw.',
+  PAYOUT_NOT_CANCELLABLE: 'This payout is already being processed.',
+  PAYOUT_NOT_APPROVABLE: 'This payout was already handled.',
+  UNLOCK_NOT_FOUND: "We couldn't find that unlock.",
+  DISPUTE_WINDOW_CLOSED: 'The 72-hour dispute window for this idea has closed.',
+  DISPUTE_NOT_FOUND: "We couldn't find that dispute.",
+  DISPUTE_NOT_AWAITING_RESPONSE: 'This dispute is no longer waiting for your reply.',
+  DISPUTE_NOT_OPEN: 'This dispute is already resolved.',
+  ALREADY_REVIEWED: "You've already reviewed this.",
+};
+
+export function friendlyError(err: unknown): string {
+  const raw = typeof err === 'string' ? err : (err as { message?: string })?.message ?? '';
+  const code = Object.keys(MESSAGES).find((k) => raw === k || raw.startsWith(k));
+  if (code) return MESSAGES[code];
+  if (raw.includes('duplicate key') && raw.includes('handle')) return 'That handle is taken. Try another.';
+  if (raw.includes('violates check constraint')) return 'Some fields are too short or too long. Check the limits under each field.';
+  console.error('[unmapped error]', raw);
+  return 'That didn’t work. Try again, and contact support if it keeps happening.';
+}
+
+export type ActionResult = { ok: true; message?: string } | { ok: false; message: string };
+export const fail = (message: string): ActionResult => ({ ok: false, message });
