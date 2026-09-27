@@ -2,12 +2,14 @@
 import { useActionState, useEffect, useRef, type ReactNode } from 'react';
 import { useFormStatus } from 'react-dom';
 import type { ActionResult } from '@/lib/errors';
+import { Loader2 } from 'lucide-react';
 import { Button, Notice } from './ui';
 
-export function SubmitButton({ children, pendingText, variant, className }: { children: ReactNode; pendingText?: string; variant?: 'primary' | 'secondary' | 'danger'; className?: string }) {
+export function SubmitButton({ children, pendingText, variant, size, className }: { children: ReactNode; pendingText?: string; variant?: 'primary' | 'secondary' | 'danger'; size?: 'sm' | 'md' | 'lg'; className?: string }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} variant={variant} className={className}>
+    <Button type="submit" disabled={pending} aria-busy={pending} variant={variant} size={size} className={className}>
+      {pending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
       {pending ? pendingText ?? 'Working…' : children}
     </Button>
   );

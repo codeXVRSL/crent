@@ -21,7 +21,7 @@ export function PitchForm({ briefId, platform, minMultiplier, maxAgeDays }: {
     <ActionForm action={submitPitch} className="grid gap-6">
       <input type="hidden" name="brief_id" value={briefId} />
 
-      <section className="grid gap-4 rounded-lg border border-line bg-surface p-5">
+      <section className="grid gap-4 rounded-2xl border border-line bg-surface shadow-sm p-5">
         <div className="grid gap-1">
           <span className="label">Shown before unlock</span>
           <h2 className="text-lg font-semibold">The proof</h2>
@@ -63,7 +63,7 @@ export function PitchForm({ briefId, platform, minMultiplier, maxAgeDays }: {
         </div>
       </section>
 
-      <section className="grid gap-4 rounded-lg border border-line bg-surface p-5">
+      <section className="grid gap-4 rounded-2xl border border-line bg-surface shadow-sm p-5">
         <div className="grid gap-1">
           <span className="label">Revealed after unlock</span>
           <h2 className="text-lg font-semibold">The idea</h2>

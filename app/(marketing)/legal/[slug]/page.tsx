@@ -66,12 +66,12 @@ export default async function LegalPage({ params }: { params: Promise<{ slug: st
   if (!doc) notFound();
   return (
     <article className="mx-auto grid max-w-3xl gap-6 px-4 py-14">
-      <h1 className="text-4xl font-bold">{doc.title}</h1>
+      <h1 className="text-[40px] font-semibold tracking-tight">{doc.title}</h1>
       <Notice>Draft for legal review. Not yet in effect.</Notice>
       {doc.sections.map(([h, body]) => (
         <section key={h} className="grid gap-2">
           <h2 className="text-lg font-semibold">{h}</h2>
-          <p className="font-serif text-muted">{body}</p>
+          <p className="leading-relaxed text-ink-2">{body}</p>
         </section>
       ))}
     </article>

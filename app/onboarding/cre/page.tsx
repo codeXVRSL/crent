@@ -39,7 +39,7 @@ export default async function CreOnboarding() {
       {status === 'rejected' && <Notice tone="bad">We couldn&apos;t verify your details: {cp?.kyc_reject_reason}. Fix it below and submit again.</Notice>}
 
       <Card className="grid gap-4">
-        <div className="flex items-center justify-between"><h2 className="text-xl font-bold">1. Public profile</h2>{profileDone && <Pill tone="good">Done</Pill>}</div>
+        <div className="flex items-center justify-between"><h2 className="text-lg font-semibold tracking-tight">1. Public profile</h2>{profileDone && <Pill tone="good">Done</Pill>}</div>
         <ActionForm action={saveCreProfile} className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Display name" htmlFor="display_name"><Input id="display_name" name="display_name" defaultValue={viewer.displayName} required maxLength={50} /></Field>
@@ -81,7 +81,7 @@ export default async function CreOnboarding() {
       </Card>
 
       <Card className="grid gap-4">
-        <div className="flex items-center justify-between"><h2 className="text-xl font-bold">2. Portfolio finds</h2>{portfolioDone ? <Pill tone="good">Done</Pill> : <Pill tone="warn">{portfolio?.length ?? 0} of 3</Pill>}</div>
+        <div className="flex items-center justify-between"><h2 className="text-lg font-semibold tracking-tight">2. Portfolio finds</h2>{portfolioDone ? <Pill tone="good">Done</Pill> : <Pill tone="warn">{portfolio?.length ?? 0} of 3</Pill>}</div>
         <p className="text-sm text-muted">Outliers you&apos;ve found before. These are public on your profile, so creators can judge your eye.</p>
         {(portfolio ?? []).length > 0 && (
           <ul className="grid gap-2">
@@ -114,7 +114,7 @@ export default async function CreOnboarding() {
       </Card>
 
       <Card className="grid gap-4">
-        <div className="flex items-center justify-between"><h2 className="text-xl font-bold">3. Verification</h2>
+        <div className="flex items-center justify-between"><h2 className="text-lg font-semibold tracking-tight">3. Verification</h2>
           {status === 'approved' ? <Pill tone="good">Verified</Pill> : status === 'pending' ? <Pill tone="warn">In review</Pill> : null}</div>
         {status === 'approved' || status === 'pending' ? (
           <p className="text-sm text-muted">{status === 'approved' ? 'Your identity is verified.' : 'Submitted. Nothing else to do here for now.'}</p>

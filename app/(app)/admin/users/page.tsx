@@ -18,7 +18,7 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
     <>
       <PageHeader eyebrow="Admin" title="Users" />
       <form className="mb-4 flex gap-2"><Input name="q" id="q" defaultValue={q} placeholder="Search name or handle" className="max-w-sm" /><Button type="submit" variant="secondary">Search</Button></form>
-      <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+      <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">
         <table className="w-full min-w-[720px] text-sm">
           <thead><tr className="border-b border-line text-left"><th className="label p-3">User</th><th className="label p-3">Role</th><th className="label p-3">Joined</th><th className="label p-3">Status</th><th className="p-3" /></tr></thead>
           <tbody>

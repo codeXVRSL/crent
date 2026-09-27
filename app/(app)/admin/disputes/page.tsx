@@ -17,7 +17,7 @@ export default async function AdminDisputes() {
       {!data?.length ? <EmptyState title="No disputes" /> : (
         <ul className="grid gap-2">
           {data.map((d) => (
-            <li key={d.id}><Link href={`/disputes/${d.id}`} className="flex flex-wrap justify-between gap-2 rounded-lg border border-line bg-surface p-4 hover:border-accent">
+            <li key={d.id}><Link href={`/disputes/${d.id}`} className="flex flex-wrap justify-between gap-2 rounded-2xl border border-line bg-surface shadow-sm p-4 lift">
               <span>{DISPUTE_REASONS.find((r) => r.value === d.reason)?.label}</span>
               <span className="flex items-center gap-2 text-xs text-muted">{fmtDate(d.opened_at, true)}
                 <Pill tone={d.status === 'awaiting_admin' ? 'bad' : d.status === 'awaiting_cre' ? 'warn' : 'muted'}>{d.status.replace('_', ' ')}</Pill></span>

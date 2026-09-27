@@ -26,7 +26,7 @@ export default async function Messages() {
           {threads.map((t) => {
             const other = pMap.get(t.creator_id === v.id ? t.cre_id : t.creator_id);
             return (
-              <li key={t.id}><Link href={`/messages/${t.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface p-4 hover:border-accent">
+              <li key={t.id}><Link href={`/messages/${t.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-surface shadow-sm p-4 lift">
                 <span><strong>{other?.display_name ?? 'Unknown'}</strong> <span className="text-sm text-muted">· {(t.briefs as unknown as { title: string } | null)?.title}</span></span>
                 <span className="num text-xs text-muted">{t.last_message_at ? fmtDate(t.last_message_at, true) : 'No messages yet'}</span>
               </Link></li>

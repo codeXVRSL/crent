@@ -34,7 +34,7 @@ export default async function Wallet() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="grid content-start gap-4">
-          <h2 className="text-lg font-bold">Withdraw</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Withdraw</h2>
           {pending ? (
             <div className="grid gap-2 text-sm">
               <p>Withdrawal of <strong className="num">{formatMoney(pending.amount_cents, pending.currency)}</strong> is {pending.status === 'requested' ? 'waiting for approval' : 'being sent'}.</p>
@@ -56,7 +56,7 @@ export default async function Wallet() {
         </Card>
 
         <Card className="grid content-start gap-4">
-          <h2 className="text-lg font-bold">Payout methods</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Payout methods</h2>
           {(methods ?? []).map((m) => (
             <div key={m.id} className="flex items-center justify-between gap-2 text-sm">
               <span>{m.kind === 'bank' ? `Bank (${m.bank_code})` : m.kind.toUpperCase()} ···{m.account_last4} · {m.account_name} {m.is_default && <Pill tone="accent">Default</Pill>}</span>
@@ -76,8 +76,8 @@ export default async function Wallet() {
       </div>
 
       <section className="mt-8 grid gap-3">
-        <h2 className="text-xl font-bold">Earnings</h2>
-        <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+        <h2 className="text-lg font-semibold tracking-tight">Earnings</h2>
+        <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">
           <table className="w-full min-w-[560px] text-sm">
             <thead><tr className="border-b border-line text-left"><th className="label p-3">Brief</th><th className="label p-3">You earned</th><th className="label p-3">Status</th><th className="label p-3">Available from</th></tr></thead>
             <tbody>
@@ -97,7 +97,7 @@ export default async function Wallet() {
 
       {(payouts ?? []).length > 0 && (
         <section className="mt-8 grid gap-3">
-          <h2 className="text-xl font-bold">Payouts</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Payouts</h2>
           <ul className="grid gap-2 text-sm">
             {payouts!.map((p) => (
               <li key={p.id} className="flex flex-wrap justify-between gap-2 rounded-md border border-line bg-surface p-3">

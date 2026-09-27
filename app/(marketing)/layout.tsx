@@ -6,46 +6,53 @@ import { getViewer } from '@/lib/auth';
 
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
   const viewer = await getViewer().catch(() => null);
+  const links = [['/#how', 'How it works'], ['/cres', 'Researchers'], ['/for-cres', 'For researchers'], ['/pricing', 'Pricing']];
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <header className="sticky top-0 z-40 border-b border-line bg-bg/95"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
           <Logo />
-          <nav className="flex flex-wrap items-center gap-4 text-sm">
-            <Link href="/#how" className="text-muted hover:text-ink">How it works</Link>
-            <Link href="/cres" className="text-muted hover:text-ink">Researchers</Link>
-            <Link href="/for-cres" className="text-muted hover:text-ink">For researchers</Link>
-            <Link href="/pricing" className="text-muted hover:text-ink">Pricing</Link>
+          <nav className="hidden items-center gap-1 text-[14px] md:flex" aria-label="Main">
+            {links.map(([href, label]) => (
+              <Link key={href} href={href} className="rounded-lg px-3 py-1.5 text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink">{label}</Link>
+            ))}
+          </nav>
+          <div className="flex items-center gap-2">
             {viewer ? (
-              <LinkButton href="/dashboard">Dashboard</LinkButton>
+              <LinkButton href="/dashboard" size="sm">Dashboard</LinkButton>
             ) : (
               <>
-                <Link href="/login" className="font-semibold">Log in</Link>
-                <LinkButton href="/signup">Sign up</LinkButton>
+                <Link href="/login" className="rounded-lg px-3 py-1.5 text-[14px] font-medium text-ink-2 hover:text-ink">Log in</Link>
+                <LinkButton href="/signup" size="sm">Sign up</LinkButton>
               </>
             )}
-          </nav>
+          </div>
         </div>
       </header>
       <main className="flex-1">{children}</main>
-      <footer className="border-t border-line">
-        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 text-sm text-muted sm:grid-cols-[1fr_auto]">
-          <div className="grid gap-2">
+      <footer className="border-t border-line bg-surface">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div className="grid content-start gap-3">
             <Logo />
-            <p className="max-w-md">A marketplace for proven content ideas, researched by verified Content Research Experts.</p>
+            <p className="max-w-xs text-sm text-muted">Proven content ideas, researched by verified Content Research Experts.</p>
             <ThemeToggle />
           </div>
-          <nav className="grid grid-cols-2 gap-x-8 gap-y-2">
-            <Link href="/#how">How it works</Link>
-            <Link href="/pricing">Pricing</Link>
-            <Link href="/for-cres">For researchers</Link>
-            <Link href="/help">Help</Link>
-            <Link href="/legal/terms">Terms</Link>
-            <Link href="/legal/privacy">Privacy</Link>
-            <Link href="/legal/refunds">Refunds</Link>
-            <Link href="/legal/cre-agreement">Researcher agreement</Link>
-          </nav>
-          <p className="sm:col-span-2">© {new Date().getFullYear()} Outlier Desk. Business registration details: add your DTI/SEC and BIR numbers here before launch.</p>
+          {[
+            ['Product', [['/#how', 'How it works'], ['/pricing', 'Pricing'], ['/cres', 'Researchers']]],
+            ['Researchers', [['/for-cres', 'Apply'], ['/legal/cre-agreement', 'Researcher agreement'], ['/help', 'Help']]],
+            ['Legal', [['/legal/terms', 'Terms'], ['/legal/privacy', 'Privacy'], ['/legal/refunds', 'Refunds']]],
+          ].map(([title, items]) => (
+            <div key={title as string} className="grid content-start gap-2 text-sm">
+              <span className="label mb-1">{title as string}</span>
+              {(items as string[][]).map(([href, label]) => <Link key={href} href={href} className="text-ink-2 hover:text-ink">{label}</Link>)}
+            </div>
+          ))}
+        </div>
+        <div className="border-t border-line">
+          <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-muted sm:px-6">
+            © {new Date().getFullYear()} Outlier Desk · Naga City, Philippines. Business registration details (DTI/SEC, BIR) go here before launch.
+          </p>
         </div>
       </footer>
     </div>

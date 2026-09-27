@@ -14,10 +14,10 @@ const faq: [string, string][] = [
 export default function Help() {
   return (
     <div className="mx-auto grid max-w-3xl gap-6 px-4 py-14">
-      <h1 className="text-4xl font-bold">Help</h1>
+      <h1 className="text-[40px] font-semibold tracking-tight">Help</h1>
       <div className="grid gap-3">
         {faq.map(([q, a]) => (
-          <details key={q} className="rounded-lg border border-line bg-surface p-4">
+          <details key={q} className="rounded-2xl border border-line bg-surface shadow-sm p-4">
             <summary className="cursor-pointer font-semibold">{q}</summary>
             <p className="mt-2 text-muted">{a}</p>
           </details>

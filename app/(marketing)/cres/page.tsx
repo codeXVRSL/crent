@@ -23,7 +23,7 @@ export default async function CreDirectory({ searchParams }: { searchParams: Pro
     <div className="mx-auto grid max-w-6xl gap-6 px-4 py-14">
       <div className="grid gap-2">
         <span className="label">Directory</span>
-        <h1 className="text-4xl font-bold">Verified researchers</h1>
+        <h1 className="text-[40px] font-semibold tracking-tight">Verified researchers</h1>
         <p className="text-muted">Every researcher here has passed ID verification and shown at least three outlier finds.</p>
       </div>
       <form className="flex flex-wrap gap-2">
@@ -38,7 +38,7 @@ export default async function CreDirectory({ searchParams }: { searchParams: Pro
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((c) => (
-            <Link key={c.id} href={`/cres/${c.handle}`} className="grid content-start gap-3 rounded-lg border border-line bg-surface p-5 hover:border-accent">
+            <Link key={c.id} href={`/cres/${c.handle}`} className="grid content-start gap-3 rounded-2xl border border-line bg-surface shadow-sm p-5 lift">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-semibold">{c.display_name}</div>

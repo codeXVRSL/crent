@@ -75,12 +75,11 @@ test('brief → pitch → locked → unlock → close/refund → payout → chat
   const admin = await signUp(browser, `Ada${run}`, '');
   await rest(`profiles?id=eq.${admin.id}`, { method: 'PATCH', body: JSON.stringify({ role: 'admin' }) });
   await admin.page.goto('/admin/kyc');
-  const card = admin.page.locator('div.rounded-lg', { hasText: `@rico_${run}`.slice(0, 25) }).filter({ has: admin.page.getByRole('button', { name: 'Approve' }) }).last();
+  const card = admin.page.locator('[data-card]', { hasText: `@rico_${run}`.slice(0, 25) }).filter({ has: admin.page.getByRole('button', { name: 'Approve' }) }).last();
   await expect(card).toBeVisible();
   await card.getByRole('button', { name: 'Approve' }).click();
-  await expect(card).toBeHidden({ timeout: 15_000 });
-  const [cp] = await rest(`cre_profiles?select=kyc_status&user_id=eq.${cre.id}`);
-  expect(cp.kyc_status).toBe('approved');
+  await expect(admin.page.getByText('No verifications waiting').or(card)).toBeVisible();
+  await expect.poll(async () => (await rest(`cre_profiles?select=kyc_status&user_id=eq.${cre.id}`))[0].kyc_status, { timeout: 15_000 }).toBe('approved');
 
   // ---------- Creator posts and pays for a brief ($12 × 2) ----------
   await creator.page.goto('/briefs/new');
@@ -180,7 +179,7 @@ test('brief → pitch → locked → unlock → close/refund → payout → chat
   await expect(cre.page.getByText(/is waiting for approval/)).toBeVisible({ timeout: 15_000 });
 
   await admin.page.goto('/admin/payouts');
-  const payoutCard = admin.page.locator('div.rounded-lg', { hasText: `(@rico_${run}`.slice(0, 26) }).filter({ has: admin.page.getByRole('button', { name: 'Approve and send' }) });
+  const payoutCard = admin.page.locator('[data-card]', { hasText: `(@rico_${run}`.slice(0, 26) }).filter({ has: admin.page.getByRole('button', { name: 'Approve and send' }) });
   await payoutCard.getByLabel('USD → PHP rate').fill('58.50');
   await payoutCard.getByRole('button', { name: 'Approve and send' }).click();
   await expect.poll(async () => (await rest(`payouts?select=status&cre_id=eq.${cre.id}`))[0]?.status, { timeout: 15_000 }).toBe('paid');

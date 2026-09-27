@@ -24,7 +24,7 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<{
             Post your first brief and get pitches from verified researchers, usually within a day.
           </EmptyState>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+          <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">
             <table className="w-full min-w-[680px] text-sm">
               <thead><tr className="border-b border-line text-left">
                 <th className="label p-3">Brief</th><th className="label p-3">Status</th><th className="label p-3">Pitches</th>
@@ -80,7 +80,7 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<{
           {briefs.map((b) => {
             const c = cMap.get(b.creator_id);
             return (
-              <Link key={b.id} href={`/briefs/${b.id}`} className="grid content-start gap-3 rounded-lg border border-line bg-surface p-5 hover:border-accent">
+              <Link key={b.id} href={`/briefs/${b.id}`} className="grid content-start gap-3 rounded-2xl border border-line bg-surface shadow-sm p-5 lift">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="num text-lg font-semibold text-accent">{formatMoney(b.price_per_idea_cents, b.currency)}<span className="text-sm text-muted"> / idea</span></span>
                   <Pill tone="accent">{timeLeft(b.deadline_at)}</Pill>

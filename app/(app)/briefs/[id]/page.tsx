@@ -38,7 +38,7 @@ export default async function BriefPage({ params, searchParams }: {
         <Pill>min {Number(brief.min_multiplier).toFixed(1)}×</Pill>
         {brief.max_video_age_days && <Pill>source ≤ {brief.max_video_age_days} days old</Pill>}
       </div>
-      <p className="whitespace-pre-wrap font-serif">{brief.description}</p>
+      <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-ink">{brief.description}</p>
       {brief.must_include && <div><span className="label">Must include</span><p className="whitespace-pre-wrap text-sm">{brief.must_include}</p></div>}
       {brief.avoid && <div><span className="label">Avoid</span><p className="whitespace-pre-wrap text-sm">{brief.avoid}</p></div>}
       {brief.example_urls?.length > 0 && (
@@ -51,9 +51,17 @@ export default async function BriefPage({ params, searchParams }: {
 
   const budget = (
     <div className="grid gap-2">
-      <div className="h-2 overflow-hidden rounded bg-line">
-        <div className="h-full bg-accent" style={{ width: `${(brief.unlocks_used / brief.max_unlocks) * 100}%` }} />
-      </div>
+      {brief.max_unlocks <= 20 ? (
+        <div className="flex gap-1" aria-hidden="true">
+          {Array.from({ length: brief.max_unlocks }, (_, i) => (
+            <span key={i} className={`h-2 flex-1 rounded-full ${i < brief.unlocks_used ? 'bg-accent' : 'bg-surface-2 ring-1 ring-inset ring-line'}`} />
+          ))}
+        </div>
+      ) : (
+        <div className="h-2 overflow-hidden rounded-full bg-surface-2" aria-hidden="true">
+          <div className="h-full rounded-full bg-accent" style={{ width: `${(brief.unlocks_used / brief.max_unlocks) * 100}%` }} />
+        </div>
+      )}
       <p className="num text-sm text-muted">
         {brief.unlocks_used} of {brief.max_unlocks} unlocks used · {formatMoney(left * brief.price_per_idea_cents, brief.currency)} left
         {brief.status === 'open' && ` · closes in ${timeLeft(brief.deadline_at).replace(' left', '')}`}
@@ -95,16 +103,16 @@ export default async function BriefPage({ params, searchParams }: {
         {sp.payment === 'error' && <div className="mb-4"><Notice tone="bad">We couldn&apos;t start the payment. Your brief is saved as a draft. Try paying again below.</Notice></div>}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="grid content-start gap-6">
+          <div className="grid min-w-0 content-start gap-6">
             {details}
             <section className="grid gap-4">
-              <h2 className="text-xl font-bold">Pitches <span className="num text-muted">({visible.length})</span></h2>
+              <h2 className="text-lg font-semibold tracking-tight">Pitches <span className="num text-muted">({visible.length})</span></h2>
               {visible.length === 0 ? (
                 <EmptyState title="No pitches yet">
                   {brief.status === 'open' ? 'Briefs usually get their first pitch within 24 hours. Researchers in your niche have been notified.' : 'Pitches appear here once the brief is live.'}
                 </EmptyState>
               ) : (
-                <div className="grid gap-4 xl:grid-cols-2">
+                <div className="grid gap-4 2xl:grid-cols-2">
                   {visible.map((p) => {
                     const secret = secretMap.get(p.id) ?? null;
                     const u = unlockMap.get(p.id);
@@ -135,7 +143,7 @@ export default async function BriefPage({ params, searchParams }: {
           <aside className="grid content-start gap-4">
             <Card className="grid gap-3">
               <span className="label">Budget</span>
-              <div className="num text-2xl font-semibold">{price}<span className="text-sm text-muted"> per idea</span></div>
+              <div className="num text-[30px] font-medium tracking-tight">{price}<span className="text-sm text-muted"> / idea</span></div>
               {budget}
               <dl className="num grid gap-1 border-t border-line pt-3 text-sm">
                 <div className="flex justify-between"><dt>Budget</dt><dd>{formatMoney(brief.budget_cents, brief.currency)}</dd></div>
@@ -200,7 +208,7 @@ export default async function BriefPage({ params, searchParams }: {
         <div className="grid content-start gap-6">
           {details}
           <section className="grid gap-4">
-            <h2 className="text-xl font-bold">Your pitches on this brief <span className="num text-muted">({active} of 5)</span></h2>
+            <h2 className="text-lg font-semibold tracking-tight">Your pitches on this brief <span className="num text-muted">({active} of 5)</span></h2>
             {!mine?.length ? <p className="text-muted">You haven&apos;t pitched on this brief yet.</p> : (
               <div className="grid gap-4 xl:grid-cols-2">
                 {mine.map((p) => <PitchCard key={p.id} pitch={p as PitchPublic} secret={sMap.get(p.id)} />)}
@@ -211,7 +219,7 @@ export default async function BriefPage({ params, searchParams }: {
         <aside className="grid content-start gap-4">
           <Card className="grid gap-3">
             <span className="label">Pays</span>
-            <div className="num text-2xl font-semibold text-accent">{price}<span className="text-sm text-muted"> per unlock</span></div>
+            <div className="num text-[30px] font-medium tracking-tight text-accent">{price}<span className="text-sm text-muted"> / unlock</span></div>
             <p className="num text-xs text-muted">You receive {formatMoney(unlockSplit(brief.price_per_idea_cents, brief.cre_fee_bps).net, brief.currency)} after the {brief.cre_fee_bps / 100}% fee.</p>
             {budget}
           </Card>

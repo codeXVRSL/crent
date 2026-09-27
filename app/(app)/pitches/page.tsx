@@ -28,7 +28,7 @@ export default async function Pitches() {
       {!pitches?.length ? (
         <EmptyState title="No pitches yet" action={<LinkButton href="/briefs">Browse open briefs</LinkButton>}>Pitch on an open brief and it shows up here.</EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+        <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">
           <table className="w-full min-w-[720px] text-sm">
             <thead><tr className="border-b border-line text-left">
               <th className="label p-3">Brief</th><th className="label p-3">Idea</th><th className="label p-3">Status</th><th className="label p-3">Earning</th><th className="label p-3">Sent</th><th className="p-3" />

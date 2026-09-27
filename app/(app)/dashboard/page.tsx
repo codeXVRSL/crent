@@ -6,6 +6,7 @@ import { EmptyState, LinkButton, PageHeader, Stat, Card } from '@/components/ui'
 import { BriefStatus, timeLeft, fmtDate } from '@/components/status';
 import { formatMoney } from '@/lib/money';
 import { formatMultiplier } from '@/lib/outlier';
+import { FileText, Inbox, LockOpen, Percent, Plus, Star, Timer, Wallet } from 'lucide-react';
 
 export const metadata = { title: 'Dashboard' };
 
@@ -29,12 +30,14 @@ export default async function Dashboard() {
 
     return (
       <>
-        <PageHeader title={`Hi ${v.displayName}`}><LinkButton href="/briefs/new">Post a brief</LinkButton></PageHeader>
-        <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Stat label="Live briefs" value={open.length} />
-          <Stat label="Pitches waiting" value={recent?.length ?? 0} />
-          <Stat label="Unlocked this month" value={unlocksMonth ?? 0} />
-          <Stat label="Budget left" value={formatMoney(remaining)} />
+        <PageHeader eyebrow="Dashboard" title={`Hi ${v.displayName}`} description="Here’s what’s happening with your briefs.">
+          <LinkButton href="/briefs/new"><Plus className="size-4" aria-hidden="true" /> Post a brief</LinkButton>
+        </PageHeader>
+        <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Stat label="Pitches waiting" value={recent?.length ?? 0} icon={<Inbox className="size-4" />} emphasis={(recent?.length ?? 0) > 0} sub="Ready to review" />
+          <Stat label="Live briefs" value={open.length} icon={<FileText className="size-4" />} />
+          <Stat label="Unlocked this month" value={unlocksMonth ?? 0} icon={<LockOpen className="size-4" />} />
+          <Stat label="Budget left" value={formatMoney(remaining)} icon={<Wallet className="size-4" />} sub="Across live briefs" />
         </div>
         {(unpaid.length > 0 || closingSoon.length > 0) && (
           <Card className="mb-8 grid gap-2">
@@ -44,15 +47,15 @@ export default async function Dashboard() {
           </Card>
         )}
         <section className="grid gap-3">
-          <h2 className="text-xl font-bold">New pitches</h2>
+          <h2 className="text-lg font-semibold tracking-tight">New pitches</h2>
           {!recent?.length ? (
-            <EmptyState title={briefs?.length ? 'No pitches waiting' : 'No briefs yet'} action={!briefs?.length ? <LinkButton href="/briefs/new">Post your first brief</LinkButton> : undefined}>
+            <EmptyState icon={<Inbox className="size-5" />} title={briefs?.length ? 'No pitches waiting' : 'No briefs yet'} action={!briefs?.length ? <LinkButton href="/briefs/new">Post your first brief</LinkButton> : undefined}>
               {briefs?.length ? 'New pitches on your live briefs will show up here.' : 'Post a brief and verified researchers will start pitching, usually within a day.'}
             </EmptyState>
           ) : (
             <ul className="grid gap-2">
               {recent.map((p) => (
-                <li key={p.id}><Link href={`/briefs/${p.brief_id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface p-4 hover:border-accent">
+                <li key={p.id}><Link href={`/briefs/${p.brief_id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-surface shadow-sm p-4 lift">
                   <span><span className="num font-semibold text-accent">{formatMultiplier(p.multiplier)}</span> · {p.format_label}</span>
                   <span className="text-sm text-muted">{(p.briefs as unknown as { title: string }).title} · {fmtDate(p.submitted_at, true)}</span>
                 </Link></li>
@@ -62,10 +65,10 @@ export default async function Dashboard() {
         </section>
         {!!briefs?.length && (
           <section className="mt-8 grid gap-3">
-            <h2 className="text-xl font-bold">Recent briefs</h2>
+            <h2 className="text-lg font-semibold tracking-tight">Recent briefs</h2>
             <ul className="grid gap-2">
               {briefs.slice(0, 5).map((b) => (
-                <li key={b.id}><Link href={`/briefs/${b.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface p-4 hover:border-accent">
+                <li key={b.id}><Link href={`/briefs/${b.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-surface shadow-sm p-4 lift">
                   <span className="font-semibold">{b.title}</span><span className="flex items-center gap-3"><span className="num text-sm text-muted">{b.unlocks_used}/{b.max_unlocks}</span><BriefStatus status={b.status} /></span>
                 </Link></li>
               ))}
@@ -91,20 +94,22 @@ export default async function Dashboard() {
 
   return (
     <>
-      <PageHeader title={`Hi ${v.displayName}`}>{v.kycStatus === 'approved' && <LinkButton href="/briefs">Browse briefs</LinkButton>}</PageHeader>
-      <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Stat label="On hold" value={formatMoney(bal?.held_cents ?? 0)} sub="72-hour dispute window" />
-        <Stat label="Available" value={formatMoney(bal?.available_cents ?? 0)} sub={<Link href="/wallet" className="underline">Withdraw</Link>} />
-        <Stat label="Unlock rate" value={stats?.unlock_rate_pct != null ? `${stats.unlock_rate_pct}%` : '–'} />
-        <Stat label="Rating" value={stats?.avg_rating ? `${stats.avg_rating}★` : '–'} sub={`${stats?.review_count ?? 0} reviews`} />
+      <PageHeader eyebrow="Dashboard" title={`Hi ${v.displayName}`} description="Your earnings and the briefs that match your niches.">
+        {v.kycStatus === 'approved' && <LinkButton href="/briefs">Browse briefs</LinkButton>}
+      </PageHeader>
+      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Stat label="Available" value={formatMoney(bal?.available_cents ?? 0)} icon={<Wallet className="size-4" />} emphasis sub={<Link href="/wallet" className="underline">Withdraw</Link>} />
+        <Stat label="On hold" value={formatMoney(bal?.held_cents ?? 0)} icon={<Timer className="size-4" />} sub="72-hour dispute window" />
+        <Stat label="Unlock rate" value={stats?.unlock_rate_pct != null ? `${stats.unlock_rate_pct}%` : '–'} icon={<Percent className="size-4" />} />
+        <Stat label="Rating" value={stats?.avg_rating ? `${stats.avg_rating}★` : '–'} icon={<Star className="size-4" />} sub={`${stats?.review_count ?? 0} reviews`} />
       </div>
       <div className="grid gap-8 lg:grid-cols-2">
         <section className="grid content-start gap-3">
-          <h2 className="text-xl font-bold">Briefs in your niches</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Briefs in your niches</h2>
           {!matching?.length ? <p className="text-muted">No open briefs in your niches right now.</p> : (
             <ul className="grid gap-2">
               {matching.map((b) => (
-                <li key={b.id}><Link href={`/briefs/${b.id}`} className="grid gap-1 rounded-lg border border-line bg-surface p-4 hover:border-accent">
+                <li key={b.id}><Link href={`/briefs/${b.id}`} className="grid gap-1 rounded-2xl border border-line bg-surface shadow-sm p-4 lift">
                   <span className="font-semibold">{b.title}</span>
                   <span className="num text-sm text-muted">{formatMoney(b.price_per_idea_cents, b.currency)}/idea · {b.max_unlocks - b.unlocks_used} unlocks left · {timeLeft(b.deadline_at)}</span>
                 </Link></li>
@@ -113,11 +118,11 @@ export default async function Dashboard() {
           )}
         </section>
         <section className="grid content-start gap-3">
-          <h2 className="text-xl font-bold">Your recent pitches</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Your recent pitches</h2>
           {!pitches?.length ? <p className="text-muted">You haven&apos;t pitched yet.</p> : (
             <ul className="grid gap-2">
               {pitches.map((p) => (
-                <li key={p.id}><Link href={`/briefs/${p.brief_id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface p-4 hover:border-accent">
+                <li key={p.id}><Link href={`/briefs/${p.brief_id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-surface shadow-sm p-4 lift">
                   <span><span className="num font-semibold">{formatMultiplier(p.multiplier)}</span> · {(p.briefs as unknown as { title: string } | null)?.title}</span>
                   <span className="text-xs text-muted">{p.status === 'submitted' ? 'Waiting' : p.status === 'unlocked' ? 'Unlocked' : p.status}</span>
                 </Link></li>

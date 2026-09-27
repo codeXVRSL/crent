@@ -19,10 +19,10 @@ export default async function CreProfile({ params }: { params: Promise<{ handle:
     <div className="mx-auto grid max-w-4xl gap-8 px-4 py-14">
       <header className="grid gap-3">
         <div className="flex flex-wrap items-center gap-2"><Pill tone="good">Verified</Pill>{!cre.accepting_work && <Pill tone="muted">Not taking new work</Pill>}</div>
-        <h1 className="text-4xl font-bold">{cre.display_name}</h1>
+        <h1 className="text-[40px] font-semibold tracking-tight">{cre.display_name}</h1>
         <p className="text-muted">@{cre.handle}{cre.years_experience ? ` · ${cre.years_experience} years researching` : ''}</p>
         {cre.headline && <p className="text-lg">{cre.headline}</p>}
-        {cre.bio && <p className="max-w-2xl whitespace-pre-wrap font-serif text-muted">{cre.bio}</p>}
+        {cre.bio && <p className="max-w-2xl whitespace-pre-wrap leading-relaxed text-ink-2">{cre.bio}</p>}
         <div className="flex flex-wrap gap-1">{(cre.niches as string[]).map((n) => <Pill key={n}>{n}</Pill>)}</div>
         <p className="text-sm text-muted">{(cre.platforms as string[]).map(platformLabel).join(' · ')}</p>
       </header>
@@ -35,8 +35,8 @@ export default async function CreProfile({ params }: { params: Promise<{ handle:
       </section>
 
       <section className="grid gap-3">
-        <h2 className="text-xl font-bold">Portfolio finds</h2>
-        <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+        <h2 className="text-lg font-semibold tracking-tight">Portfolio finds</h2>
+        <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">
           <table className="w-full min-w-[560px] text-sm">
             <thead><tr className="border-b border-line text-left">
               <th className="label p-3">Find</th><th className="label p-3">Platform</th><th className="label p-3">Views vs median</th><th className="label p-3">Score</th>
@@ -56,11 +56,11 @@ export default async function CreProfile({ params }: { params: Promise<{ handle:
       </section>
 
       <section className="grid gap-3">
-        <h2 className="text-xl font-bold">Reviews</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Reviews</h2>
         {(reviews ?? []).length === 0 ? <p className="text-muted">No reviews yet.</p> : (
           <ul className="grid gap-3">
             {reviews!.map((r) => (
-              <li key={r.id} className="rounded-lg border border-line bg-surface p-4">
+              <li key={r.id} className="rounded-2xl border border-line bg-surface shadow-sm p-4">
                 <div className="num text-sm font-semibold">{'★'.repeat(r.rating)}<span className="text-muted">{'★'.repeat(5 - r.rating)}</span></div>
                 {r.body && <p className="mt-1 text-sm">{r.body}</p>}
               </li>

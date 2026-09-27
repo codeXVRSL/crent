@@ -134,6 +134,13 @@ npx playwright test      # browser test of the full flow; needs the app + Supaba
 ```
 The browser test skips the ID-photo upload (it writes the verification row directly) and makes one account admin through the API.
 
+## Design system
+- **Type:** Geist and Geist Mono (self-hosted through `next/font`, no third-party requests), Instrument Serif italic for one accent word in the hero.
+- **Color:** cool neutrals plus one signal color (teal) and amber for "locked". Tokens live in `app/globals.css`; light and dark are both designed, and the theme follows the system unless the user picks one.
+- **Surfaces:** hairline borders at low opacity, 16px card radius, tinted shadows, dot-grid backgrounds on hero areas.
+- **Motion:** one easing curve, 150–520 ms, disabled when the user prefers reduced motion. Glass blur and 3D are left out for performance on mid-range phones.
+- **Components:** `components/ui.tsx` (buttons with loading state, inputs with focus ring, cards, pills, stat tiles, notices, empty states), `components/pitch-card.tsx` (outlier score with a views-vs-median bar chart), `components/command-palette.tsx` (⌘K / Ctrl+K).
+
 ## How it's put together
 ```
 supabase/migrations/   schema, money functions, Row Level Security, storage policy

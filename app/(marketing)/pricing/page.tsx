@@ -14,9 +14,9 @@ export default function Pricing() {
     <div className="mx-auto grid max-w-3xl gap-8 px-4 py-14">
       <div className="grid gap-2">
         <span className="label">Pricing</span>
-        <h1 className="text-4xl font-bold">No subscriptions. You pay per idea.</h1>
+        <h1 className="text-[40px] font-semibold tracking-tight">No subscriptions. You pay per idea.</h1>
       </div>
-      <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+      <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">
         <table className="w-full min-w-[480px] text-sm">
           <thead><tr className="border-b border-line text-left"><th className="label p-3">Fee</th><th className="label p-3">Rate</th><th className="label p-3">Paid by</th></tr></thead>
           <tbody>
@@ -26,8 +26,8 @@ export default function Pricing() {
         </table>
       </div>
       <div className="grid gap-3">
-        <h2 className="text-xl font-bold">Worked example</h2>
-        <dl className="grid gap-2 rounded-lg border border-line bg-surface p-5 text-sm">
+        <h2 className="text-lg font-semibold tracking-tight">Worked example</h2>
+        <dl className="grid gap-2 rounded-2xl border border-line bg-surface shadow-sm p-5 text-sm">
           {rows.map(([k, v]) => (
             <div key={k} className="grid gap-1 sm:grid-cols-[160px_1fr]"><dt className="font-semibold">{k}</dt><dd className="num">{v}</dd></div>
           ))}

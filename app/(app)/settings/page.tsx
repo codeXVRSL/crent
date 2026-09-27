@@ -22,11 +22,11 @@ export default async function Settings() {
           <ThemeToggle />
         </Card>
         {v.role === 'creator' && (
-          <Card className="grid gap-4"><h2 className="text-lg font-bold">Channel profile</h2><CreatorProfileForm displayName={v.displayName} cp={cp} /></Card>
+          <Card className="grid gap-4"><h2 className="text-lg font-semibold tracking-tight">Channel profile</h2><CreatorProfileForm displayName={v.displayName} cp={cp} /></Card>
         )}
         {v.role === 'cre' && (
           <Card className="grid gap-2">
-            <h2 className="text-lg font-bold">Researcher profile</h2>
+            <h2 className="text-lg font-semibold tracking-tight">Researcher profile</h2>
             <p className="text-sm text-muted">Edit your headline, niches and portfolio, or check your verification.</p>
             <Link href="/onboarding/cre" className="text-sm font-semibold text-accent">Edit researcher profile →</Link>
             {v.handle && <Link href={`/cres/${v.handle}`} className="text-sm text-accent">View public profile →</Link>}

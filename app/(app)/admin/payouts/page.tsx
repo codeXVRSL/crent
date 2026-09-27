@@ -25,7 +25,7 @@ export default async function AdminPayouts() {
     <>
       <PageHeader eyebrow="Admin" title="Payouts & refunds" />
       <section className="grid gap-3">
-        <h2 className="text-xl font-bold">Payouts to approve</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Payouts to approve</h2>
         {!todo.length ? <EmptyState title="Nothing to approve" /> : todo.map((p) => {
           const m = p.payout_methods as { kind: string; bank_code: string | null; account_name: string; account_last4: string };
           const who = pMap.get(p.cre_id);
@@ -48,7 +48,7 @@ export default async function AdminPayouts() {
       </section>
 
       <section className="mt-8 grid gap-3">
-        <h2 className="text-xl font-bold">Refunds needing attention</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Refunds needing attention</h2>
         {!refunds?.length ? <EmptyState title="No refunds waiting" /> : refunds.map((r) => (
           <Card key={r.id} className="grid gap-3 text-sm">
             <div className="flex flex-wrap justify-between gap-2">
@@ -72,7 +72,7 @@ export default async function AdminPayouts() {
 
       {!!rest.length && (
         <section className="mt-8 grid gap-3">
-          <h2 className="text-xl font-bold">History</h2>
+          <h2 className="text-lg font-semibold tracking-tight">History</h2>
           <ul className="grid gap-2 text-sm">
             {rest.map((p) => (
               <li key={p.id} className="flex flex-wrap justify-between gap-2 rounded-md border border-line bg-surface p-3">

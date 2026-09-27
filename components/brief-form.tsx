@@ -59,7 +59,7 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform }: {
         </div>
       </div>
 
-      <aside className="grid content-start gap-4 rounded-lg border border-line bg-surface p-5 lg:sticky lg:top-6">
+      <aside className="grid content-start gap-4 rounded-2xl border border-line bg-surface shadow-sm p-5 lg:sticky lg:top-6">
         <Field label="Price per unlocked idea (USD)" htmlFor="price" hint="$3–$500. Most briefs pay $5–$15.">
           <Input id="price" name="price" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} required />
         </Field>

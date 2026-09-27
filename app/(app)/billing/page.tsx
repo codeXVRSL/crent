@@ -20,7 +20,7 @@ export default async function Billing() {
     <>
       <PageHeader title="Billing" description="Payments for your briefs and refunds of unused budget." />
       {!payments?.length ? <EmptyState title="No payments yet">Payments appear here after you fund a brief.</EmptyState> : (
-        <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+        <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">
           <table className="w-full min-w-[640px] text-sm">
             <thead><tr className="border-b border-line text-left"><th className="label p-3">Brief</th><th className="label p-3">Paid</th><th className="label p-3">Refunded</th><th className="label p-3">Status</th><th className="label p-3">Date</th></tr></thead>
             <tbody>
@@ -39,7 +39,7 @@ export default async function Billing() {
       )}
       {!!refunds?.length && (
         <section className="mt-8 grid gap-3">
-          <h2 className="text-xl font-bold">Refunds</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Refunds</h2>
           <ul className="grid gap-2 text-sm">
             {refunds.map((r) => (
               <li key={r.id} className="flex flex-wrap justify-between gap-2 rounded-md border border-line bg-surface p-3">
