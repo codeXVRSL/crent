@@ -112,3 +112,19 @@ export async function updateSettings(_: ActionResult | null, fd: FormData): Prom
   revalidatePath('/admin/settings');
   return { ok: true, message: 'Saved. New values apply to briefs created from now on.' };
 }
+
+export async function runJobsNow(): Promise<ActionResult> {
+  await requireViewer(['admin']);
+  const { runScheduledJobs } = await import('@/lib/jobs');
+  const r = await runScheduledJobs();
+  revalidatePath('/admin');
+  if (r.errors.length) return { ok: false, message: r.errors.join('; ') };
+  return { ok: true, message: `Done. Closed ${r.closedBriefs} brief(s), released ${r.releasedHolds} hold(s), sent ${Math.max(r.refundsSent, 0)} refund(s).` };
+}
+
+export async function setFeedbackStatus(fd: FormData) {
+  await requireViewer(['admin']);
+  const supabase = await createClient();
+  await supabase.rpc('set_feedback_status', { p_id: String(fd.get('id')), p_status: String(fd.get('status')) });
+  revalidatePath('/admin/feedback');
+}

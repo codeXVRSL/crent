@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation';
 import { getViewer } from '@/lib/auth';
 import { setRole } from '@/app/actions/onboarding';
 import { Button, PageHeader } from '@/components/ui';
-import { Megaphone, Search } from 'lucide-react';
+import { Megaphone, Search, ShieldCheck } from 'lucide-react';
+import { env } from '@/lib/env';
 
 export default async function Onboarding({ searchParams }: { searchParams: Promise<{ as?: string }> }) {
   const viewer = await getViewer();
@@ -28,6 +29,13 @@ export default async function Onboarding({ searchParams }: { searchParams: Promi
           </form>
         ))}
       </div>
+      {env.adminEmails.includes(viewer.email.toLowerCase()) && (
+        <form action={setRole} className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-line-strong p-5">
+          <input type="hidden" name="role" value="admin" />
+          <span className="flex items-center gap-2 text-sm text-ink-2"><ShieldCheck className="size-4 text-accent" aria-hidden="true" /> This email is on the admin list.</span>
+          <Button type="submit" variant="secondary">Continue as admin</Button>
+        </form>
+      )}
     </>
   );
 }

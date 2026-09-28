@@ -11,6 +11,7 @@ import { ActionForm, SubmitButton } from '@/components/form';
 import { closeBrief, payBrief, cancelDraft } from '@/app/actions/briefs';
 import { startThread } from '@/app/actions/messages';
 import { formatMoney, unlockSplit } from '@/lib/money';
+import { signProofs } from '@/lib/proof';
 import { platformLabel } from '@/lib/constants';
 
 type CreInfo = { id: string; display_name: string; handle: string; unlock_rate_pct: number | null; avg_rating: number | null; review_count: number };
@@ -84,6 +85,7 @@ export default async function BriefPage({ params, searchParams }: {
       supabase.from('reviews').select('unlock_id').eq('reviewer_id', v.id),
     ]);
     const secretMap = new Map((secrets ?? []).map((s) => [s.pitch_id, s as PitchSecret]));
+    const proofMap = await signProofs(supabase, (secrets ?? []) as { pitch_id: string; proof_path?: string | null }[]);
     const unlockMap = new Map((unlocks ?? []).map((u) => [u.pitch_id, u]));
     const creMap = new Map(((cres ?? []) as CreInfo[]).map((c) => [c.id, c]));
     const reviewed = new Set((myReviews ?? []).map((r) => r.unlock_id));
@@ -119,7 +121,7 @@ export default async function BriefPage({ params, searchParams }: {
                     const c = creMap.get(p.cre_id);
                     const canDispute = u && u.status === 'held' && new Date(u.available_at) > new Date();
                     return (
-                      <PitchCard key={p.id} pitch={p as PitchPublic} secret={secret}
+                      <PitchCard key={p.id} pitch={p as PitchPublic} secret={secret} proofUrl={proofMap.get(p.id)}
                         priceLabel={p.status === 'submitted' ? price : undefined}
                         byline={c ? <><Link href={`/cres/${c.handle}`} className="underline">@{c.handle}</Link> · Verified · {c.unlock_rate_pct ?? '–'}% unlock rate{c.avg_rating ? ` · ${c.avg_rating}★` : ''}</> : null}
                         actions={<>
@@ -194,6 +196,7 @@ export default async function BriefPage({ params, searchParams }: {
   const myIds = (mine ?? []).map((p) => p.id);
   const { data: mySecrets } = myIds.length ? await supabase.from('pitch_secrets').select('*').in('pitch_id', myIds) : { data: [] };
   const sMap = new Map((mySecrets ?? []).map((s) => [s.pitch_id, s as PitchSecret]));
+  const myProofs = await signProofs(supabase, (mySecrets ?? []) as { pitch_id: string; proof_path?: string | null }[]);
   const active = (mine ?? []).filter((p) => p.status !== 'withdrawn').length;
   const canPitch = brief.status === 'open' && new Date(brief.deadline_at) > new Date() && v.kycStatus === 'approved' && active < 5;
 
@@ -211,7 +214,7 @@ export default async function BriefPage({ params, searchParams }: {
             <h2 className="text-lg font-semibold tracking-tight">Your pitches on this brief <span className="num text-muted">({active} of 5)</span></h2>
             {!mine?.length ? <p className="text-muted">You haven&apos;t pitched on this brief yet.</p> : (
               <div className="grid gap-4 xl:grid-cols-2">
-                {mine.map((p) => <PitchCard key={p.id} pitch={p as PitchPublic} secret={sMap.get(p.id)} />)}
+                {mine.map((p) => <PitchCard key={p.id} pitch={p as PitchPublic} secret={sMap.get(p.id)} proofUrl={myProofs.get(p.id)} />)}
               </div>
             )}
           </section>

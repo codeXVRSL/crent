@@ -3,6 +3,8 @@ import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Card, PageHeader, Stat } from '@/components/ui';
 import { formatMoney } from '@/lib/money';
+import { ActionForm, SubmitButton } from '@/components/form';
+import { runJobsNow } from '@/app/actions/admin';
 
 export const metadata = { title: 'Admin' };
 
@@ -20,6 +22,7 @@ export default async function AdminHome() {
     supabase.from('flags').select('id', { count: 'exact', head: true }).eq('status', 'open'),
     supabase.from('refunds').select('id', { count: 'exact', head: true }).in('status', ['manual', 'failed']),
   ]);
+  const feedbackNew = await supabase.from('feedback').select('id', { count: 'exact', head: true }).eq('status', 'new');
   const rows = ledger.data ?? [];
   const gmv = rows.filter((r) => r.kind === 'brief_funding').reduce((s, r) => s + r.amount_cents, 0);
   const revenue = rows.filter((r) => r.credit_account === 'platform:revenue').reduce((s, r) => s + r.amount_cents, 0)
@@ -33,6 +36,7 @@ export default async function AdminHome() {
     ['Payouts to approve', payouts.count ?? 0, '/admin/payouts'],
     ['Refunds needing action', refunds.count ?? 0, '/admin/payouts'],
     ['Open flags', flags.count ?? 0, '/admin/flags'],
+    ['New tester feedback', feedbackNew.count ?? 0, '/admin/feedback'],
   ] as const;
 
   return (
@@ -44,6 +48,13 @@ export default async function AdminHome() {
         <Stat label="Live briefs" value={openBriefs.count ?? 0} />
         <Stat label="Fill rate" value={fill != null ? `${fill}%` : '–'} sub="Closed briefs with ≥1 unlock. Target 60%." />
       </div>
+      <Card className="mb-6 grid gap-3">
+        <div className="grid gap-1">
+          <span className="label">Scheduled jobs</span>
+          <p className="text-sm text-muted">These run every 15 minutes: close briefs past their deadline, release 72-hour holds, send refunds. Run them now when testing.</p>
+        </div>
+        <ActionForm action={runJobsNow} className="grid justify-items-start gap-2"><SubmitButton variant="secondary">Run scheduled jobs now</SubmitButton></ActionForm>
+      </Card>
       <Card className="grid gap-2">
         <span className="label">Queues</span>
         {queues.map(([label, n, href]) => (

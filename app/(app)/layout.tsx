@@ -6,6 +6,8 @@ import { MobileNav, NavList, SearchTrigger, type NavGroup } from '@/components/a
 import { CommandPalette, type Command } from '@/components/command-palette';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LinkButton, Notice } from '@/components/ui';
+import { FeedbackButton } from '@/components/feedback-button';
+import { env } from '@/lib/env';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const v = await requireViewer();
@@ -44,6 +46,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: '/admin/payouts', label: 'Payouts & refunds', icon: 'payouts' },
         { href: '/admin/flags', label: 'Flags', icon: 'flags' },
         { href: '/admin/users', label: 'Users', icon: 'users' },
+        { href: '/admin/feedback', label: 'Feedback', icon: 'inbox' },
         { href: '/admin/settings', label: 'Settings', icon: 'settings' },
       ] },
       { title: 'Account', items: [{ href: '/notifications', label: 'Notifications', icon: 'notifications', badge: bell }] },
@@ -110,6 +113,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </header>
 
       <main className="mx-auto w-full max-w-[1160px] px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
+        {env.isTestMode && (
+          <div className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-warn/40 bg-warn-soft px-3.5 py-2 text-[13px] text-ink-2">
+            <span className="rounded-md bg-warn px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white">Test mode</span>
+            Payments are simulated. No real money moves. Use the Feedback button to report anything odd.
+          </div>
+        )}
         {v.role === 'cre' && v.kycStatus !== 'approved' && (
           <div className="mb-6">
             <Notice>
@@ -122,6 +131,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="anim-fade-up">{children}</div>
       </main>
       <CommandPalette commands={commands} />
+      <FeedbackButton />
     </div>
   );
 }

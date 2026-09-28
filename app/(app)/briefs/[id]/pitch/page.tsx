@@ -19,7 +19,7 @@ export default async function PitchPage({ params }: { params: Promise<{ id: stri
   return (
     <>
       <PageHeader eyebrow={`Pitch · ${formatMoney(brief.price_per_idea_cents, brief.currency)} per unlock`} title={brief.title} />
-      <PitchForm briefId={brief.id} platform={brief.platform} minMultiplier={Number(brief.min_multiplier)} maxAgeDays={brief.max_video_age_days} />
+      <PitchForm briefId={brief.id} userId={v.id} platform={brief.platform} minMultiplier={Number(brief.min_multiplier)} maxAgeDays={brief.max_video_age_days} />
     </>
   );
 }

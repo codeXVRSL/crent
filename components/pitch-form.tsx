@@ -1,13 +1,17 @@
 'use client';
 import { useState } from 'react';
-import { ActionForm, SubmitButton } from './form';
+import { useActionState } from 'react';
+import { SubmitButton } from './form';
+import { Notice } from './ui';
+import { createBrowserSupabase } from '@/lib/supabase/client';
+import type { ActionResult } from '@/lib/errors';
 import { Field, Input, Select, Textarea } from './ui';
 import { submitPitch } from '@/app/actions/pitches';
 import { HOOK_CATEGORIES, INSTRUCTIONS_TEMPLATE, PLATFORMS, SIZE_BANDS } from '@/lib/constants';
 import { formatMultiplier } from '@/lib/outlier';
 
-export function PitchForm({ briefId, platform, minMultiplier, maxAgeDays }: {
-  briefId: string; platform: string; minMultiplier: number; maxAgeDays: number | null;
+export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays }: {
+  briefId: string; userId: string; platform: string; minMultiplier: number; maxAgeDays: number | null;
 }) {
   const [views, setViews] = useState('');
   const [median, setMedian] = useState('');
@@ -17,8 +21,24 @@ export function PitchForm({ briefId, platform, minMultiplier, maxAgeDays }: {
   const today = new Date().toISOString().slice(0, 10);
   const minDate = maxAgeDays ? new Date(Date.now() - maxAgeDays * 86_400_000).toISOString().slice(0, 10) : undefined;
 
+  // Upload the optional proof screenshot to private storage first, then submit the pitch.
+  const [state, action] = useActionState(async (_: ActionResult | null, fd: FormData): Promise<ActionResult> => {
+    const file = fd.get('proof');
+    fd.delete('proof');
+    if (file instanceof File && file.size > 0) {
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return { ok: false, message: 'The screenshot must be JPG, PNG or WebP.' };
+      if (file.size > 5 * 1024 * 1024) return { ok: false, message: 'The screenshot must be 5 MB or smaller.' };
+      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+      const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await createBrowserSupabase().storage.from('pitch-proof').upload(path, file, { contentType: file.type });
+      if (error) return { ok: false, message: `Screenshot upload failed: ${error.message}` };
+      fd.set('proof_path', path);
+    }
+    return submitPitch(null, fd);
+  }, null);
+
   return (
-    <ActionForm action={submitPitch} className="grid gap-6">
+    <form action={action} className="grid gap-6">
       <input type="hidden" name="brief_id" value={briefId} />
 
       <section className="grid gap-4 rounded-2xl border border-line bg-surface shadow-sm p-5">
@@ -83,13 +103,17 @@ export function PitchForm({ briefId, platform, minMultiplier, maxAgeDays }: {
         <Field label="How to adapt it for this creator (optional)" htmlFor="adaptation_notes">
           <Textarea id="adaptation_notes" name="adaptation_notes" maxLength={2000} rows={3} />
         </Field>
+        <Field label="Proof screenshot (optional)" htmlFor="proof" hint="A screenshot showing the video's views and the channel page. JPG, PNG or WebP, up to 5 MB. Only shown after unlock.">
+          <Input id="proof" name="proof" type="file" accept="image/jpeg,image/png,image/webp" />
+        </Field>
       </section>
 
       <label className="flex items-start gap-2 text-sm">
         <input type="checkbox" required className="mt-1" />
         <span>The views and median are accurate today, and the write-up is my own work.</span>
       </label>
+      {state && !state.ok && <Notice tone="bad">{state.message}</Notice>}
       <SubmitButton pendingText="Sending pitch…" className="justify-self-start">Send pitch</SubmitButton>
-    </ActionForm>
+    </form>
   );
 }

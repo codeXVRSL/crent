@@ -28,6 +28,7 @@ export type PitchSecret = {
   why_it_worked: string;
   instructions: string;
   adaptation_notes: string | null;
+  proof_path?: string | null;
 };
 
 const statusPill: Record<string, { tone: 'neutral' | 'accent' | 'good' | 'muted' | 'bad'; label: string }> = {
@@ -62,8 +63,9 @@ function ViewsBars({ views, median }: { views: number; median: number }) {
 }
 
 export function PitchCard({
-  pitch, secret, priceLabel, byline, actions, showStatus = true,
+  pitch, secret, priceLabel, byline, actions, showStatus = true, proofUrl,
 }: {
+  proofUrl?: string;
   pitch: PitchPublic;
   secret?: PitchSecret | null;
   priceLabel?: string;
@@ -126,6 +128,15 @@ export function PitchCard({
             <pre className="overflow-x-auto whitespace-pre-wrap rounded-2xl border border-line bg-surface shadow-sm p-3 font-mono text-[12.5px] leading-relaxed">{secret.instructions}</pre>
           </div>
           {secret.adaptation_notes && <div className="grid gap-1"><span className="label">How to adapt it for you</span><p className="whitespace-pre-wrap text-sm text-ink-2">{secret.adaptation_notes}</p></div>}
+          {proofUrl && (
+            <div className="grid gap-1.5">
+              <span className="label">Proof screenshot</span>
+              <a href={proofUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border border-line">
+                {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL */}
+                <img src={proofUrl} alt="Screenshot of the source video's views" className="max-h-72 w-full bg-surface object-contain" />
+              </a>
+            </div>
+          )}
         </div>
       ) : (
         // Decorative placeholder only. The real content is never sent to the browser before unlock.

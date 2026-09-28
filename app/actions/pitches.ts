@@ -12,7 +12,7 @@ const num = (fd: FormData, k: string) => Number(str(fd, k).replace(/[,\s]/g, '')
 export async function submitPitch(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   const briefId = str(fd, 'brief_id');
   const supabase = await createClient();
-  const { error } = await supabase.rpc('submit_pitch', {
+  const { data: pitchId, error } = await supabase.rpc('submit_pitch', {
     p_brief_id: briefId,
     p_platform: str(fd, 'platform'),
     p_format_label: str(fd, 'format_label'),
@@ -31,6 +31,11 @@ export async function submitPitch(_: ActionResult | null, fd: FormData): Promise
     p_adaptation_notes: str(fd, 'adaptation_notes'),
   });
   if (error) return { ok: false, message: friendlyError(error) };
+  const proofPath = str(fd, 'proof_path');
+  if (proofPath && pitchId) {
+    const { error: pe } = await supabase.rpc('attach_pitch_proof', { p_pitch_id: pitchId, p_path: proofPath });
+    if (pe) console.error('[attach proof]', pe.message);
+  }
 
   const { data: brief } = await supabase.from('briefs').select('creator_id, title').eq('id', briefId).single();
   if (brief) {

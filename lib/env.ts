@@ -17,4 +17,7 @@ export const env = {
   cronSecret: () => need('CRON_SECRET', process.env.CRON_SECRET),
   resendKey: process.env.RESEND_API_KEY,
   emailFrom: process.env.EMAIL_FROM ?? 'Outlier Desk <hello@example.com>',
+  /** Emails that become admin on first sign-in (comma separated). */
+  adminEmails: (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean),
+  isTestMode: (process.env.PAYMENT_PROVIDER ?? 'mock') === 'mock',
 };

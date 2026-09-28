@@ -3,12 +3,25 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { friendlyError, type ActionResult } from '@/lib/errors';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { env } from '@/lib/env';
 import { PLATFORMS } from '@/lib/constants';
 
 const PLATFORM_VALUES = PLATFORMS.map((p) => p.value) as string[];
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
 
 export async function setRole(fd: FormData) {
+  if (fd.get('role') === 'admin') {
+    // Only for emails listed in ADMIN_EMAILS, and only while the account has no role yet.
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.email || !env.adminEmails.includes(user.email.toLowerCase())) throw new Error('Not allowed.');
+    const db = createAdminClient();
+    const { data: p } = await db.from('profiles').select('role').eq('id', user.id).single();
+    if (p?.role) throw new Error(friendlyError('ROLE_ALREADY_SET'));
+    await db.from('profiles').update({ role: 'admin' }).eq('id', user.id);
+    redirect('/admin');
+  }
   const role = fd.get('role') === 'cre' ? 'cre' : 'creator';
   const supabase = await createClient();
   const { error } = await supabase.rpc('set_initial_role', { p_role: role });

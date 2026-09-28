@@ -5,6 +5,7 @@ import { EmptyState, LinkButton, PageHeader } from '@/components/ui';
 import { PitchCard, type PitchPublic, type PitchSecret } from '@/components/pitch-card';
 import { ReviewForm, DisputeToggle } from '@/components/unlock-extras';
 import { UnlockStatus } from '@/components/status';
+import { signProofs } from '@/lib/proof';
 
 export const metadata = { title: 'Unlocked ideas' };
 
@@ -25,10 +26,13 @@ export default async function Unlocks() {
   const pMap = new Map((pitches ?? []).map((p) => [p.id, p]));
   const sMap = new Map((secrets ?? []).map((s) => [s.pitch_id, s as PitchSecret]));
   const reviewed = new Set((reviews ?? []).map((r) => r.unlock_id));
+  const proofMap = await signProofs(supabase, (secrets ?? []) as { pitch_id: string; proof_path?: string | null }[]);
 
   return (
     <>
-      <PageHeader title="Unlocked ideas" description="Every idea you've paid for, with its source, hook and filming instructions." />
+      <PageHeader title="Unlocked ideas" description="Every idea you've paid for, with its source, hook and filming instructions.">
+        {!!unlocks?.length && <a href="/unlocks/export" className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-line-strong bg-surface px-4 text-sm font-medium shadow-sm hover:bg-surface-2">Download CSV</a>}
+      </PageHeader>
       {!unlocks?.length ? (
         <EmptyState title="No unlocked ideas yet" action={<LinkButton href="/briefs">Go to my briefs</LinkButton>}>Unlock a pitch on one of your briefs and it&apos;s saved here.</EmptyState>
       ) : (
@@ -38,7 +42,7 @@ export default async function Unlocks() {
             if (!p) return null;
             const canDispute = u.status === 'held' && new Date(u.available_at) > new Date();
             return (
-              <PitchCard key={u.id} pitch={p as PitchPublic} secret={sMap.get(u.pitch_id)}
+              <PitchCard key={u.id} pitch={p as PitchPublic} secret={sMap.get(u.pitch_id)} proofUrl={proofMap.get(u.pitch_id)}
                 byline={<Link href={`/briefs/${u.brief_id}`} className="underline">{(u.briefs as unknown as { title: string } | null)?.title}</Link>}
                 actions={<>
                   {u.status === 'disputed' && <UnlockStatus status="disputed" />}
