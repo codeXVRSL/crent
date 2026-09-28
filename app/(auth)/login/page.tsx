@@ -14,6 +14,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
         <input type="hidden" name="next" value={next ?? '/dashboard'} />
         <Field label="Email" htmlFor="email"><Input id="email" name="email" type="email" autoComplete="email" required /></Field>
         <Field label="Password" htmlFor="password"><Input id="password" name="password" type="password" autoComplete="current-password" required /></Field>
+        <Link href="/forgot-password" className="-mt-2 justify-self-end text-xs font-medium text-muted hover:text-ink">Forgot password?</Link>
         <SubmitButton pendingText="Logging in…" size="lg" className="w-full">Log in</SubmitButton>
       </ActionForm>
       <p className="text-sm text-muted">New here? <Link href="/signup" className="font-semibold text-accent">Create an account</Link></p>

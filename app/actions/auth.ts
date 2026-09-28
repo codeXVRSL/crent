@@ -39,3 +39,26 @@ export async function signUp(_: ActionResult | null, fd: FormData): Promise<Acti
   if (!data.session) return { ok: true, message: 'Check your email for a confirmation link to finish signing up.' };
   redirect('/onboarding' + (as ? `?as=${as}` : ''));
 }
+
+export async function requestPasswordReset(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const email = String(fd.get('email') ?? '').trim();
+  if (!email.includes('@')) return { ok: false, message: 'Enter the email you signed up with.' };
+  const supabase = await createClient();
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${env.appUrl}/auth/callback?next=${encodeURIComponent('/reset-password')}`,
+  });
+  // Same answer whether or not the account exists, so emails can't be probed.
+  return { ok: true, message: 'If that email has an account, a reset link is on its way. Check your inbox and spam folder.' };
+}
+
+export async function updatePassword(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const password = String(fd.get('password') ?? '');
+  if (password.length < 10) return { ok: false, message: 'Use a password with at least 10 characters.' };
+  if (password !== String(fd.get('confirm') ?? '')) return { ok: false, message: 'The two passwords don’t match.' };
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: 'This reset link has expired. Request a new one.' };
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { ok: false, message: error.message };
+  redirect('/dashboard');
+}
