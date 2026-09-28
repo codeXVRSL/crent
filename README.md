@@ -29,9 +29,13 @@ Built with Next.js 15 (App Router, TypeScript), Tailwind CSS v4 and Supabase (Po
 | Admin: overview metrics, verifications, disputes, payouts & manual refunds, flags, users/suspension, fee settings, audit log | ✅ |
 | Append-only money ledger; escrow balances to zero per brief | ✅ (tested) |
 | Light and dark theme, mobile layout | ✅ |
+| Tester Feedback button → admin Feedback inbox; test-mode banner | ✅ |
+| Proof screenshot on pitches (private, shown after unlock); CSV export of unlocked ideas | ✅ |
+| Admin "Run scheduled jobs now"; admin sign-up via `ADMIN_EMAILS` | ✅ |
+| Open Graph image, sitemap, robots, security headers | ✅ |
 
 ### Not built yet (from the spec's later phases)
-Idea Packs, research retainers, featured briefs, researcher Pro subscription, CSV export of unlocked ideas, admin two-factor login, rate limiting, Sentry/PostHog, Open Graph images and sitemap, live (websocket) chat — chat refreshes every few seconds instead — avatar and pitch-proof screenshot uploads.
+Idea Packs, research retainers, featured briefs, researcher Pro subscription, referral codes, admin two-factor login, rate limiting, Sentry/PostHog, live (websocket) chat — chat refreshes every few seconds instead — and avatar uploads.
 
 ---
 
@@ -63,7 +67,8 @@ In Supabase → SQL Editor, run these files in order:
 2. `supabase/migrations/20260927000002_functions.sql`
 3. `supabase/migrations/20260927000003_rls.sql`
 4. `supabase/migrations/20260927000004_storage.sql`
-5. `supabase/seed.sql`
+5. `supabase/migrations/20260928000005_feedback_and_proof.sql`
+6. `supabase/seed.sql`
 
 ### 4. Configure Supabase Auth
 Supabase → Authentication → URL Configuration:
@@ -113,7 +118,7 @@ Log out and back in. You'll land on `/admin`. Use a **different** email for your
 ## Deploy (Vercel)
 1. Push this folder to a GitHub repo and import it in Vercel.
 2. Add every variable from `.env.example` in Vercel → Settings → Environment Variables. Set `NEXT_PUBLIC_APP_URL` to your domain.
-3. `vercel.json` schedules `/api/cron` every 15 minutes. **Vercel's Hobby plan only allows daily cron jobs.** Either use the Pro plan, or keep Hobby and point a free external scheduler (e.g. cron-job.org) at `https://YOUR_DOMAIN/api/cron` with header `Authorization: Bearer <CRON_SECRET>` every 15 minutes.
+3. `vercel.json` runs `/api/cron` once a day (midnight Manila time) so it works on Vercel's free Hobby plan. While testing, use **Admin → Run scheduled jobs now**. For launch, either move to Pro and set the schedule to `*/15 * * * *`, or keep Hobby and point a free external scheduler (e.g. cron-job.org) at `https://YOUR_DOMAIN/api/cron` with header `Authorization: Bearer <CRON_SECRET>` every 15 minutes.
 4. Add your domain's `/auth/callback` to Supabase Redirect URLs and change the Site URL.
 
 ## Switching to real payments (Xendit)
