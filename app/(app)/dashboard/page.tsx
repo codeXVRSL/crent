@@ -17,7 +17,7 @@ export default async function Dashboard() {
 
   if (v.role === 'creator') {
     const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
-    const [{ data: briefs }, { count: unlocksMonth }, { data: recent }, { data: tracking }, { count: unlockedTotal }] = await Promise.all([
+    const [{ data: briefs }, { count: unlocksMonth }, { data: waiting }, { data: tracking }, { count: unlockedTotal }] = await Promise.all([
       supabase.from('briefs').select('id, title, status, max_unlocks, unlocks_used, price_per_idea_cents, currency, deadline_at').eq('creator_id', v.id).order('created_at', { ascending: false }),
       supabase.from('unlocks').select('id', { count: 'exact', head: true }).eq('creator_id', v.id).gte('created_at', monthStart.toISOString()),
       supabase.from('pitches').select('id, brief_id, multiplier, format_label, submitted_at, briefs!inner(title, creator_id)')
@@ -25,6 +25,11 @@ export default async function Dashboard() {
       supabase.from('idea_tracking').select('unlock_id, stage, planned_on, result_multiple').eq('creator_id', v.id),
       supabase.from('unlocks').select('id', { count: 'exact', head: true }).eq('creator_id', v.id).neq('status', 'reversed'),
     ]);
+    // Pitches the creator already passed on aren't waiting for them.
+    const waitingIds = (waiting ?? []).map((p) => p.id);
+    const { data: passed } = waitingIds.length ? await supabase.from('pitch_feedback').select('pitch_id').in('pitch_id', waitingIds) : { data: [] };
+    const passedIds = new Set((passed ?? []).map((f) => f.pitch_id));
+    const recent = (waiting ?? []).filter((p) => !passedIds.has(p.id));
     const tracked = tracking ?? [];
     const inProduction = tracked.filter((t) => t.stage === 'scripting' || t.stage === 'filming').length;
     const notStarted = (unlockedTotal ?? 0) - tracked.filter((t) => t.stage !== 'saved').length;
