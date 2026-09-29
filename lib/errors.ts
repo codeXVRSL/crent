@@ -46,6 +46,8 @@ const MESSAGES: Record<string, string> = {
   DISPUTE_NOT_AWAITING_RESPONSE: 'This dispute is no longer waiting for your reply.',
   DISPUTE_NOT_OPEN: 'This dispute is already resolved.',
   ALREADY_REVIEWED: "You've already reviewed this.",
+  CRE_NOT_FOUND: "We couldn't find that researcher, or they're not verified yet.",
+  TOO_MANY_INVITES: 'You can invite up to 25 researchers to one brief.',
 };
 
 export function friendlyError(err: unknown): string {

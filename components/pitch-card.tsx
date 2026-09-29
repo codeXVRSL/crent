@@ -63,9 +63,11 @@ function ViewsBars({ views, median }: { views: number; median: number }) {
 }
 
 export function PitchCard({
-  pitch, secret, priceLabel, byline, actions, showStatus = true, proofUrl,
+  pitch, secret, priceLabel, byline, actions, showStatus = true, proofUrl, scriptPrompt,
 }: {
   proofUrl?: string;
+  /** Ready-to-paste AI prompt built from the unlocked idea. */
+  scriptPrompt?: string;
   pitch: PitchPublic;
   secret?: PitchSecret | null;
   priceLabel?: string;
@@ -124,7 +126,8 @@ export function PitchCard({
           </div>
           <div className="grid gap-1"><span className="label">Why it worked</span><p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-2">{secret.why_it_worked}</p></div>
           <div className="grid gap-1.5">
-            <div className="flex items-center justify-between gap-2"><span className="label">Instructions</span><CopyButton text={secret.instructions} label="Copy instructions" /></div>
+            <div className="flex flex-wrap items-center justify-between gap-2"><span className="label">Instructions</span>
+              <span className="flex flex-wrap gap-1.5"><CopyButton text={secret.instructions} label="Copy instructions" />{scriptPrompt && <CopyButton text={scriptPrompt} label="Copy as AI script prompt" />}</span></div>
             <pre className="overflow-x-auto whitespace-pre-wrap rounded-2xl border border-line bg-surface shadow-sm p-3 font-mono text-[12.5px] leading-relaxed">{secret.instructions}</pre>
           </div>
           {secret.adaptation_notes && <div className="grid gap-1"><span className="label">How to adapt it for you</span><p className="whitespace-pre-wrap text-sm text-ink-2">{secret.adaptation_notes}</p></div>}

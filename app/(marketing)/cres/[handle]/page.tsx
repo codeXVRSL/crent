@@ -3,12 +3,21 @@ import { createClient } from '@/lib/supabase/server';
 import { Pill, Stat } from '@/components/ui';
 import { platformLabel } from '@/lib/constants';
 import { compactViews, formatMultiplier } from '@/lib/outlier';
+import { getViewer } from '@/lib/auth';
+import { FavoriteButton } from '@/components/favorite-button';
+import { LevelBadge, type PublicCre } from '@/components/track-record';
+import { levelHint, researcherLevel } from '@/lib/level';
 
 export default async function CreProfile({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params;
   const supabase = await createClient();
   const { data: cre } = await supabase.from('public_cres').select('*').eq('handle', handle.toLowerCase()).maybeSingle();
   if (!cre) notFound();
+  const c = cre as PublicCre;
+  const viewer = await getViewer();
+  const { data: fav } = viewer?.role === 'creator'
+    ? await supabase.from('favorite_cres').select('cre_id').eq('creator_id', viewer.id).eq('cre_id', c.id).maybeSingle()
+    : { data: null };
   const [{ data: portfolio }, { data: reviews }] = await Promise.all([
     supabase.from('portfolio_items').select('id, title, platform, source_views, channel_median_views, multiplier, result_note')
       .eq('cre_id', cre.id).order('multiplier', { ascending: false }),
@@ -18,7 +27,11 @@ export default async function CreProfile({ params }: { params: Promise<{ handle:
   return (
     <div className="mx-auto grid max-w-4xl gap-8 px-4 py-14">
       <header className="grid gap-3">
-        <div className="flex flex-wrap items-center gap-2"><Pill tone="good">Verified</Pill>{!cre.accepting_work && <Pill tone="muted">Not taking new work</Pill>}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Pill tone="good">Verified</Pill><LevelBadge cre={c} />
+          {!cre.accepting_work && <Pill tone="muted">Not taking new work</Pill>}
+          {viewer?.role === 'creator' && <span className="ml-auto"><FavoriteButton creId={c.id} saved={!!fav} back={`/cres/${cre.handle}`} /></span>}
+        </div>
         <h1 className="text-[40px] font-semibold tracking-tight">{cre.display_name}</h1>
         <p className="text-muted">@{cre.handle}{cre.years_experience ? ` · ${cre.years_experience} years researching` : ''}</p>
         {cre.headline && <p className="text-lg">{cre.headline}</p>}
@@ -32,6 +45,20 @@ export default async function CreProfile({ params }: { params: Promise<{ handle:
         <Stat label="Unlocked" value={cre.pitches_unlocked ?? 0} />
         <Stat label="Unlock rate" value={cre.unlock_rate_pct != null ? `${cre.unlock_rate_pct}%` : '–'} />
         <Stat label="Rating" value={cre.avg_rating ? `${cre.avg_rating}★` : '–'} sub={`${cre.review_count} reviews`} />
+      </section>
+
+      <section className="grid gap-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold tracking-tight">Track record with creators</h2>
+          <span className="text-xs text-muted">{levelHint[researcherLevel(c)]}</span>
+        </div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Stat label="Creators served" value={c.buyers} />
+          <Stat label="Repeat buyers" value={c.repeat_buyers} sub={c.buyers ? `${Math.round((100 * c.repeat_buyers) / c.buyers)}% came back` : undefined} />
+          <Stat label="Ideas posted" value={c.ideas_posted} sub="Filmed and posted by creators" />
+          <Stat label="Avg result" value={c.avg_result_multiple != null ? formatMultiplier(c.avg_result_multiple) : '–'}
+            sub={c.results_logged ? `vs the creator's usual views · ${c.results_logged} logged` : 'No results logged yet'} emphasis={Number(c.avg_result_multiple ?? 0) >= 1.5} />
+        </div>
       </section>
 
       <section className="grid gap-3">

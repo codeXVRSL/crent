@@ -17,12 +17,19 @@ export default async function Dashboard() {
 
   if (v.role === 'creator') {
     const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
-    const [{ data: briefs }, { count: unlocksMonth }, { data: recent }] = await Promise.all([
+    const [{ data: briefs }, { count: unlocksMonth }, { data: recent }, { data: tracking }, { count: unlockedTotal }] = await Promise.all([
       supabase.from('briefs').select('id, title, status, max_unlocks, unlocks_used, price_per_idea_cents, currency, deadline_at').eq('creator_id', v.id).order('created_at', { ascending: false }),
       supabase.from('unlocks').select('id', { count: 'exact', head: true }).eq('creator_id', v.id).gte('created_at', monthStart.toISOString()),
       supabase.from('pitches').select('id, brief_id, multiplier, format_label, submitted_at, briefs!inner(title, creator_id)')
         .eq('status', 'submitted').eq('briefs.creator_id', v.id).order('submitted_at', { ascending: false }).limit(8),
+      supabase.from('idea_tracking').select('unlock_id, stage, planned_on, result_multiple').eq('creator_id', v.id),
+      supabase.from('unlocks').select('id', { count: 'exact', head: true }).eq('creator_id', v.id).neq('status', 'reversed'),
     ]);
+    const tracked = tracking ?? [];
+    const inProduction = tracked.filter((t) => t.stage === 'scripting' || t.stage === 'filming').length;
+    const notStarted = (unlockedTotal ?? 0) - tracked.filter((t) => t.stage !== 'saved').length;
+    const needsViews = tracked.filter((t) => t.stage === 'posted' && t.result_multiple == null).length;
+    const overdue = tracked.filter((t) => t.planned_on && t.planned_on < new Date().toISOString().slice(0, 10) && t.stage !== 'posted' && t.stage !== 'skipped').length;
     const open = (briefs ?? []).filter((b) => b.status === 'open');
     const remaining = open.reduce((s, b) => s + (b.max_unlocks - b.unlocks_used) * b.price_per_idea_cents, 0);
     const unpaid = (briefs ?? []).filter((b) => b.status === 'draft' || b.status === 'awaiting_payment');
@@ -39,9 +46,19 @@ export default async function Dashboard() {
           <Stat label="Unlocked this month" value={unlocksMonth ?? 0} icon={<LockOpen className="size-4" />} />
           <Stat label="Budget left" value={formatMoney(remaining)} icon={<Wallet className="size-4" />} sub="Across live briefs" />
         </div>
-        {(unpaid.length > 0 || closingSoon.length > 0) && (
+        {(unlockedTotal ?? 0) > 0 && (
+          <Link href="/ideas" className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4 shadow-sm lift">
+            <span className="grid gap-0.5">
+              <span className="label">Idea board</span>
+              <span className="text-sm"><strong className="num">{Math.max(notStarted, 0)}</strong> to do · <strong className="num">{inProduction}</strong> in production{overdue ? <> · <strong className="num text-bad">{overdue}</strong> past their date</> : null}</span>
+            </span>
+            <span className="text-sm font-medium text-accent">Open board →</span>
+          </Link>
+        )}
+        {(unpaid.length > 0 || closingSoon.length > 0 || needsViews > 0) && (
           <Card className="mb-8 grid gap-2">
             <span className="label">Needs attention</span>
+            {needsViews > 0 && <Link href="/ideas" className="text-sm hover:text-accent">Log views for <strong>{needsViews} posted idea{needsViews > 1 ? 's' : ''}</strong> so you can see which researchers bring results</Link>}
             {unpaid.map((b) => <Link key={b.id} href={`/briefs/${b.id}`} className="text-sm hover:text-accent">Pay to publish: <strong>{b.title}</strong></Link>)}
             {closingSoon.map((b) => <Link key={b.id} href={`/briefs/${b.id}`} className="text-sm hover:text-accent">Closes in {timeLeft(b.deadline_at).replace(' left', '')}: <strong>{b.title}</strong></Link>)}
           </Card>
@@ -80,12 +97,18 @@ export default async function Dashboard() {
   }
 
   // Researcher
-  const [{ data: bal }, { data: stats }, { data: pitches }, { data: nicheRows }] = await Promise.all([
+  const [{ data: bal }, { data: stats }, { data: pitches }, { data: nicheRows }, { data: inviteRows }] = await Promise.all([
     supabase.from('cre_balances').select('*').eq('cre_id', v.id).maybeSingle(),
-    supabase.from('public_cres').select('unlock_rate_pct, avg_rating, review_count').eq('id', v.id).maybeSingle(),
+    supabase.from('public_cres').select('unlock_rate_pct, avg_rating, review_count, results_logged, avg_result_multiple, repeat_buyers').eq('id', v.id).maybeSingle(),
     supabase.from('pitches').select('id, brief_id, status, multiplier, format_label, submitted_at, briefs(title)').eq('cre_id', v.id).order('submitted_at', { ascending: false }).limit(6),
     supabase.from('cre_niches').select('niche_id').eq('user_id', v.id),
+    supabase.from('brief_invites').select('brief_id').eq('cre_id', v.id).order('invited_at', { ascending: false }).limit(20),
   ]);
+  const inviteIds = (inviteRows ?? []).map((i) => i.brief_id);
+  const { data: invited } = v.kycStatus === 'approved' && inviteIds.length
+    ? await supabase.from('briefs').select('id, title, price_per_idea_cents, currency, deadline_at')
+        .in('id', inviteIds).eq('status', 'open').gt('deadline_at', new Date().toISOString())
+    : { data: [] };
   const nicheIds = (nicheRows ?? []).map((n) => n.niche_id);
   const { data: matching } = v.kycStatus === 'approved' && nicheIds.length
     ? await supabase.from('briefs').select('id, title, price_per_idea_cents, currency, max_unlocks, unlocks_used, deadline_at')
@@ -103,6 +126,22 @@ export default async function Dashboard() {
         <Stat label="Unlock rate" value={stats?.unlock_rate_pct != null ? `${stats.unlock_rate_pct}%` : '–'} icon={<Percent className="size-4" />} />
         <Stat label="Rating" value={stats?.avg_rating ? `${stats.avg_rating}★` : '–'} icon={<Star className="size-4" />} sub={`${stats?.review_count ?? 0} reviews`} />
       </div>
+      {stats?.results_logged ? (
+        <p className="mb-6 text-sm text-muted">Creators who posted your ideas got <strong className="num text-ink">{formatMultiplier(stats.avg_result_multiple ?? 0)}</strong> their usual views on average ({stats.results_logged} logged){stats.repeat_buyers ? ` · ${stats.repeat_buyers} repeat buyer${stats.repeat_buyers > 1 ? 's' : ''}` : ''}.</p>
+      ) : null}
+      {!!invited?.length && (
+        <section className="mb-8 grid gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">You were invited</h2>
+          <ul className="grid gap-2 md:grid-cols-2">
+            {invited.map((b) => (
+              <li key={b.id}><Link href={`/briefs/${b.id}`} className="grid gap-1 rounded-2xl border border-accent/30 bg-accent-soft/40 p-4 shadow-sm lift">
+                <span className="font-semibold">{b.title}</span>
+                <span className="num text-sm text-muted">{formatMoney(b.price_per_idea_cents, b.currency)}/idea · {timeLeft(b.deadline_at)}</span>
+              </Link></li>
+            ))}
+          </ul>
+        </section>
+      )}
       <div className="grid gap-8 lg:grid-cols-2">
         <section className="grid content-start gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Briefs in your niches</h2>

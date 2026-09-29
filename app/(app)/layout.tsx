@@ -18,7 +18,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       { title: 'Work', items: [
         { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
         { href: '/briefs', label: 'My briefs', icon: 'briefs' },
+        { href: '/ideas', label: 'Idea board', icon: 'board' },
         { href: '/unlocks', label: 'Unlocked ideas', icon: 'unlocks' },
+        { href: '/favorites', label: 'Saved researchers', icon: 'favorites' },
         { href: '/messages', label: 'Messages', icon: 'messages' },
       ] },
       { title: 'Account', items: [
@@ -31,6 +33,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
         { href: '/briefs', label: 'Open briefs', icon: 'inbox' },
         { href: '/pitches', label: 'My pitches', icon: 'pitches' },
+        { href: '/swipe', label: 'Swipe file', icon: 'swipe' },
         { href: '/messages', label: 'Messages', icon: 'messages' },
       ] },
       { title: 'Account', items: [
@@ -53,9 +56,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ];
 
   const commands: Command[] = [
-    ...(v.role === 'creator' ? [{ id: 'new-brief', label: 'Post a brief', href: '/briefs/new', icon: 'briefs', group: 'Actions', keywords: 'create new' } as Command] : []),
+    ...(v.role === 'creator' ? [
+      { id: 'new-brief', label: 'Post a brief', href: '/briefs/new', icon: 'briefs', group: 'Actions', keywords: 'create new template' } as Command,
+      { id: 'find-cres', label: 'Find researchers', href: '/cres', icon: 'users', group: 'Actions', keywords: 'directory hire invite' } as Command,
+    ] : []),
     ...(v.role === 'cre' ? [
       { id: 'browse', label: 'Browse open briefs', href: '/briefs', icon: 'inbox', group: 'Actions', keywords: 'find work pitch' } as Command,
+      { id: 'invited', label: 'Briefs I was invited to', href: '/briefs?invited=1', icon: 'inbox', group: 'Actions', keywords: 'invite' } as Command,
+      { id: 'swipe-add', label: 'Save a find to my swipe file', href: '/swipe', icon: 'swipe', group: 'Actions', keywords: 'outlier save idea bank' } as Command,
       { id: 'profile', label: 'Edit researcher profile', href: '/onboarding/cre', icon: 'settings', group: 'Actions', keywords: 'portfolio niches verification' } as Command,
       ...(v.handle ? [{ id: 'public', label: 'View my public profile', href: `/cres/${v.handle}`, icon: 'users', group: 'Actions' } as Command] : []),
     ] : []),

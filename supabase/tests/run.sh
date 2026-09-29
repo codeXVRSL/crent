@@ -21,4 +21,7 @@ OK=$(cat /tmp/race1.out /tmp/race2.out | grep -c UNLOCK_OK)
 USED=$(psql -X -tA -d $DB -c "select unlocks_used from briefs b join race_ids r on r.brief_id = b.id")
 if [ "$OK" = "1" ] && [ "$USED" = "1" ]; then echo "✓ race: two simultaneous unlocks for the last slot → exactly one succeeds"
 else echo "FAIL: race produced $OK successful unlocks, unlocks_used=$USED"; cat /tmp/race1.out /tmp/race2.out; exit 1; fi
+out=$(psql -X -v ON_ERROR_STOP=1 -d $DB -f tests/30_creator_researcher_tools.sql 2>&1); status=$?
+echo "$out" | grep -E "✓|FAIL|ERROR|CONTEXT|LINE"
+if [ $status -ne 0 ] || echo "$out" | grep -q "FAIL"; then echo "DATABASE TESTS FAILED"; exit 1; fi
 echo "ALL DATABASE TESTS PASSED"

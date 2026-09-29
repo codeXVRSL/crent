@@ -63,3 +63,59 @@ CTA:
 
 CAPTION + HASHTAGS:
 `;
+
+export const IDEA_STAGES = [
+  { value: 'saved', label: 'To do' },
+  { value: 'scripting', label: 'Scripting' },
+  { value: 'filming', label: 'Filming' },
+  { value: 'posted', label: 'Posted' },
+  { value: 'skipped', label: 'Skipped' },
+] as const;
+export type IdeaStage = (typeof IDEA_STAGES)[number]['value'];
+export const stageLabel = (v: string) => IDEA_STAGES.find((s) => s.value === v)?.label ?? v;
+
+export const PASS_REASONS = [
+  { value: 'not_my_style', label: "Not my style" },
+  { value: 'seen_it', label: 'I already have this idea' },
+  { value: 'score_too_low', label: 'Score too low for me' },
+  { value: 'off_brief', label: "Doesn't match the brief" },
+  { value: 'too_hard_to_film', label: 'Too hard for me to film' },
+  { value: 'other', label: 'Something else' },
+] as const;
+export const passReasonLabel = (v: string) => PASS_REASONS.find((r) => r.value === v)?.label ?? v;
+
+/** Starting points for the brief form. Creators edit everything before posting. */
+export const BRIEF_TEMPLATES = [
+  {
+    id: 'talking-head',
+    label: 'Talking-head tips',
+    title: 'Talking-head tip videos for my audience',
+    description: 'I film solo, face to camera, usually 30–45 seconds. I want ideas where one strong, specific tip carries the video. My audience is beginners who want quick wins. Great ideas have a clear promise in the first line and something visual I can show on screen.',
+    must_include: 'Face on camera. Filmable alone at home or in one location.',
+    avoid: 'Skits with more than one person. Anything that needs expensive gear.',
+  },
+  {
+    id: 'storytime',
+    label: 'Storytime',
+    title: 'Storytime ideas that keep people to the end',
+    description: 'I want outlier story videos: a personal or client story with a twist, told in under 60 seconds. Show me formats where the hook sets up a question that only the ending answers. Include why the pacing worked.',
+    must_include: 'A clear open loop in the first 3 seconds.',
+    avoid: 'Stories that depend on a famous person or private information.',
+  },
+  {
+    id: 'tutorial',
+    label: 'Tutorial / how-to',
+    title: 'Step-by-step tutorial ideas that get saved',
+    description: 'I teach practical skills. I want tutorial formats that got far more saves and views than the channel usually gets: numbered steps, before/after results, screen recordings with voice-over. Tell me the exact step structure.',
+    must_include: 'A visible result at the start or end.',
+    avoid: 'Tutorials longer than 90 seconds.',
+  },
+  {
+    id: 'trend-remix',
+    label: 'Trend remix',
+    title: 'Recent trends I can remix for my niche',
+    description: 'Find formats trending in the last few weeks (sounds, edits, memes) that a creator outside the niche turned into an outlier, and explain how to adapt the format to my topic. Speed matters, so recent sources only.',
+    must_include: 'Source posted in the last 30 days.',
+    avoid: 'Sounds that are only licensed for personal accounts.',
+  },
+] as const;

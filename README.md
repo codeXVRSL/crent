@@ -33,9 +33,18 @@ Built with Next.js 15 (App Router, TypeScript), Tailwind CSS v4 and Supabase (Po
 | Proof screenshot on pitches (private, shown after unlock); CSV export of unlocked ideas | ✅ |
 | Admin "Run scheduled jobs now"; admin sign-up via `ADMIN_EMAILS` | ✅ |
 | Open Graph image, sitemap, robots, security headers | ✅ |
+| **Idea board** for creators: move unlocked ideas through To do → Scripting → Filming → Posted, group them into boards, set film dates, keep private notes | ✅ (tested) |
+| **Results loop**: creators log views after posting; researchers see the result (never the link or notes) and it builds their public track record | ✅ (tested) |
+| Pitch review tools: sort by score/date, filter by hook type, private shortlist, **pass with a reason** the researcher sees | ✅ (tested) |
+| Saved researchers and **invite to brief** (notifies the researcher, works outside their niches) | ✅ (tested) |
+| Researcher **swipe file**: save outliers before a brief exists, see which open briefs they fit, pitch with details prefilled | ✅ (tested) |
+| Researcher levels (New / Rising / Pro / Top rated), repeat-buyer count and results on profiles, directory filters and sorting | ✅ |
+| Brief templates and "Post a similar brief"; researcher feed filters (platform, minimum pay, sort, invited only) | ✅ |
+| Hook library search on unlocked ideas; "Copy as AI script prompt"; idea-board columns in the CSV export | ✅ |
 
 ### Not built yet (from the spec's later phases)
 Idea Packs, research retainers, featured briefs, researcher Pro subscription, referral codes, admin two-factor login, rate limiting, Sentry/PostHog, live (websocket) chat — chat refreshes every few seconds instead — and avatar uploads.
+See `docs/feature-research.md` for the research behind the creator and researcher tools, and the ranked list of what to build next.
 
 ---
 
@@ -68,7 +77,10 @@ In Supabase → SQL Editor, run these files in order:
 3. `supabase/migrations/20260927000003_rls.sql`
 4. `supabase/migrations/20260927000004_storage.sql`
 5. `supabase/migrations/20260928000005_feedback_and_proof.sql`
-6. `supabase/seed.sql`
+6. `supabase/migrations/20260929000006_creator_researcher_tools.sql`
+7. `supabase/seed.sql`
+
+Or run `supabase/setup_all.sql`, which is all of the above in one file (for a new, empty project). If your database already has migrations 1–5, run only file 6.
 
 ### 4. Configure Supabase Auth
 Supabase → Authentication → URL Configuration:
@@ -131,8 +143,8 @@ Log out and back in. You'll land on `/admin`. Use a **different** email for your
 
 ## Tests
 ```bash
-npm test                 # unit tests: fee math matches the database, outlier score
-npm run db:test          # database: whole marketplace flow, security rules, race condition
+npm test                 # unit tests: fee math matches the database, outlier score, researcher levels, AI prompt
+npm run db:test          # database: whole marketplace flow, security rules, race condition, idea board / invites / swipe file privacy
                          # needs a throwaway Postgres 15+: PGHOST=... PGPORT=... PGUSER=postgres npm run db:test
 npx playwright test      # browser test of the full flow; needs the app + Supabase running and
                          # SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY set (local Supabase recommended)

@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   Banknote, Bell, CreditCard, FileText, Flag, Gauge, Inbox, LayoutDashboard, LockOpen, Menu, MessageSquare,
-  Scale, Search, Settings, ShieldCheck, Sparkles, Users, Wallet, X,
+  Scale, Search, Settings, ShieldCheck, Sparkles, Users, Wallet, X, KanbanSquare, Heart, Bookmark,
 } from 'lucide-react';
 import { LogoMark } from './logo';
 
@@ -12,6 +12,7 @@ export const ICONS = {
   dashboard: LayoutDashboard, briefs: FileText, unlocks: LockOpen, messages: MessageSquare, billing: CreditCard,
   notifications: Bell, settings: Settings, pitches: Sparkles, wallet: Wallet, admin: Gauge, kyc: ShieldCheck,
   disputes: Scale, payouts: Banknote, flags: Flag, users: Users, inbox: Inbox,
+  board: KanbanSquare, favorites: Heart, swipe: Bookmark,
 } as const;
 export type IconKey = keyof typeof ICONS;
 export type NavItem = { href: string; label: string; icon: IconKey; badge?: number };

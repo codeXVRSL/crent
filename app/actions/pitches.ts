@@ -36,6 +36,8 @@ export async function submitPitch(_: ActionResult | null, fd: FormData): Promise
     const { error: pe } = await supabase.rpc('attach_pitch_proof', { p_pitch_id: pitchId, p_path: proofPath });
     if (pe) console.error('[attach proof]', pe.message);
   }
+  const swipeId = str(fd, 'swipe_id');
+  if (swipeId) await supabase.from('swipe_items').update({ status: 'pitched' }).eq('id', swipeId);
 
   const { data: brief } = await supabase.from('briefs').select('creator_id, title').eq('id', briefId).single();
   if (brief) {
@@ -64,4 +66,28 @@ export async function unlockPitch(_: ActionResult | null, fd: FormData): Promise
     revalidatePath(`/briefs/${p.brief_id}`);
   }
   return { ok: true, message: 'Unlocked.' };
+}
+
+export async function toggleShortlist(fd: FormData) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('set_pitch_shortlist', { p_pitch_id: str(fd, 'pitch_id'), p_on: str(fd, 'on') === '1' });
+  if (error) throw new Error(friendlyError(error));
+  revalidatePath(`/briefs/${str(fd, 'brief_id')}`);
+}
+
+export async function passPitch(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('pass_pitch', {
+    p_pitch_id: str(fd, 'pitch_id'), p_reason: str(fd, 'reason'), p_note: str(fd, 'note').slice(0, 400),
+  });
+  if (error) return { ok: false, message: friendlyError(error) };
+  // The pitch leaves the "To review" list, so confirm at the top of the page instead of on the card.
+  redirect(`/briefs/${str(fd, 'brief_id')}?passed=1`);
+}
+
+export async function unpassPitch(fd: FormData) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('unpass_pitch', { p_pitch_id: str(fd, 'pitch_id') });
+  if (error) throw new Error(friendlyError(error));
+  revalidatePath(`/briefs/${str(fd, 'brief_id')}`);
 }

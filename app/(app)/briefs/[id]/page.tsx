@@ -9,16 +9,28 @@ import { UnlockButton } from '@/components/unlock-button';
 import { DisputeToggle, ReviewForm } from '@/components/unlock-extras';
 import { ActionForm, SubmitButton } from '@/components/form';
 import { closeBrief, payBrief, cancelDraft } from '@/app/actions/briefs';
+import { toggleShortlist, unpassPitch } from '@/app/actions/pitches';
+import { PassToggle } from '@/components/pitch-review';
+import { FavoriteButton } from '@/components/favorite-button';
+import { InviteForm } from '@/components/invite-form';
+import { LevelBadge } from '@/components/track-record';
+import { Copy, Star } from 'lucide-react';
 import { startThread } from '@/app/actions/messages';
 import { formatMoney, unlockSplit } from '@/lib/money';
 import { signProofs } from '@/lib/proof';
-import { platformLabel } from '@/lib/constants';
+import { HOOK_CATEGORIES, passReasonLabel, platformLabel } from '@/lib/constants';
+import { formatMultiplier } from '@/lib/outlier';
+import { buildScriptPrompt } from '@/lib/script-prompt';
 
-type CreInfo = { id: string; display_name: string; handle: string; unlock_rate_pct: number | null; avg_rating: number | null; review_count: number };
+type CreInfo = {
+  id: string; display_name: string; handle: string; unlock_rate_pct: number | null; avg_rating: number | null; review_count: number;
+  unlocks_total: number; repeat_buyers: number; results_logged: number; avg_result_multiple: number | string | null;
+};
+type Feedback = { pitch_id: string; reason: string; note: string | null };
 
 export default async function BriefPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ paid?: string; payment?: string; pitched?: string }>;
+  searchParams: Promise<{ paid?: string; payment?: string; pitched?: string; passed?: string; sort?: string; hook?: string; show?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -79,40 +91,96 @@ export default async function BriefPage({ params, searchParams }: {
     ]);
     const ids = (pitches ?? []).map((p) => p.id);
     const creIds = [...new Set((pitches ?? []).map((p) => p.cre_id))];
-    const [{ data: secrets }, { data: cres }, { data: myReviews }] = await Promise.all([
+    const [{ data: secrets }, { data: cres }, { data: myReviews }, { data: shortlist }, { data: feedback }, { data: favs }, { data: invites }] = await Promise.all([
       ids.length ? supabase.from('pitch_secrets').select('*').in('pitch_id', ids) : Promise.resolve({ data: [] as (PitchSecret & { pitch_id: string })[] }),
-      creIds.length ? supabase.from('public_cres').select('id, display_name, handle, unlock_rate_pct, avg_rating, review_count').in('id', creIds) : Promise.resolve({ data: [] as CreInfo[] }),
+      creIds.length ? supabase.from('public_cres').select('id, display_name, handle, unlock_rate_pct, avg_rating, review_count, unlocks_total, repeat_buyers, results_logged, avg_result_multiple').in('id', creIds) : Promise.resolve({ data: [] as CreInfo[] }),
       supabase.from('reviews').select('unlock_id').eq('reviewer_id', v.id),
+      ids.length ? supabase.from('pitch_shortlist').select('pitch_id').in('pitch_id', ids) : Promise.resolve({ data: [] as { pitch_id: string }[] }),
+      ids.length ? supabase.from('pitch_feedback').select('pitch_id, reason, note').in('pitch_id', ids) : Promise.resolve({ data: [] as Feedback[] }),
+      supabase.from('favorite_cres').select('cre_id').eq('creator_id', v.id),
+      supabase.from('brief_invites').select('cre_id').eq('brief_id', id),
     ]);
+    const favIds = new Set((favs ?? []).map((f) => f.cre_id));
+    const shortlisted = new Set((shortlist ?? []).map((x) => x.pitch_id));
+    const passed = new Map(((feedback ?? []) as Feedback[]).map((f) => [f.pitch_id, f]));
+    const invitedIds = new Set((invites ?? []).map((i) => i.cre_id));
+    const favToInvite = brief.status === 'open' && isOwner && favIds.size
+      ? ((await supabase.from('public_cres').select('id, display_name, handle, accepting_work').in('id', [...favIds])).data ?? []) as { id: string; display_name: string; handle: string; accepting_work: boolean }[]
+      : [];
     const secretMap = new Map((secrets ?? []).map((s) => [s.pitch_id, s as PitchSecret]));
     const proofMap = await signProofs(supabase, (secrets ?? []) as { pitch_id: string; proof_path?: string | null }[]);
     const unlockMap = new Map((unlocks ?? []).map((u) => [u.pitch_id, u]));
     const creMap = new Map(((cres ?? []) as CreInfo[]).map((c) => [c.id, c]));
     const reviewed = new Set((myReviews ?? []).map((r) => r.unlock_id));
     const order: Record<string, number> = { submitted: 0, unlocked: 1, refunded: 2, expired: 3, withdrawn: 4 };
-    const sorted = [...(pitches ?? [])].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
-    const visible = sorted.filter((p) => p.status !== 'withdrawn');
+    const within = (a: { multiplier: number | string; submitted_at: string }, b: typeof a) =>
+      sp.sort === 'newest' ? b.submitted_at.localeCompare(a.submitted_at)
+        : sp.sort === 'oldest' ? a.submitted_at.localeCompare(b.submitted_at)
+        : Number(b.multiplier) - Number(a.multiplier);
+    const sorted = [...(pitches ?? [])].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || within(a, b));
+    const live = sorted.filter((p) => p.status !== 'withdrawn');
+    const passedCount = live.filter((p) => passed.has(p.id) && p.status === 'submitted').length;
+    const visible = live
+      .filter((p) => !sp.hook || p.hook_category === sp.hook)
+      .filter((p) => sp.show === 'passed' ? passed.has(p.id) && p.status === 'submitted'
+        : sp.show === 'shortlist' ? shortlisted.has(p.id)
+        : !(passed.has(p.id) && p.status === 'submitted'));
+    const hooksPresent = [...new Set(live.map((p) => p.hook_category))];
+    const qs = (patch: Record<string, string | undefined>) => {
+      const q = new URLSearchParams();
+      const merged = { sort: sp.sort, hook: sp.hook, show: sp.show, ...patch };
+      Object.entries(merged).forEach(([k, val]) => { if (val) q.set(k, val); });
+      const str = q.toString();
+      return `/briefs/${id}${str ? `?${str}` : ''}`;
+    };
+    const chip = (active: boolean) => `rounded-full px-2.5 py-1 text-[12px] ring-1 ring-inset ${active ? 'bg-accent text-accent-ink ring-accent' : 'ring-line hover:bg-surface-2'}`;
 
     return (
       <>
         <PageHeader eyebrow="Brief" title={brief.title}>
           <BriefStatus status={brief.status} />
+          {isOwner && <LinkButton href={`/briefs/new?from=${id}`} variant="secondary"><Copy className="size-4" aria-hidden="true" /> Post a similar brief</LinkButton>}
         </PageHeader>
 
         {sp.paid && brief.status !== 'open' && <div className="mb-4"><Notice>We&apos;re confirming your payment. This page updates when it&apos;s done. Refresh in a few seconds.</Notice></div>}
         {sp.paid && brief.status === 'open' && <div className="mb-4"><Notice tone="good">Payment received. Your brief is live and researchers have been notified.</Notice></div>}
         {sp.payment === 'failed' && <div className="mb-4"><Notice tone="bad">Your payment didn&apos;t go through. Your brief is saved. Try again below.</Notice></div>}
+        {sp.passed && <div className="mb-4"><Notice tone="good">Passed. The researcher sees your reason, which helps them pitch better next time. <Link href={`/briefs/${id}?show=passed`}>See passed pitches</Link></Notice></div>}
         {sp.payment === 'error' && <div className="mb-4"><Notice tone="bad">We couldn&apos;t start the payment. Your brief is saved as a draft. Try paying again below.</Notice></div>}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="grid min-w-0 content-start gap-6">
             {details}
             <section className="grid gap-4">
-              <h2 className="text-lg font-semibold tracking-tight">Pitches <span className="num text-muted">({visible.length})</span></h2>
+              <h2 className="text-lg font-semibold tracking-tight">Pitches <span className="num text-muted">({live.length})</span></h2>
+              {live.length > 1 && (
+                <div className="grid gap-2 text-sm">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="mr-1 text-xs text-muted">Show</span>
+                    <Link href={qs({ show: undefined })} className={chip(!sp.show)}>To review</Link>
+                    <Link href={qs({ show: 'shortlist' })} className={chip(sp.show === 'shortlist')}><Star className="inline size-3" aria-hidden="true" /> Shortlist <span className="num">{shortlisted.size}</span></Link>
+                    {passedCount > 0 && <Link href={qs({ show: 'passed' })} className={chip(sp.show === 'passed')}>Passed <span className="num">{passedCount}</span></Link>}
+                    <span className="ml-3 mr-1 text-xs text-muted">Sort</span>
+                    <Link href={qs({ sort: undefined })} className={chip(!sp.sort)}>Highest score</Link>
+                    <Link href={qs({ sort: 'newest' })} className={chip(sp.sort === 'newest')}>Newest</Link>
+                    <Link href={qs({ sort: 'oldest' })} className={chip(sp.sort === 'oldest')}>Oldest</Link>
+                  </div>
+                  {hooksPresent.length > 1 && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="mr-1 text-xs text-muted">Hook</span>
+                      <Link href={qs({ hook: undefined })} className={chip(!sp.hook)}>Any</Link>
+                      {HOOK_CATEGORIES.filter((h) => hooksPresent.includes(h.value)).map((h) => (
+                        <Link key={h.value} href={qs({ hook: h.value })} className={chip(sp.hook === h.value)}>{h.label}</Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               {visible.length === 0 ? (
+                live.length ? <EmptyState title="Nothing matches these filters" action={<LinkButton href={`/briefs/${id}`} variant="secondary">Clear filters</LinkButton>} /> : (
                 <EmptyState title="No pitches yet">
-                  {brief.status === 'open' ? 'Briefs usually get their first pitch within 24 hours. Researchers in your niche have been notified.' : 'Pitches appear here once the brief is live.'}
-                </EmptyState>
+                  {brief.status === 'open' ? 'Briefs usually get their first pitch within 24 hours. Researchers in your niche have been notified. Invite researchers you saved to get pitches faster.' : 'Pitches appear here once the brief is live.'}
+                </EmptyState>)
               ) : (
                 <div className="grid gap-4 2xl:grid-cols-2">
                   {visible.map((p) => {
@@ -120,11 +188,26 @@ export default async function BriefPage({ params, searchParams }: {
                     const u = unlockMap.get(p.id);
                     const c = creMap.get(p.cre_id);
                     const canDispute = u && u.status === 'held' && new Date(u.available_at) > new Date();
+                    const fb = passed.get(p.id);
+                    const starred = shortlisted.has(p.id);
                     return (
                       <PitchCard key={p.id} pitch={p as PitchPublic} secret={secret} proofUrl={proofMap.get(p.id)}
+                        scriptPrompt={secret && isOwner ? buildScriptPrompt({ ...(p as PitchPublic), ...secret }) : undefined}
                         priceLabel={p.status === 'submitted' ? price : undefined}
-                        byline={c ? <><Link href={`/cres/${c.handle}`} className="underline">@{c.handle}</Link> · Verified · {c.unlock_rate_pct ?? '–'}% unlock rate{c.avg_rating ? ` · ${c.avg_rating}★` : ''}</> : null}
+                        byline={c ? <span className="inline-flex flex-wrap items-center gap-1.5"><Link href={`/cres/${c.handle}`} className="underline">@{c.handle}</Link> <LevelBadge cre={c} /> {c.unlock_rate_pct ?? '–'}% unlock rate{c.avg_rating ? ` · ${c.avg_rating}★` : ''}{c.results_logged ? ` · ideas avg ${formatMultiplier(c.avg_result_multiple ?? 0)} for creators` : ''}{fb && p.status === 'submitted' ? ` · You passed: ${passReasonLabel(fb.reason)}` : ''}</span> : null}
                         actions={<>
+                          {isOwner && p.status === 'submitted' && (
+                            <form action={toggleShortlist}><input type="hidden" name="pitch_id" value={p.id} /><input type="hidden" name="brief_id" value={id} /><input type="hidden" name="on" value={starred ? '0' : '1'} />
+                              <button type="submit" aria-pressed={starred} aria-label={starred ? 'Remove from shortlist' : 'Add to shortlist'} title={starred ? 'Remove from shortlist' : 'Add to shortlist'}
+                                className={`grid size-9 place-items-center rounded-[10px] border ${starred ? 'border-warn/40 bg-warn-soft text-warn' : 'border-line text-muted hover:bg-surface-2'}`}>
+                                <Star className={`size-4 ${starred ? 'fill-current' : ''}`} aria-hidden="true" />
+                              </button></form>
+                          )}
+                          {isOwner && p.status === 'submitted' && !fb && brief.status === 'open' && <PassToggle pitchId={p.id} briefId={id} />}
+                          {isOwner && p.status === 'submitted' && fb && (
+                            <form action={unpassPitch}><input type="hidden" name="pitch_id" value={p.id} /><input type="hidden" name="brief_id" value={id} /><Button type="submit" variant="ghost">Undo pass</Button></form>
+                          )}
+                          {isOwner && c && <FavoriteButton creId={c.id} saved={favIds.has(c.id)} back={`/briefs/${id}`} compact />}
                           {p.status === 'submitted' && brief.status === 'open' && isOwner && left > 0 && <UnlockButton pitchId={p.id} priceLabel={price} leftAfter={left - 1} />}
                           {u && (u.status === 'disputed' || u.status === 'reversed') && <UnlockStatus status={u.status} />}
                           {secret && canDispute && isOwner && <DisputeToggle unlockId={u!.id} />}
@@ -181,6 +264,19 @@ export default async function BriefPage({ params, searchParams }: {
                 ))}
               </Card>
             )}
+            {favToInvite.length > 0 && (
+              <Card className="grid gap-3 text-sm">
+                <span className="label">Invite saved researchers</span>
+                <ul className="grid gap-3">
+                  {favToInvite.map((f) => (
+                    <li key={f.id} className="grid gap-1.5">
+                      <Link href={`/cres/${f.handle}`} className="font-medium hover:text-accent">{f.display_name} <span className="text-xs text-muted">@{f.handle}</span></Link>
+                      <InviteForm creId={f.id} briefs={[{ id, title: brief.title }]} invited={invitedIds.has(f.id) ? [id] : []} />
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
             <p className="text-xs text-muted">Created {fmtDate(brief.created_at)} · Deadline {fmtDate(brief.deadline_at, true)}</p>
           </aside>
         </div>
@@ -194,7 +290,12 @@ export default async function BriefPage({ params, searchParams }: {
     supabase.from('pitches').select('*').eq('brief_id', id).eq('cre_id', v.id).order('submitted_at'),
   ]);
   const myIds = (mine ?? []).map((p) => p.id);
-  const { data: mySecrets } = myIds.length ? await supabase.from('pitch_secrets').select('*').in('pitch_id', myIds) : { data: [] };
+  const [{ data: mySecrets }, { data: myFeedback }, { data: invite }] = await Promise.all([
+    myIds.length ? supabase.from('pitch_secrets').select('*').in('pitch_id', myIds) : Promise.resolve({ data: [] }),
+    myIds.length ? supabase.from('pitch_feedback').select('pitch_id, reason, note').in('pitch_id', myIds) : Promise.resolve({ data: [] as Feedback[] }),
+    supabase.from('brief_invites').select('invited_at').eq('brief_id', id).eq('cre_id', v.id).maybeSingle(),
+  ]);
+  const fbMap = new Map(((myFeedback ?? []) as Feedback[]).map((f) => [f.pitch_id, f]));
   const sMap = new Map((mySecrets ?? []).map((s) => [s.pitch_id, s as PitchSecret]));
   const myProofs = await signProofs(supabase, (mySecrets ?? []) as { pitch_id: string; proof_path?: string | null }[]);
   const active = (mine ?? []).filter((p) => p.status !== 'withdrawn').length;
@@ -207,6 +308,7 @@ export default async function BriefPage({ params, searchParams }: {
         {canPitch && <LinkButton href={`/briefs/${id}/pitch`}>Pitch an idea</LinkButton>}
       </PageHeader>
       {sp.pitched && <div className="mb-4"><Notice tone="good">Pitch sent. The creator has been notified.</Notice></div>}
+      {invite && brief.status === 'open' && <div className="mb-4"><Notice tone="accent">The creator invited you to pitch on this brief.</Notice></div>}
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <div className="grid content-start gap-6">
           {details}
@@ -214,7 +316,15 @@ export default async function BriefPage({ params, searchParams }: {
             <h2 className="text-lg font-semibold tracking-tight">Your pitches on this brief <span className="num text-muted">({active} of 5)</span></h2>
             {!mine?.length ? <p className="text-muted">You haven&apos;t pitched on this brief yet.</p> : (
               <div className="grid gap-4 xl:grid-cols-2">
-                {mine.map((p) => <PitchCard key={p.id} pitch={p as PitchPublic} secret={sMap.get(p.id)} proofUrl={myProofs.get(p.id)} />)}
+                {mine.map((p) => {
+                  const fb = fbMap.get(p.id);
+                  return (
+                    <PitchCard key={p.id} pitch={p as PitchPublic} secret={sMap.get(p.id)} proofUrl={myProofs.get(p.id)}
+                      byline={fb && p.status === 'submitted' ? (
+                        <span className="grid gap-0.5"><span className="font-medium text-ink-2">Creator passed: {passReasonLabel(fb.reason)}</span>{fb.note && <span>“{fb.note}”</span>}</span>
+                      ) : undefined} />
+                  );
+                })}
               </div>
             )}
           </section>

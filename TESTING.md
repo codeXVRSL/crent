@@ -48,7 +48,21 @@ Gmail delivers `you+anything@gmail.com` to `you@gmail.com`, so you don't need ex
 2. **Jamaica:** **Wallet** → add a GCash number (any 11-digit test number, e.g. 09170000000) → **Withdraw**.
 3. **Save (admin):** Admin → **Payouts** → approve → mark as sent.
 
-## 7 · Try to break it
+## 7 · New tools for creators and researchers
+**Creator (Save):**
+1. **Idea board**: every unlocked idea starts in "To do". Move it along with the arrow buttons, open **Details** to set a board name (e.g. "March batch") and a film date, then mark it **Posted** and enter the views it got and your usual views.
+2. Open a brief with several pitches: sort by score, filter by hook type, **star** a pitch to shortlist it, and **Pass** on one with a reason.
+3. On a pitch (or the researcher's public profile) tap **Save researcher**. Then go to **Saved researchers** and **Invite to pitch** on a live brief.
+4. **Post a similar brief** from a brief page, or pick a template on the new-brief form.
+5. **Unlocked ideas**: search for a word from a hook, and try **Copy as AI script prompt**.
+
+**Researcher (Jamaica):**
+1. **Swipe file** → save a video you found. If an open brief fits it, click **Pitch this**: the form opens with the link, views and date filled in.
+2. **My pitches** shows the creator's result once Save logs views, and the reason if Save passed.
+3. **Open briefs**: try the platform / pay / sort filters and **Invited only**.
+4. Check your public profile: level badge and "Track record with creators".
+
+## 8 · Try to break it
 - Pitch the **same video twice** (even with a different URL format). It should be blocked.
 - Put an email or @handle in a pitch or a message.
 - Open a **dispute** on an unlocked idea as the creator, reply as the researcher, and decide it as admin.
