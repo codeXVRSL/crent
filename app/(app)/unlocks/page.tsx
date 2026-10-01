@@ -27,14 +27,14 @@ export default async function Unlocks({ searchParams }: { searchParams: Promise<
     ? await Promise.all([
         supabase.from('pitches').select('*').in('id', ids),
         supabase.from('pitch_secrets').select('*').in('pitch_id', ids),
-        supabase.from('reviews').select('unlock_id').eq('reviewer_id', v.id),
+        supabase.from('reviews').select('unlock_id, rating').eq('reviewer_id', v.id),
         supabase.from('idea_tracking').select('unlock_id, stage, result_multiple').eq('creator_id', v.id),
       ])
     : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }];
   const pMap = new Map((pitches ?? []).map((p) => [p.id, p]));
   const sMap = new Map((secrets ?? []).map((s) => [s.pitch_id, s as PitchSecret]));
   const tMap = new Map((tracking ?? []).map((t) => [t.unlock_id, t]));
-  const reviewed = new Set((reviews ?? []).map((r) => r.unlock_id));
+  const reviewed = new Map((reviews ?? []).map((r) => [r.unlock_id, r.rating as number]));
   const proofMap = await signProofs(supabase, (secrets ?? []) as { pitch_id: string; proof_path?: string | null }[]);
 
   const q = (sp.q ?? '').trim().toLowerCase();
@@ -98,7 +98,7 @@ export default async function Unlocks({ searchParams }: { searchParams: Promise<
                 actions={<>
                   {u.status === 'disputed' && <UnlockStatus status="disputed" />}
                   {canDispute && <DisputeToggle unlockId={u.id} />}
-                  {!reviewed.has(u.id) && <ReviewForm unlockId={u.id} label="Rate this researcher" />}
+                  {reviewed.has(u.id) ? <Pill tone="good">You rated {reviewed.get(u.id)}★</Pill> : <ReviewForm unlockId={u.id} label="Rate this researcher" />}
                 </>}
               />
             );

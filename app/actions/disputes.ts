@@ -27,7 +27,8 @@ export async function respondDispute(_: ActionResult | null, fd: FormData): Prom
   const { error } = await supabase.rpc('respond_dispute', { p_dispute_id: id, p_response: response });
   if (error) return { ok: false, message: friendlyError(error) };
   revalidatePath(`/disputes/${id}`);
-  return { ok: true, message: 'Sent. Our team will review both sides.' };
+  // The reply form is replaced by the reply itself, so confirm at the top of the page.
+  redirect(`/disputes/${id}?sent=1`);
 }
 
 export async function submitReview(_: ActionResult | null, fd: FormData): Promise<ActionResult> {

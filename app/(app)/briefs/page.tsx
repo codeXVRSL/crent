@@ -15,13 +15,15 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<F
   const supabase = await createClient();
 
   if (v.role === 'creator') {
-    const { data: briefs } = await supabase.from('briefs')
-      .select('id, title, status, platform, price_per_idea_cents, currency, max_unlocks, unlocks_used, deadline_at, created_at, pitches(count)')
+    const { data: allBriefs } = await supabase.from('briefs')
+      .select('id, title, status, close_reason, platform, price_per_idea_cents, currency, max_unlocks, unlocks_used, deadline_at, created_at, pitches(count)')
       .eq('creator_id', v.id).order('created_at', { ascending: false });
+    // A deleted draft is marked cancelled (never paid, nothing to refund). Nobody needs to see it again.
+    const visibleBriefs = (allBriefs ?? []).filter((b) => !(b.status === 'cancelled' && b.unlocks_used === 0 && b.close_reason === 'cancelled_unpaid'));
     return (
       <>
         <PageHeader title="My briefs"><LinkButton href="/briefs/new">Post a brief</LinkButton></PageHeader>
-        {!briefs?.length ? (
+        {!visibleBriefs.length ? (
           <EmptyState title="No briefs yet" action={<LinkButton href="/briefs/new">Post a brief</LinkButton>}>
             Post your first brief and get pitches from verified researchers, usually within a day.
           </EmptyState>
@@ -33,7 +35,7 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<F
                 <th className="label p-3">Unlocks</th><th className="label p-3">Price</th><th className="label p-3">Deadline</th>
               </tr></thead>
               <tbody>
-                {briefs.map((b) => (
+                {visibleBriefs.map((b) => (
                   <tr key={b.id} className="border-b border-line last:border-0">
                     <td className="p-3"><Link href={`/briefs/${b.id}`} className="font-semibold hover:text-accent">{b.title}</Link><div className="text-xs text-muted">{platformLabel(b.platform)}</div></td>
                     <td className="p-3"><BriefStatus status={b.status} /></td>

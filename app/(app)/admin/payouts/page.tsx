@@ -1,15 +1,16 @@
 import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { ActionForm, SubmitButton } from '@/components/form';
-import { Card, EmptyState, Input, PageHeader, Pill } from '@/components/ui';
+import { Card, EmptyState, Input, Notice, PageHeader, Pill } from '@/components/ui';
 import { fmtDate } from '@/components/status';
 import { approvePayout, markRefundDone, retryRefund } from '@/app/actions/admin';
 import { formatMoney } from '@/lib/money';
 
 export const metadata = { title: 'Payouts & refunds' };
 
-export default async function AdminPayouts() {
+export default async function AdminPayouts({ searchParams }: { searchParams: Promise<{ done?: string }> }) {
   await requireViewer(['admin']);
+  const { done } = await searchParams;
   const supabase = await createClient();
   const [{ data: payouts }, { data: refunds }] = await Promise.all([
     supabase.from('payouts').select('*, payout_methods(kind, bank_code, account_name, account_last4)').order('requested_at', { ascending: false }).limit(100),
@@ -24,6 +25,9 @@ export default async function AdminPayouts() {
   return (
     <>
       <PageHeader eyebrow="Admin" title="Payouts & refunds" />
+      {done === 'sent' && <div className="mb-4"><Notice tone="good">Payout sent. It shows under History and in the researcher&apos;s wallet.</Notice></div>}
+      {done === 'pending' && <div className="mb-4"><Notice>Payout submitted; waiting for the provider to confirm.</Notice></div>}
+      {done === 'failed' && <div className="mb-4"><Notice tone="bad">The provider rejected the payout. See the failure reason on the card and retry.</Notice></div>}
       <section className="grid gap-3">
         <h2 className="text-lg font-semibold tracking-tight">Payouts to approve</h2>
         {!todo.length ? <EmptyState title="Nothing to approve" /> : todo.map((p) => {

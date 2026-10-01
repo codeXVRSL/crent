@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { ActionForm, SubmitButton } from '@/components/form';
-import { Card, PageHeader, Pill, Textarea } from '@/components/ui';
+import { Card, Notice, PageHeader, Pill, Textarea } from '@/components/ui';
 import { fmtDate } from '@/components/status';
 import { respondDispute } from '@/app/actions/disputes';
 import { resolveDispute } from '@/app/actions/admin';
@@ -15,8 +15,9 @@ const statusText: Record<string, string> = {
   resolved_creator: 'Resolved: creator refunded', resolved_cre: 'Resolved: researcher keeps the earning',
 };
 
-export default async function DisputePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DisputePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ sent?: string; resolved?: string }> }) {
   const { id } = await params;
+  const { sent, resolved } = await searchParams;
   const v = await requireViewer();
   const supabase = await createClient();
   const { data: d } = await supabase.from('disputes').select('*, unlocks(id, pitch_id, brief_id, gross_cents, currency, creator_id, cre_id)').eq('id', id).maybeSingle();
@@ -28,6 +29,8 @@ export default async function DisputePage({ params }: { params: Promise<{ id: st
     <>
       <PageHeader eyebrow="Dispute" title={reason}><Pill tone={open ? 'warn' : 'neutral'}>{statusText[d.status]}</Pill></PageHeader>
       <div className="grid max-w-3xl gap-4">
+        {sent && <Notice tone="good">Sent. Our team will review both sides and decide within a few days.</Notice>}
+        {resolved && <Notice tone="good">Resolved. Both sides have been notified{d.status === 'resolved_creator' ? ' and the refund is on its way' : ''}.</Notice>}
         <Card className="grid gap-2 text-sm">
           <span className="label">Creator · {fmtDate(d.opened_at, true)}</span>
           <p className="whitespace-pre-wrap">{d.details}</p>

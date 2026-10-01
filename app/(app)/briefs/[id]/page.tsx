@@ -94,7 +94,7 @@ export default async function BriefPage({ params, searchParams }: {
     const [{ data: secrets }, { data: cres }, { data: myReviews }, { data: shortlist }, { data: feedback }, { data: favs }, { data: invites }] = await Promise.all([
       ids.length ? supabase.from('pitch_secrets').select('*').in('pitch_id', ids) : Promise.resolve({ data: [] as (PitchSecret & { pitch_id: string })[] }),
       creIds.length ? supabase.from('public_cres').select('id, display_name, handle, unlock_rate_pct, avg_rating, review_count, unlocks_total, repeat_buyers, results_logged, avg_result_multiple').in('id', creIds) : Promise.resolve({ data: [] as CreInfo[] }),
-      supabase.from('reviews').select('unlock_id').eq('reviewer_id', v.id),
+      supabase.from('reviews').select('unlock_id, rating').eq('reviewer_id', v.id),
       ids.length ? supabase.from('pitch_shortlist').select('pitch_id').in('pitch_id', ids) : Promise.resolve({ data: [] as { pitch_id: string }[] }),
       ids.length ? supabase.from('pitch_feedback').select('pitch_id, reason, note').in('pitch_id', ids) : Promise.resolve({ data: [] as Feedback[] }),
       supabase.from('favorite_cres').select('cre_id').eq('creator_id', v.id),
@@ -111,7 +111,7 @@ export default async function BriefPage({ params, searchParams }: {
     const proofMap = await signProofs(supabase, (secrets ?? []) as { pitch_id: string; proof_path?: string | null }[]);
     const unlockMap = new Map((unlocks ?? []).map((u) => [u.pitch_id, u]));
     const creMap = new Map(((cres ?? []) as CreInfo[]).map((c) => [c.id, c]));
-    const reviewed = new Set((myReviews ?? []).map((r) => r.unlock_id));
+    const reviewed = new Map((myReviews ?? []).map((r) => [r.unlock_id, r.rating as number]));
     const order: Record<string, number> = { submitted: 0, unlocked: 1, refunded: 2, expired: 3, withdrawn: 4 };
     const within = (a: { multiplier: number | string; submitted_at: string }, b: typeof a) =>
       sp.sort === 'newest' ? b.submitted_at.localeCompare(a.submitted_at)
@@ -211,7 +211,7 @@ export default async function BriefPage({ params, searchParams }: {
                           {p.status === 'submitted' && brief.status === 'open' && isOwner && left > 0 && <UnlockButton pitchId={p.id} priceLabel={price} leftAfter={left - 1} />}
                           {u && (u.status === 'disputed' || u.status === 'reversed') && <UnlockStatus status={u.status} />}
                           {secret && canDispute && isOwner && <DisputeToggle unlockId={u!.id} />}
-                          {secret && u && !reviewed.has(u.id) && isOwner && <ReviewForm unlockId={u.id} label="Rate this researcher" />}
+                          {secret && u && isOwner && (reviewed.has(u.id) ? <Pill tone="good">You rated {reviewed.get(u.id)}★</Pill> : <ReviewForm unlockId={u.id} label="Rate this researcher" />)}
                           {isOwner && (
                             <form action={startThread}><input type="hidden" name="brief_id" value={id} /><input type="hidden" name="cre_id" value={p.cre_id} />
                               <Button type="submit" variant="ghost">Message</Button></form>

@@ -1,4 +1,5 @@
 'use server';
+import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -20,7 +21,8 @@ export async function reviewKyc(_: ActionResult | null, fd: FormData): Promise<A
   await emailUser(userId, approve ? "You're verified on Outlier Desk" : 'Your Outlier Desk verification needs changes',
     approve ? `You can now pitch on open briefs: ${env.appUrl}/briefs` : `Reason: ${str(fd, 'reason')}\nUpdate it here: ${env.appUrl}/onboarding/cre`);
   revalidatePath('/admin/kyc');
-  return { ok: true, message: approve ? 'Approved.' : 'Rejected with reason.' };
+  // The card leaves the queue, so confirm at the top of the page instead of on the card.
+  redirect(`/admin/kyc?done=${approve ? 'approved' : 'rejected'}`);
 }
 
 export async function approvePayout(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
@@ -31,13 +33,15 @@ export async function approvePayout(_: ActionResult | null, fd: FormData): Promi
   const supabase = await createClient();
   const { error } = await supabase.rpc('approve_payout', { p_payout_id: id, p_fx_rate: rate });
   if (error) return { ok: false, message: friendlyError(error) };
+  let status: Awaited<ReturnType<typeof sendPayout>>;
   try {
-    const status = await sendPayout(id);
-    revalidatePath('/admin/payouts');
-    return { ok: true, message: status === 'succeeded' ? 'Payout sent.' : status === 'pending' ? 'Payout submitted; waiting for the provider.' : 'Provider rejected the payout. See the failure reason.' };
+    status = await sendPayout(id);
   } catch (e) {
     return { ok: false, message: `Couldn't send the payout: ${(e as Error).message}` };
   }
+  revalidatePath('/admin/payouts');
+  // The card leaves the queue, so confirm at the top of the page instead of on the card.
+  redirect(`/admin/payouts?done=${status === 'succeeded' ? 'sent' : status === 'pending' ? 'pending' : 'failed'}`);
 }
 
 export async function resolveDispute(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
@@ -50,7 +54,8 @@ export async function resolveDispute(_: ActionResult | null, fd: FormData): Prom
   if (error) return { ok: false, message: friendlyError(error) };
   await processPendingRefunds().catch((e) => console.error('[refunds]', e));
   revalidatePath(`/disputes/${id}`);
-  return { ok: true, message: 'Resolved.' };
+  // The decision form goes away once resolved, so confirm at the top of the page.
+  redirect(`/disputes/${id}?resolved=1`);
 }
 
 /** For refunds the provider couldn't process automatically: admin refunds by hand, then records it here. */

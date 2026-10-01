@@ -164,6 +164,10 @@ npm run db:test          # database: whole marketplace flow, security rules, rac
 npx playwright test      # browser test of the full flow; needs the app + Supabase running and
                          # SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY set (local Supabase recommended)
 ```
+node tests/e2e/exploratory.mjs   # 34-step exploratory run through everything TESTING.md asks a human to try
+                                 # (ID upload, disputes, feedback, suspension, every admin page, phone sweep);
+                                 # same requirements as the Playwright tests, plus `npm run seed:demo` first
+
 The browser test skips the ID-photo upload (it writes the verification row directly) and makes one account admin through the API.
 
 ## Design system

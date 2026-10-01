@@ -19,7 +19,7 @@ Run `npm run seed:demo` once against the test database to get a ready-made creat
 
 ## 1 · Set up the admin (Save, once)
 1. Sign up with your admin email. On the "How will you use Outlier Desk?" screen, choose **Continue as admin**.
-2. Go to **Admin → Settings** and set **Hold period** to **0 hours**. Earnings then become withdrawable as soon as the jobs run, instead of after 72 hours.
+2. Leave **Hold period** at 72 hours for now. The hold is also the dispute window, so set it to **0 hours** (Admin → Settings) only when you reach step 6 and want to test payouts; after that, disputes can't be opened on new unlocks.
 
 ## 2 · Researcher gets verified (Jamaica)
 1. Sign up → choose **I'm a researcher**.
@@ -47,7 +47,7 @@ Run `npm run seed:demo` once against the test database to get a ready-made creat
 4. Optional: **Close brief** to see the unused budget refunded.
 
 ## 6 · Researcher gets paid (Jamaica + Save)
-1. **Save (admin):** Admin → **Run scheduled jobs now**. This releases the held earnings.
+1. **Save (admin):** Admin → **Settings** → set **Hold period** to 0 and **Minimum withdrawal** to $1 (one $8 unlock earns $7.20, under the $10 default). Then Admin → **Run scheduled jobs now** to release the held earnings.
 2. **Jamaica:** **Wallet** → add a GCash number (any 11-digit test number, e.g. 09170000000) → **Withdraw**.
 3. **Save (admin):** Admin → **Payouts** → approve → mark as sent.
 

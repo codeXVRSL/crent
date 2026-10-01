@@ -1,7 +1,7 @@
 import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { ActionForm } from '@/components/form';
-import { Card, EmptyState, Input, PageHeader, Pill } from '@/components/ui';
+import { Card, EmptyState, Input, Notice, PageHeader, Pill } from '@/components/ui';
 import { fmtDate } from '@/components/status';
 import { reviewKyc } from '@/app/actions/admin';
 import { ID_TYPES, platformLabel } from '@/lib/constants';
@@ -9,8 +9,9 @@ import { compactViews, formatMultiplier } from '@/lib/outlier';
 
 export const metadata = { title: 'Verifications' };
 
-export default async function AdminKyc() {
+export default async function AdminKyc({ searchParams }: { searchParams: Promise<{ done?: string }> }) {
   await requireViewer(['admin']);
+  const { done } = await searchParams;
   const supabase = await createClient();
   const { data: pending } = await supabase.from('cre_profiles').select('user_id, headline, platforms').eq('kyc_status', 'pending');
   const ids = (pending ?? []).map((p) => p.user_id);
@@ -32,6 +33,8 @@ export default async function AdminKyc() {
   return (
     <>
       <PageHeader eyebrow="Admin" title="Verifications" description="Oldest first. Image links expire after 5 minutes; reload to refresh them." />
+      {done === 'approved' && <div className="mb-4"><Notice tone="good">Approved. The researcher has been notified and can pitch now.</Notice></div>}
+      {done === 'rejected' && <div className="mb-4"><Notice tone="good">Rejected with your reason. The researcher has been told what to fix.</Notice></div>}
       {items.length === 0 ? <EmptyState title="No verifications waiting" /> : (
         <div className="grid gap-6">
           {items.map(({ s, front, selfie }) => {
