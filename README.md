@@ -104,6 +104,21 @@ npm run dev
 ```
 Open http://localhost:3000.
 
+### 6b. Demo accounts (optional, recommended for testing)
+```bash
+npm run seed:demo
+```
+Creates four ready-to-use accounts (password `OutlierDemo2026!` for all, change it with `DEMO_PASSWORD=...`):
+
+| Account | Email | What it has |
+|---|---|---|
+| Creator | `demo.creator@example.com` | A live, paid brief with 3 locked pitches waiting to be unlocked |
+| Researcher | `demo.researcher@example.com` | Verified, finance niches, 3 portfolio finds, a swipe-file item |
+| Researcher 2 | `demo.researcher2@example.com` | Verified, fitness niches (use it to test invites) |
+| Admin | `demo.admin@example.com` | Full admin panel |
+
+Safe to run again: it resets the passwords and adds the sample data only once. Only use it on a local or test project.
+
 ### 7. Make yourself admin
 Sign up once with your own email, then in the Supabase SQL Editor:
 ```sql

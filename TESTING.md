@@ -14,6 +14,9 @@ Each account has one role, so use a different email for each.
 
 Gmail delivers `you+anything@gmail.com` to `you@gmail.com`, so you don't need extra inboxes.
 
+## Shortcut: demo accounts
+Run `npm run seed:demo` once against the test database to get a ready-made creator, two verified researchers and an admin (password `OutlierDemo2026!`). The creator already has a live brief with three locked pitches. See the README for the emails. You can skip steps 1–4 below and go straight to unlocking.
+
 ## 1 · Set up the admin (Save, once)
 1. Sign up with your admin email. On the "How will you use Outlier Desk?" screen, choose **Continue as admin**.
 2. Go to **Admin → Settings** and set **Hold period** to **0 hours**. Earnings then become withdrawable as soon as the jobs run, instead of after 72 hours.
