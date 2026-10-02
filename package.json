@@ -6,11 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "setup": "node scripts/setup.mjs",
+    "seed:demo": "node scripts/seed-demo.mjs",
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "db:test": "bash supabase/tests/run.sh",
-    "seed:demo": "node scripts/seed-demo.mjs"
+    "db:test": "bash supabase/tests/run.sh"
   },
   "dependencies": {
     "@fontsource/instrument-serif": "^5.3.0",

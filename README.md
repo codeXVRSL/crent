@@ -50,6 +50,24 @@ See `docs/feature-research.md` for the research behind the creator and researche
 
 ## Run it locally
 
+### The short way (about 10 minutes)
+1. Install [Node.js 20+](https://nodejs.org) and [Git](https://git-scm.com).
+2. Create a free project at [supabase.com](https://supabase.com) (any name, any region, save the database password).
+3. In a terminal:
+   ```bash
+   git clone https://github.com/codeXVRSL/crent.git
+   cd crent
+   git checkout claude/hopeful-edison-rfuv5k
+   npm install
+   npm run setup      # asks for your 3 Supabase keys, sets everything up, creates demo accounts
+   npm run dev
+   ```
+4. Open http://localhost:3000 and log in with a demo account (password `OutlierDemo2026!`): `demo.creator@example.com`, `demo.researcher@example.com` or `demo.admin@example.com`.
+
+`npm run setup` tells you if the database still needs the one-time SQL file (Supabase → SQL Editor → paste `supabase/setup_all.sql` → Run), then run it again. The longer explanation of each step follows.
+
+### The long way
+
 ### 1. Requirements
 - Node.js 20+
 - A Supabase project (free tier is fine) — or the Supabase CLI with Docker for a fully local setup
