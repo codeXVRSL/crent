@@ -24,4 +24,7 @@ else echo "FAIL: race produced $OK successful unlocks, unlocks_used=$USED"; cat 
 out=$(psql -X -v ON_ERROR_STOP=1 -d $DB -f tests/30_creator_researcher_tools.sql 2>&1); status=$?
 echo "$out" | grep -E "✓|FAIL|ERROR|CONTEXT|LINE"
 if [ $status -ne 0 ] || echo "$out" | grep -q "FAIL"; then echo "DATABASE TESTS FAILED"; exit 1; fi
+out=$(psql -X -v ON_ERROR_STOP=1 -d $DB -f tests/40_rate_limits_and_closure.sql 2>&1); status=$?
+echo "$out" | grep -E "✓|FAIL|ERROR|CONTEXT|LINE"
+if [ $status -ne 0 ] || echo "$out" | grep -q "FAIL"; then echo "DATABASE TESTS FAILED"; exit 1; fi
 echo "ALL DATABASE TESTS PASSED"

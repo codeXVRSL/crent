@@ -48,6 +48,11 @@ const MESSAGES: Record<string, string> = {
   ALREADY_REVIEWED: "You've already reviewed this.",
   CRE_NOT_FOUND: "We couldn't find that researcher, or they're not verified yet.",
   TOO_MANY_INVITES: 'You can invite up to 25 researchers to one brief.',
+  ADMIN_CANNOT_CLOSE: 'Admin accounts are closed by another admin.',
+  EARNINGS_PENDING: 'You still have earnings on hold or available. Withdraw them first, then close the account.',
+  PAYOUT_PENDING: 'A withdrawal is still being processed. Close the account once it has been paid.',
+  BRIEF_OPEN: 'You still have a live or unpaid brief. Close it (unused budget is refunded) and wait for the refund, then try again.',
+  DISPUTE_OPEN: 'An open dispute involves this account. It can be closed once the dispute is resolved.',
 };
 
 export function friendlyError(err: unknown): string {

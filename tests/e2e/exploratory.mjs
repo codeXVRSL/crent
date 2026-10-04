@@ -5,6 +5,7 @@
 // Needs the app on localhost:3000 and the demo accounts (npm run seed:demo). Creates fresh accounts each run.
 import { chromium } from '@playwright/test';
 import { writeFileSync, mkdirSync } from 'node:fs';
+import { enrollAdmin, passMfa, totp } from './mfa.mjs';
 
 const BASE = 'http://localhost:3000';
 const SB = process.env.SUPABASE_URL;
@@ -58,18 +59,21 @@ async function signUp(name, as) {
   const [u] = await rest(`profiles?select=id&display_name=eq.${name}&order=created_at.desc&limit=1`);
   return { page: p, id: u.id, email: `${name.toLowerCase()}-${run}@example.com`, name };
 }
-async function login(email, pw = PW, opts = {}) {
+async function login(email, pw = PW, opts = {}, mfaSecret = null) {
   const p = await newPage(opts);
   await p.goto(`${BASE}/login`);
   await p.getByLabel('Email').fill(email); await p.getByLabel('Password').fill(pw);
   await p.getByRole('button', { name: /log in|sign in/i }).click();
-  await p.waitForURL(/dashboard|admin|onboarding|suspended/, { timeout: 15000 });
+  await p.waitForURL(/dashboard|admin|onboarding|suspended|mfa/, { timeout: 15000 });
+  if (p.url().includes('/mfa')) { expect(mfaSecret, 'login hit the two-factor step without a secret'); await passMfa(p, mfaSecret); }
   return p;
 }
 // A small real PNG for uploads.
 const png = `${OUT}/upload.png`;
 { const p = await newPage({ viewport: { width: 300, height: 200 } }); await p.setContent('<body style="background:#1faa8c;font:40px sans-serif;color:#fff;padding:30px">TEST ID 1234</body>'); await p.screenshot({ path: png }); await p.context().close(); }
 
+// Test runs create many accounts from one address, which the sign-up limit would refuse; start with a clean slate.
+await rest('rate_limits?key=like.*', { method: 'DELETE' });
 const daysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
 let creator, cre, admin, briefUrl, briefId, disputeId;
 
@@ -153,7 +157,10 @@ await step('unverified researcher cannot see briefs or pitch', async () => {
 await step('admin reviews ID photos, rejects with reason, researcher sees it, resubmits, admin approves', async () => {
   admin = await signUp(`Ava${run}`, '');
   await rest(`profiles?id=eq.${admin.id}`, { method: 'PATCH', body: JSON.stringify({ role: 'admin' }) });
-  const p = admin.page; await p.goto(`${BASE}/admin/kyc`);
+  const p = admin.page;
+  await p.goto(`${BASE}/admin/kyc`); expect(p.url().includes('/mfa/setup'), 'admin reached the panel without two-factor setup: ' + p.url());
+  admin.secret = await enrollAdmin(p, BASE);
+  await p.goto(`${BASE}/admin/kyc`);
   const card = p.locator('[data-card]', { hasText: `@rina_${run}`.slice(0, 25) }).last();
   await card.waitFor();
   const imgs = card.locator('img'); expect(await imgs.count() === 2, 'ID photos not shown to admin: ' + await imgs.count());
@@ -173,6 +180,17 @@ await step('admin reviews ID photos, rejects with reason, researcher sees it, re
   const card2 = p.locator('[data-card]', { hasText: `@rina_${run}`.slice(0, 25) }).filter({ has: p.getByRole('button', { name: 'Approve' }) }).last();
   await card2.getByRole('button', { name: 'Approve' }).click();
   await visible(p, /^Approved\./);
+});
+await step('admin two-factor: wrong code refused, fresh login asks for a code, right code opens the panel, non-admins skip it', async () => {
+  const p = await newPage(); await p.goto(`${BASE}/login`);
+  await p.getByLabel('Email').fill(admin.email); await p.getByLabel('Password').fill(PW); await p.getByRole('button', { name: 'Log in' }).click();
+  await p.waitForURL(/\/mfa/, { timeout: 15000 });
+  await p.goto(`${BASE}/admin/kyc`); expect(p.url().includes('/mfa'), 'admin page opened before the code was entered: ' + p.url());
+  await p.getByLabel('6-digit code').fill('000000'); await p.getByRole('button', { name: 'Continue' }).click(); await visible(p, /did not match/);
+  await p.getByLabel('6-digit code').fill(totp(admin.secret)); await p.getByRole('button', { name: 'Continue' }).click();
+  await p.waitForURL(/\/admin/, { timeout: 15000 }); await visible(p, 'Overview');
+  await p.context().close();
+  const c = cre.page; await c.goto(`${BASE}/mfa/setup`); expect(!c.url().includes('/mfa'), 'researcher was shown the admin two-factor page');
 });
 await step('admin settings: hold period to 0 and back; validation on bad values', async () => {
   const p = admin.page; await p.goto(`${BASE}/admin/settings`);
@@ -271,6 +289,12 @@ await step('researcher sees the unlock, earning and notification', async () => {
   const p = cre.page; await p.goto(`${BASE}/pitches`); await visible(p, '$5.40'); await visible(p, 'Unlocked');
   await p.goto(`${BASE}/notifications`); await visible(p, 'Your pitch was unlocked');
   await p.getByText('Your pitch was unlocked').first().click(); await p.waitForURL(new RegExp(`/briefs/${briefId}`), { timeout: 10000 });
+});
+await step('close account is refused while earnings are on hold', async () => {
+  const c = cre.page; await c.goto(`${BASE}/settings`); await c.getByRole('button', { name: 'Close my account…' }).click();
+  await c.getByLabel(/Type CLOSE/).fill('CLOSE'); await c.getByRole('button', { name: 'Close my account' }).click();
+  await visible(c, /earnings on hold or available/);
+  const [prof] = await rest(`profiles?select=display_name&id=eq.${cre.id}`); expect(prof.display_name !== 'Deleted user', 'account was closed despite held earnings');
 });
 await step('CSV export has the idea-board columns and the hook', async () => {
   const p = creator.page; await p.goto(`${BASE}/unlocks`);
@@ -426,17 +450,42 @@ await step('logout works and protected pages lock again', async () => {
   await p.goto(`${BASE}/dashboard`); expect(p.url().includes('/login'), 'still signed in after logout');
 });
 
+// ============ 9b. Rate limiting and account closure ============
+await step('login rate limit: after 10 wrong passwords the account is locked for a while, even with the right password', async () => {
+  const p = await newPage(); let last = '';
+  for (let i = 0; i < 11; i++) {
+    await p.goto(`${BASE}/login`); await p.getByLabel('Email').fill(creator.email); await p.getByLabel('Password').fill(i < 10 ? 'wrong-password-' + i : PW);
+    await p.getByRole('button', { name: 'Log in' }).click(); await p.getByText(/Wrong email or password|Too many attempts/).first().waitFor({ timeout: 10000 }); last = await p.getByText(/Wrong email or password|Too many attempts/).first().innerText();
+    if (i < 10) expect(/Wrong email or password/.test(last), `attempt ${i + 1}: ${last}`);
+  }
+  expect(/Too many attempts/.test(last), 'right password still accepted after 10 wrong ones: ' + last);
+  await rest(`rate_limits?key=eq.${encodeURIComponent('login:email:' + creator.email)}`, { method: 'DELETE' }); // unlock for the steps below
+  await p.context().close();
+});
+await step('close account: a clean account closes, is anonymised and cannot log in', async () => {
+  const z = await signUp(`Zed${run}`, 'cre'); const p = z.page;
+  await p.getByRole('button', { name: 'Continue as researcher' }).click(); await p.waitForURL(/onboarding\/cre/, { timeout: 15000 });
+  await p.goto(`${BASE}/settings`); await p.getByRole('button', { name: 'Close my account…' }).click();
+  await p.getByLabel(/Type CLOSE/).fill('nope'); await p.getByRole('button', { name: 'Close my account' }).click(); await p.getByRole('alert').getByText('Type CLOSE to confirm.').waitFor({ timeout: 10000 });
+  await p.getByLabel(/Type CLOSE/).fill('CLOSE'); await p.getByRole('button', { name: 'Close my account' }).click();
+  await p.waitForURL(/login\?closed=1/, { timeout: 30000 }).catch((e) => { e.page = p; throw e; }); await visible(p, 'Your account is closed');
+  const [prof] = await rest(`profiles?select=display_name,handle,suspended_reason&id=eq.${z.id}`);
+  expect(prof.display_name === 'Deleted user' && prof.handle === null && prof.suspended_reason === 'account_closed', 'profile not anonymised: ' + JSON.stringify(prof));
+  await p.getByLabel('Email').fill(z.email); await p.getByLabel('Password').fill(PW); await p.getByRole('button', { name: 'Log in' }).click(); await visible(p, /Wrong email or password/);
+  await p.context().close();
+});
+
 // ============ 10. Phone + dark mode sweep of every page ============
 await step('phone width: no horizontal overflow on any page (creator, researcher, admin)', async () => {
   const bad = [];
-  const sweep = async (email, pw, urls) => {
-    const p = await login(email, pw, { viewport: { width: 390, height: 844 }, colorScheme: 'dark' });
+  const sweep = async (email, pw, urls, secret = null) => {
+    const p = await login(email, pw, { viewport: { width: 390, height: 844 }, colorScheme: 'dark' }, secret);
     for (const u of urls) { await p.goto(BASE + u); await p.waitForLoadState('networkidle').catch(() => {}); const w = await p.evaluate(() => document.documentElement.scrollWidth); if (w > 390) bad.push(`${u} ${w}px`); const t = await text(p); if (/Application error|Unhandled Runtime/i.test(t)) bad.push(`${u} error`); }
     await p.context().close();
   };
   await sweep('demo.creator@example.com', 'OutlierDemo2026!', ['/dashboard', '/briefs', '/briefs/new', '/ideas', '/unlocks', '/favorites', '/messages', '/billing', '/notifications', '/settings']);
   await sweep(cre.email, PW, ['/dashboard', '/briefs', `/briefs/${briefId}`, '/pitches', '/swipe', '/wallet', '/messages', '/settings', '/onboarding/cre', `/cres/rina_${run}`.slice(0, 200), '/cres', '/', '/pricing', '/help']);
-  await sweep(admin.email, PW, ['/admin', '/admin/kyc', '/admin/disputes', '/admin/payouts', '/admin/flags', '/admin/users', '/admin/feedback', '/admin/settings']);
+  await sweep(admin.email, PW, ['/admin', '/admin/kyc', '/admin/disputes', '/admin/payouts', '/admin/flags', '/admin/users', '/admin/feedback', '/admin/settings'], admin.secret);
   expect(bad.length === 0, 'overflow/errors: ' + bad.join(', '));
 });
 

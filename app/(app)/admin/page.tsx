@@ -1,15 +1,16 @@
 import Link from 'next/link';
 import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { Card, PageHeader, Stat } from '@/components/ui';
+import { Card, Notice, PageHeader, Stat } from '@/components/ui';
 import { formatMoney } from '@/lib/money';
 import { ActionForm, SubmitButton } from '@/components/form';
 import { runJobsNow } from '@/app/actions/admin';
 
 export const metadata = { title: 'Admin' };
 
-export default async function AdminHome() {
+export default async function AdminHome({ searchParams }: { searchParams: Promise<{ mfa?: string }> }) {
   await requireViewer(['admin']);
+  const { mfa } = await searchParams;
   const supabase = await createClient();
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
   const [ledger, openBriefs, settledBriefs, kyc, disputes, payouts, flags, refunds] = await Promise.all([
@@ -42,6 +43,7 @@ export default async function AdminHome() {
   return (
     <>
       <PageHeader eyebrow="Admin" title="Overview" description="Last 30 days." />
+      {mfa === 'enrolled' && <Notice tone="good">Two-factor login is on. You&apos;ll be asked for a code from your authenticator app each time you log in.</Notice>}
       <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="Briefs funded (GMV)" value={formatMoney(gmv)} />
         <Stat label="Platform revenue" value={formatMoney(revenue)} sub="Fees minus refunded fees" />

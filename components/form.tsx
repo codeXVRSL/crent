@@ -30,11 +30,11 @@ export function restoreForm(form: HTMLFormElement | null, fd: FormData | null) {
       if (node instanceof HTMLInputElement) {
         if (node.type === 'file' || node.type === 'hidden') continue;
         if (node.type === 'checkbox' || node.type === 'radio') node.checked = values.includes(node.value);
-        else node.value = values[0] ?? '';
+        else if (!node.value || node.value === node.defaultValue) node.value = values[0] ?? ''; // don't overwrite what they've typed since
       } else if (node instanceof HTMLSelectElement) {
         for (const o of node.options) o.selected = values.includes(o.value);
       } else if (node instanceof HTMLTextAreaElement) {
-        node.value = values[0] ?? '';
+        if (!node.value || node.value === node.defaultValue) node.value = values[0] ?? '';
       }
     }
   }

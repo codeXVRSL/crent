@@ -20,5 +20,7 @@ export const env = {
   emailFrom: process.env.EMAIL_FROM ?? `${BRAND} <hello@example.com>`,
   /** Emails that become admin on first sign-in (comma separated). */
   adminEmails: (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean),
+  /** Admins must log in with an authenticator app unless ADMIN_MFA_REQUIRED=false (local testing only). */
+  adminMfaRequired: process.env.ADMIN_MFA_REQUIRED !== 'false',
   isTestMode: (process.env.PAYMENT_PROVIDER ?? 'mock') === 'mock',
 };

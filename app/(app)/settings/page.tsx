@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { CreatorProfileForm } from '@/components/creator-profile-form';
 import { Card, PageHeader } from '@/components/ui';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { CloseAccount } from '@/components/close-account';
 
 export const metadata = { title: 'Settings' };
 
@@ -24,6 +25,12 @@ export default async function Settings() {
         {v.role === 'creator' && (
           <Card className="grid gap-4"><h2 className="text-lg font-semibold tracking-tight">Channel profile</h2><CreatorProfileForm displayName={v.displayName} cp={cp} /></Card>
         )}
+        {v.role === 'admin' && (
+          <Card className="grid gap-2">
+            <h2 className="text-lg font-semibold tracking-tight">Two-factor login</h2>
+            <p className="text-sm text-muted">Admin accounts need an authenticator app. <Link href="/mfa/setup" className="text-accent">Set up or replace your authenticator →</Link></p>
+          </Card>
+        )}
         {v.role === 'cre' && (
           <Card className="grid gap-2">
             <h2 className="text-lg font-semibold tracking-tight">Researcher profile</h2>
@@ -32,6 +39,7 @@ export default async function Settings() {
             {v.handle && <Link href={`/cres/${v.handle}`} className="text-sm text-accent">View public profile →</Link>}
           </Card>
         )}
+        {v.role !== 'admin' && <CloseAccount />}
       </div>
     </>
   );

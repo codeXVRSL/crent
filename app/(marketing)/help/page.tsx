@@ -15,7 +15,7 @@ const faq: [string, string][] = [
   ['What do the researcher levels mean?', 'New, Rising, Pro and Top rated are computed from public stats: unlocks, ratings, repeat buyers and the results creators logged. A researcher whose logged results average below the creator\'s usual views cannot pass Rising.'],
   ['Who can see my ID photos?', 'Only you and the verification team. ID photos are stored in private storage, shown through links that expire after five minutes, and are never shown to creators or other researchers.'],
   ['Do I pay tax on my earnings?', "Researchers are independent contractors and are responsible for their own taxes in the Philippines. We don't withhold tax from payouts at this time; download your earnings history from Wallet for your records."],
-  ['How do I delete my account?', 'Message support from the Feedback button or email the address in the footer. We close the account after any held earnings are paid out and any open disputes are resolved, and we delete verification data as described in the Privacy Policy.'],
+  ['How do I delete my account?', 'Settings → Close account. It works once any held earnings are paid out, any live brief is closed and refunded, and any open dispute is resolved. Your ID photos, payout details, saved items and profile are deleted straight away; payment records stay with the platform under an anonymised profile, as the Privacy Policy describes.'],
   ['Who owns the idea after I unlock it?', "Ideas themselves can't be owned under copyright. When you unlock, you get the right to use the researcher's written instructions for your own content. The researcher won't pitch the same source video to you again."],
 ];
 

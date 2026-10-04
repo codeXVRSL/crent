@@ -57,6 +57,8 @@ async function fillPitchIdea(page: Page, hook: string) {
 }
 
 test('idea board, results loop, shortlist/pass, invites, swipe file', async ({ browser }) => {
+  // Test runs create many accounts from one address, which the sign-up limit would refuse; start with a clean slate.
+  await rest('rate_limits?key=like.*', { method: 'DELETE' });
   // ---------- People ----------
   const creator = await signUp(browser, `Tess${run}`, 'creator');
   await creator.page.getByRole('button', { name: 'Continue as creator' }).click();

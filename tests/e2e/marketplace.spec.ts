@@ -1,3 +1,4 @@
+import { enrollAdmin } from './mfa.mjs';
 import { test, expect, type Browser, type Page } from '@playwright/test';
 
 // Full marketplace flow through the real UI.
@@ -37,6 +38,8 @@ async function flash(page: Page, text: string | RegExp) {
 }
 
 test('brief → pitch → locked → unlock → close/refund → payout → chat', async ({ browser }) => {
+  // Test runs create many accounts from one address, which the sign-up limit would refuse; start with a clean slate.
+  await rest('rate_limits?key=like.*', { method: 'DELETE' });
   // ---------- Creator signs up ----------
   const creator = await signUp(browser, `Carla${run}`, 'creator');
   await creator.page.getByRole('button', { name: 'Continue as creator' }).click();
@@ -74,6 +77,7 @@ test('brief → pitch → locked → unlock → close/refund → payout → chat
   // ---------- Admin approves ----------
   const admin = await signUp(browser, `Ada${run}`, '');
   await rest(`profiles?id=eq.${admin.id}`, { method: 'PATCH', body: JSON.stringify({ role: 'admin' }) });
+  await enrollAdmin(admin.page); // admins must set up an authenticator app before the panel opens
   await admin.page.goto('/admin/kyc');
   const card = admin.page.locator('[data-card]', { hasText: `@rico_${run}`.slice(0, 25) }).filter({ has: admin.page.getByRole('button', { name: 'Approve' }) }).last();
   await expect(card).toBeVisible();

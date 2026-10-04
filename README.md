@@ -42,8 +42,13 @@ Built with Next.js 15 (App Router, TypeScript), Tailwind CSS v4 and Supabase (Po
 | Brief templates and "Post a similar brief"; researcher feed filters (platform, minimum pay, sort, invited only) | ✅ |
 | Hook library search on unlocked ideas; "Copy as AI script prompt"; idea-board columns in the CSV export | ✅ |
 
+| Login, sign-up and password-reset rate limiting (per account and per address, counted in the database) | ✅ (tested) |
+| Self-service account closure from Settings: refuses while money or a dispute is attached, anonymises the profile, deletes ID photos | ✅ (tested) |
+| Admin two-factor login with an authenticator app (TOTP); admins are walked through setup on first login | ✅ (tested) |
+| Branded HTML transactional emails with a plain-text fallback | ✅ |
+
 ### Not built yet (from the spec's later phases)
-Idea Packs, research retainers, featured briefs, researcher Pro subscription, referral codes, admin two-factor login, rate limiting, Sentry/PostHog, live (websocket) chat — chat refreshes every few seconds instead — and avatar uploads.
+Idea Packs, research retainers, featured briefs, researcher Pro subscription, referral codes, Sentry/PostHog, live (websocket) chat — chat refreshes every few seconds instead — and avatar uploads.
 See `docs/feature-research.md` for the research behind the creator and researcher tools, and the ranked list of what to build next.
 
 ---
@@ -96,9 +101,10 @@ In Supabase → SQL Editor, run these files in order:
 4. `supabase/migrations/20260927000004_storage.sql`
 5. `supabase/migrations/20260928000005_feedback_and_proof.sql`
 6. `supabase/migrations/20260929000006_creator_researcher_tools.sql`
-7. `supabase/seed.sql`
+7. `supabase/migrations/20261004000007_rate_limits_and_account_closure.sql`
+8. `supabase/seed.sql`
 
-Or run `supabase/setup_all.sql`, which is all of the above in one file (for a new, empty project). If your database already has migrations 1–5, run only file 6.
+Or run `supabase/setup_all.sql`, which is all of the above in one file (for a new, empty project). If your database already has migrations 1–6, run only file 7.
 
 ### 4. Configure Supabase Auth
 Supabase → Authentication → URL Configuration:
@@ -219,3 +225,4 @@ app/api/               payment webhook, scheduled job, health check
 - Register the business (DTI or SEC) and with the BIR; put the registration numbers in the site footer.
 - Check the trade name "Outlier Desk" with IPOPHL before buying a domain.
 - Set up SPF/DKIM for your email domain in Resend.
+- Turn on Authentication → Multi-factor → **TOTP** in the Supabase dashboard (free tier includes it). Admins are then asked to set up an authenticator app at their first login; `ADMIN_MFA_REQUIRED=false` skips this on a local test database only.

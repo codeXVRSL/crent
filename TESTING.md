@@ -19,6 +19,7 @@ Run `npm run seed:demo` once against the test database to get a ready-made creat
 
 ## 1 · Set up the admin (Save, once)
 1. Sign up with your admin email. On the "How will you use Outlier Desk?" screen, choose **Continue as admin**.
+   The site then asks you to set up an authenticator app (Google Authenticator, Microsoft Authenticator, Authy or 1Password): scan the QR code and type the 6-digit code. From then on every admin login asks for a code. If you are testing on a local database without a phone handy, put `ADMIN_MFA_REQUIRED=false` in `.env.local`.
 2. Leave **Hold period** at 72 hours for now. The hold is also the dispute window, so set it to **0 hours** (Admin → Settings) only when you reach step 6 and want to test payouts; after that, disputes can't be opened on new unlocks.
 
 ## 2 · Researcher gets verified (Jamaica)
@@ -64,6 +65,10 @@ Run `npm run seed:demo` once against the test database to get a ready-made creat
 2. **My pitches** shows the creator's result once Save logs views, and the reason if Save passed.
 3. **Open briefs**: try the platform / pay / sort filters and **Invited only**.
 4. Check your public profile: level badge and "Track record with creators".
+
+## 7b · Account safety
+- Type a wrong password 10 times for one account: the 11th attempt is refused for 15 minutes even with the right password.
+- Settings → **Close account** on a researcher account with earnings still on hold: it refuses and says why. On an account with nothing attached, it asks you to type CLOSE, then logs you out; the same email can no longer log in and the public profile is gone.
 
 ## 8 · Try to break it
 - Pitch the **same video twice** (even with a different URL format). It should be blocked.
