@@ -1,4 +1,5 @@
 'use server';
+import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { encryptSecret } from '@/lib/crypto';
@@ -25,10 +26,15 @@ export async function addPayoutMethod(_: ActionResult | null, fd: FormData): Pro
   return { ok: true, message: 'Payout method saved.' };
 }
 
-export async function deletePayoutMethod(fd: FormData) {
+export async function deletePayoutMethod(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   const supabase = await createClient();
-  await supabase.from('payout_methods').delete().eq('id', String(fd.get('id')));
+  const { data, error } = await supabase.from('payout_methods').delete().eq('id', String(fd.get('id'))).select('id');
+  if (error) return { ok: false, message: friendlyError(error) };
+  // Row-level security blocks the delete (returns nothing) while a withdrawal to this method is in progress.
+  if (!data?.length) return { ok: false, message: "This payout method can't be removed while a withdrawal to it is in progress." };
   revalidatePath('/wallet');
+  // The row is gone after this, so confirm at the top of the page.
+  redirect('/wallet?done=removed');
 }
 
 export async function requestPayout(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
@@ -39,8 +45,10 @@ export async function requestPayout(_: ActionResult | null, fd: FormData): Promi
   return { ok: true, message: 'Withdrawal requested. Payouts are usually sent within 1–2 business days.' };
 }
 
-export async function cancelPayout(fd: FormData) {
+export async function cancelPayout(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   const supabase = await createClient();
-  await supabase.rpc('cancel_payout', { p_payout_id: String(fd.get('id')) });
+  const { error } = await supabase.rpc('cancel_payout', { p_payout_id: String(fd.get('id')) });
+  if (error) return { ok: false, message: friendlyError(error) };
   revalidatePath('/wallet');
+  redirect('/wallet?done=cancelled');
 }

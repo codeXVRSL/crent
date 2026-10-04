@@ -3,10 +3,11 @@ import { redirect } from 'next/navigation';
 import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { EmptyState, LinkButton, PageHeader, Stat, Card } from '@/components/ui';
-import { BriefStatus, timeLeft, fmtDate } from '@/components/status';
+import {BriefStatus, timeLeft} from '@/components/status';
 import { formatMoney } from '@/lib/money';
 import { formatMultiplier } from '@/lib/outlier';
 import { FileText, Inbox, LockOpen, Percent, Plus, Star, Timer, Wallet } from 'lucide-react';
+import { When } from '@/components/when';
 
 export const metadata = { title: 'Dashboard' };
 
@@ -72,14 +73,14 @@ export default async function Dashboard() {
           <h2 className="text-lg font-semibold tracking-tight">New pitches</h2>
           {!recent?.length ? (
             <EmptyState icon={<Inbox className="size-5" />} title={briefs?.length ? 'No pitches waiting' : 'No briefs yet'} action={!briefs?.length ? <LinkButton href="/briefs/new">Post your first brief</LinkButton> : undefined}>
-              {briefs?.length ? 'New pitches on your live briefs will show up here.' : 'Post a brief and verified researchers will start pitching, usually within a day.'}
+              {briefs?.length ? 'New pitches on your live briefs will show up here.' : 'Post a brief and verified researchers in your niche are notified the moment it goes live.'}
             </EmptyState>
           ) : (
             <ul className="grid gap-2">
               {recent.map((p) => (
                 <li key={p.id}><Link href={`/briefs/${p.brief_id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-surface shadow-sm p-4 lift">
                   <span><span className="num font-semibold text-accent">{formatMultiplier(p.multiplier)}</span> · {p.format_label}</span>
-                  <span className="text-sm text-muted">{(p.briefs as unknown as { title: string }).title} · {fmtDate(p.submitted_at, true)}</span>
+                  <span className="text-sm text-muted">{(p.briefs as unknown as { title: string }).title} · <When iso={p.submitted_at} /></span>
                 </Link></li>
               ))}
             </ul>

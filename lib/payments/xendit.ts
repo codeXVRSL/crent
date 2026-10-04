@@ -2,6 +2,7 @@ import 'server-only';
 import { timingSafeEqual } from 'node:crypto';
 import { env } from '@/lib/env';
 import type { PaymentProvider, PaymentEvent } from './types';
+import { BRAND } from '../brand';
 
 // Xendit integration.
 // VERIFY against the current Xendit docs and your account's enabled products before going live:
@@ -106,7 +107,7 @@ export const xenditProvider: PaymentProvider = {
         channel_properties: { account_holder_name: destination.accountName, account_number: destination.accountNumber },
         amount: amountCents / 100,
         currency,
-        description: 'Outlier Desk earnings',
+        description: `${BRAND} earnings`,
       }, { 'Idempotency-key': `payout_${payoutId}` });
       const s = String(r.status).toUpperCase();
       return { status: s === 'SUCCEEDED' ? 'succeeded' : s === 'FAILED' ? 'failed' : 'pending', providerRef: r.id, failure: r.failure_code };

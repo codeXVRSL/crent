@@ -5,6 +5,9 @@ import { PitchDemo } from '@/components/pitch-demo';
 import { ActionForm, SubmitButton } from '@/components/form';
 import { joinWaitlist } from '@/app/actions/waitlist';
 
+import { BRAND } from '@/lib/brand';
+export const metadata = { title: { absolute: `${BRAND} · proven content ideas, researched by verified experts` } };
+
 function BentoTile({ className = '', icon, title, children, visual }: {
   className?: string; icon: React.ReactNode; title: string; children: React.ReactNode; visual?: React.ReactNode;
 }) {

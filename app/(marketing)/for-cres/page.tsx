@@ -1,5 +1,5 @@
 import { LinkButton } from '@/components/ui';
-export const metadata = { title: 'For researchers' };
+export const metadata = { title: 'For researchers', description: 'Earn per proven idea. Creators fund briefs before you pitch, you keep 90% of every unlock, and withdraw to GCash, Maya or a Philippine bank.' };
 
 export default function ForCres() {
   return (

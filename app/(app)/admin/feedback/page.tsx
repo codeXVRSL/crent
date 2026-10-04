@@ -1,8 +1,9 @@
 import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Card, EmptyState, PageHeader, Pill } from '@/components/ui';
-import { fmtDate } from '@/components/status';
+
 import { setFeedbackStatus } from '@/app/actions/admin';
+import { When } from '@/components/when';
 
 export const metadata = { title: 'Feedback' };
 
@@ -34,7 +35,7 @@ export default async function AdminFeedback({ searchParams }: { searchParams: Pr
               <Card key={f.id} className="grid gap-2">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                   <span className="flex items-center gap-2"><Pill tone={k.t}>{k.l}</Pill><strong>{who?.display_name}</strong><span className="text-muted">({who?.role ?? 'no role'})</span></span>
-                  <span className="text-xs text-muted">{fmtDate(f.created_at, true)} · <span className="num">{f.page}</span></span>
+                  <span className="text-xs text-muted"><When iso={f.created_at} /> · <span className="num">{f.page}</span></span>
                 </div>
                 <p className="whitespace-pre-wrap text-sm">{f.message}</p>
                 <div className="flex gap-3 text-xs">

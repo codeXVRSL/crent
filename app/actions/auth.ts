@@ -6,7 +6,7 @@ import type { ActionResult } from '@/lib/errors';
 
 function safeNext(next: FormDataEntryValue | null) {
   const n = typeof next === 'string' ? next : '';
-  return n.startsWith('/') && !n.startsWith('//') ? n : '/dashboard';
+  return n.startsWith('/') && !/^\/[\/\\]/.test(n) ? n : '/dashboard';
 }
 
 export async function signIn(_: ActionResult | null, fd: FormData): Promise<ActionResult> {

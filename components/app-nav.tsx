@@ -7,6 +7,7 @@ import {
   Scale, Search, Settings, ShieldCheck, Sparkles, Users, Wallet, X, KanbanSquare, Heart, Bookmark,
 } from 'lucide-react';
 import { LogoMark } from './logo';
+import { BRAND } from '@/lib/brand';
 
 export const ICONS = {
   dashboard: LayoutDashboard, briefs: FileText, unlocks: LockOpen, messages: MessageSquare, billing: CreditCard,
@@ -85,7 +86,7 @@ export function MobileNav({ groups, footer }: { groups: NavGroup[]; footer: Reac
           <div className="anim-fade-up absolute inset-y-0 left-0 grid w-[280px] max-w-[85vw] content-start gap-6 overflow-y-auto border-r border-line bg-surface p-4"
             style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 font-semibold"><LogoMark /> Outlier Desk</span>
+              <span className="flex items-center gap-2 font-semibold"><LogoMark /> {BRAND}</span>
               <button type="button" onClick={() => setOpen(false)} aria-label="Close menu" className="grid size-9 place-items-center rounded-lg hover:bg-surface-2"><X className="size-5" /></button>
             </div>
             <NavList groups={groups} onNavigate={() => setOpen(false)} />

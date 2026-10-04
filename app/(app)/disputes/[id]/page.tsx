@@ -4,16 +4,20 @@ import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { ActionForm, SubmitButton } from '@/components/form';
 import { Card, Notice, PageHeader, Pill, Textarea } from '@/components/ui';
-import { fmtDate } from '@/components/status';
+
 import { respondDispute } from '@/app/actions/disputes';
 import { resolveDispute } from '@/app/actions/admin';
 import { DISPUTE_REASONS } from '@/lib/constants';
 import { formatMoney } from '@/lib/money';
+import { BRAND } from '@/lib/brand';
+import { When } from '@/components/when';
 
 const statusText: Record<string, string> = {
-  awaiting_cre: 'Waiting for the researcher', awaiting_admin: 'Waiting for Outlier Desk review',
+  awaiting_cre: 'Waiting for the researcher', awaiting_admin: `Waiting for ${BRAND} review`,
   resolved_creator: 'Resolved: creator refunded', resolved_cre: 'Resolved: researcher keeps the earning',
 };
+
+export const metadata = { title: 'Dispute' };
 
 export default async function DisputePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ sent?: string; resolved?: string }> }) {
   const { id } = await params;
@@ -32,7 +36,7 @@ export default async function DisputePage({ params, searchParams }: { params: Pr
         {sent && <Notice tone="good">Sent. Our team will review both sides and decide within a few days.</Notice>}
         {resolved && <Notice tone="good">Resolved. Both sides have been notified{d.status === 'resolved_creator' ? ' and the refund is on its way' : ''}.</Notice>}
         <Card className="grid gap-2 text-sm">
-          <span className="label">Creator · {fmtDate(d.opened_at, true)}</span>
+          <span className="label">Creator · <When iso={d.opened_at} /></span>
           <p className="whitespace-pre-wrap">{d.details}</p>
           <p className="text-muted">Amount: <span className="num">{formatMoney(u.gross_cents, u.currency)}</span> · <Link href={`/briefs/${u.brief_id}`} className="underline">View brief</Link></p>
         </Card>
@@ -41,7 +45,7 @@ export default async function DisputePage({ params, searchParams }: { params: Pr
         ) : d.status === 'awaiting_cre' && v.id === u.cre_id ? (
           <Card className="grid gap-3">
             <h2 className="font-semibold">Your response</h2>
-            <p className="text-sm text-muted">Reply by {fmtDate(d.cre_deadline_at, true)}. Include proof such as a screenshot link.</p>
+            <p className="text-sm text-muted">Reply by <When iso={d.cre_deadline_at} />. Include proof such as a screenshot link.</p>
             <ActionForm action={respondDispute} className="grid gap-2">
               <input type="hidden" name="dispute_id" value={d.id} />
               <Textarea name="response" id="response" required minLength={10} maxLength={2000} rows={4} />

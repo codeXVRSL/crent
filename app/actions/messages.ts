@@ -14,7 +14,7 @@ export async function startThread(fd: FormData) {
 }
 
 export async function sendMessage(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
-  const body = String(fd.get('body') ?? '').trim();
+  const body = String(fd.get('body') ?? '').replace(/\r\n/g, '\n').trim();
   const threadId = String(fd.get('thread_id'));
   if (!body) return { ok: false, message: 'Write a message first.' };
   if (body.length > 4000) return { ok: false, message: 'Messages can be up to 4,000 characters.' };

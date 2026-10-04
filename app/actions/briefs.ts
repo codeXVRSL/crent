@@ -8,8 +8,10 @@ import { processPendingRefunds } from '@/lib/payments/events';
 import { friendlyError, type ActionResult } from '@/lib/errors';
 import { parseDollarsToCents } from '@/lib/money';
 import { env } from '@/lib/env';
+import { BRAND } from '@/lib/brand';
 
-const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
+// Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
+const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
 
 async function startCheckout(briefId: string): Promise<string> {
   const supabase = await createClient();
@@ -22,7 +24,7 @@ async function startCheckout(briefId: string): Promise<string> {
     externalId: payment.external_id,
     amountCents: payment.amount_cents,
     currency: payment.currency,
-    description: `Outlier Desk brief: ${brief?.title ?? ''}`.slice(0, 250),
+    description: `${BRAND} brief: ${brief?.title ?? ''}`.slice(0, 250),
     payerEmail: user?.email ?? '',
     successUrl: `${env.appUrl}/briefs/${briefId}?paid=1`,
     failureUrl: `${env.appUrl}/briefs/${briefId}?payment=failed`,

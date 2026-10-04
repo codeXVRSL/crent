@@ -3,6 +3,7 @@ import localFont from 'next/font/local';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import './globals.css';
+import { BRAND } from '@/lib/brand';
 
 // Self-hosted fonts: no third-party requests, no layout shift.
 const instrument = localFont({
@@ -14,7 +15,7 @@ const instrument = localFont({
 });
 
 export const metadata: Metadata = {
-  title: { default: 'Outlier Desk', template: '%s · Outlier Desk' },
+  title: { default: BRAND, template: `%s · ${BRAND}` },
   description: 'Post a research brief. Verified Content Research Experts pitch proven, data-backed content ideas. Pay only for the ideas you unlock.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
 };

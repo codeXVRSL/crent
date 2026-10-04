@@ -1,5 +1,5 @@
 import { LinkButton } from '@/components/ui';
-export const metadata = { title: 'Pricing' };
+export const metadata = { title: 'Pricing', description: 'Pay per idea, from $3. A 5% marketplace fee on what you use, refunded on unused budget. Researchers keep 90% of every unlock.' };
 
 const rows = [
   ['You post', '5 ideas × $8.00 = $40.00 budget'],

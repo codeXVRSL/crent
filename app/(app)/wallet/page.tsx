@@ -1,15 +1,17 @@
 import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { ActionForm, SubmitButton } from '@/components/form';
-import { Card, Field, Input, PageHeader, Pill, Select, Stat } from '@/components/ui';
+import { Card, Field, Input, Notice, PageHeader, Pill, Select, Stat } from '@/components/ui';
 import { fmtDate, UnlockStatus } from '@/components/status';
 import { addPayoutMethod, deletePayoutMethod, requestPayout, cancelPayout } from '@/app/actions/wallet';
 import { formatMoney } from '@/lib/money';
+import { When } from '@/components/when';
 
 export const metadata = { title: 'Wallet' };
 
-export default async function Wallet() {
+export default async function Wallet({ searchParams }: { searchParams: Promise<{ done?: string }> }) {
   const v = await requireViewer(['cre']);
+  const { done } = await searchParams;
   const supabase = await createClient();
   const [{ data: bal }, { data: methods }, { data: payouts }, { data: unlocks }, { data: settings }] = await Promise.all([
     supabase.from('cre_balances').select('*').eq('cre_id', v.id).maybeSingle(),
@@ -25,6 +27,8 @@ export default async function Wallet() {
   return (
     <>
       <PageHeader title="Wallet" />
+      {done === 'removed' && <div className="mb-6"><Notice tone="good">Payout method removed.</Notice></div>}
+      {done === 'cancelled' && <div className="mb-6"><Notice tone="good">Withdrawal cancelled. The money is back in your available balance.</Notice></div>}
       <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="On hold" value={formatMoney(bal?.held_cents ?? 0)} sub="Released 72 hours after each unlock" />
         <Stat label="Available" value={formatMoney(available)} />
@@ -38,7 +42,7 @@ export default async function Wallet() {
           {pending ? (
             <div className="grid gap-2 text-sm">
               <p>Withdrawal of <strong className="num">{formatMoney(pending.amount_cents, pending.currency)}</strong> is {pending.status === 'requested' ? 'waiting for approval' : 'being sent'}.</p>
-              {pending.status === 'requested' && <form action={cancelPayout}><input type="hidden" name="id" value={pending.id} /><button className="text-xs text-bad">Cancel request</button></form>}
+              {pending.status === 'requested' && <ActionForm action={cancelPayout}><input type="hidden" name="id" value={pending.id} /><button className="text-xs text-bad">Cancel request</button></ActionForm>}
             </div>
           ) : !methods?.length ? (
             <p className="text-sm text-muted">Add a payout method first.</p>
@@ -60,7 +64,7 @@ export default async function Wallet() {
           {(methods ?? []).map((m) => (
             <div key={m.id} className="flex items-center justify-between gap-2 text-sm">
               <span>{m.kind === 'bank' ? `Bank (${m.bank_code})` : m.kind.toUpperCase()} ···{m.account_last4} · {m.account_name} {m.is_default && <Pill tone="accent">Default</Pill>}</span>
-              <form action={deletePayoutMethod}><input type="hidden" name="id" value={m.id} /><button className="text-xs text-bad">Remove</button></form>
+              <ActionForm action={deletePayoutMethod}><input type="hidden" name="id" value={m.id} /><button className="text-xs text-bad" aria-label={`Remove ${m.kind} ···${m.account_last4}`}>Remove</button></ActionForm>
             </div>
           ))}
           <ActionForm action={addPayoutMethod} className="grid gap-3 border-t border-line pt-3" resetOnSuccess>
@@ -87,7 +91,7 @@ export default async function Wallet() {
                   <td className="p-3">{(u.briefs as unknown as { title: string } | null)?.title}</td>
                   <td className="num p-3">{formatMoney(u.net_cents, u.currency)}</td>
                   <td className="p-3"><UnlockStatus status={u.status} /></td>
-                  <td className="num p-3">{fmtDate(u.available_at, true)}</td>
+                  <td className="num p-3"><When iso={u.available_at} /></td>
                 </tr>
               ))}
             </tbody>

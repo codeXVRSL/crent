@@ -4,7 +4,7 @@ import { EmptyState, Pill, Select, Button } from '@/components/ui';
 import { PLATFORMS, platformLabel } from '@/lib/constants';
 import { LevelBadge, TrackRecordLine, type PublicCre } from '@/components/track-record';
 
-export const metadata = { title: 'Researchers' };
+export const metadata = { title: 'Verified researchers', description: 'Browse ID-verified content researchers by niche and platform, with unlock rates, ratings and the results creators logged.' };
 
 const SORTS: Record<string, { col: string; label: string }> = {
   unlocks: { col: 'unlocks_total', label: 'Most unlocked' },

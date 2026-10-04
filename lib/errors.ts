@@ -55,7 +55,19 @@ export function friendlyError(err: unknown): string {
   const code = Object.keys(MESSAGES).find((k) => raw === k || raw.startsWith(k));
   if (code) return MESSAGES[code];
   if (raw.includes('duplicate key') && raw.includes('handle')) return 'That handle is taken. Try another.';
-  if (raw.includes('violates check constraint')) return 'Some fields are too short or too long. Check the limits under each field.';
+  if (raw.includes('violates check constraint')) {
+    // e.g. 'violates check constraint "pitches_format_label_check"' → name the field so people know what to fix
+    const m = raw.match(/constraint "([a-z_]+)_check"/);
+    const names: Record<string, string> = {
+      instructions: 'Instructions', hook_text: 'Hook', teaser: 'Angle (teaser)', why_it_worked: 'Why it worked', adaptation_notes: 'How to adapt it',
+      format_label: 'Format', title: 'Title', description: 'What you need', must_include: 'Must include', avoid: 'Avoid', bio: 'About you',
+      headline: 'Headline', display_name: 'Display name', handle: 'Handle', notes: 'Notes', body: 'Message', details: 'Details', source_url: 'Video link',
+    };
+    const col = Object.keys(names).find((k) => m?.[1]?.endsWith('_' + k));
+    const field = col ? names[col] : m?.[1]?.split('_').slice(-1)[0];
+    console.error('[check constraint]', raw);
+    return field ? `${field}: too short, too long or in the wrong format. Check the limit shown under that field.` : 'Some fields are too short or too long. Check the limits under each field.';
+  }
   console.error('[unmapped error]', raw);
   return 'That didn’t work. Try again, and contact support if it keeps happening.';
 }

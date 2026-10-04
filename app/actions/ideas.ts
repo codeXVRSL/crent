@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/server';
 import { friendlyError, type ActionResult } from '@/lib/errors';
 import { IDEA_STAGES } from '@/lib/constants';
 
-const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
+// Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
+const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
 const views = (fd: FormData, k: string) => {
   const s = str(fd, k).replace(/[,\s]/g, '');
   return s === '' ? null : Number(s);

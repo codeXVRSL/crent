@@ -21,12 +21,20 @@ import { signProofs } from '@/lib/proof';
 import { HOOK_CATEGORIES, passReasonLabel, platformLabel } from '@/lib/constants';
 import { formatMultiplier } from '@/lib/outlier';
 import { buildScriptPrompt } from '@/lib/script-prompt';
+import { When } from '@/components/when';
 
 type CreInfo = {
   id: string; display_name: string; handle: string; unlock_rate_pct: number | null; avg_rating: number | null; review_count: number;
   unlocks_total: number; repeat_buyers: number; results_logged: number; avg_result_multiple: number | string | null;
 };
 type Feedback = { pitch_id: string; reason: string; note: string | null };
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase.from('briefs').select('title').eq('id', id).maybeSingle();
+  return { title: data?.title ?? 'Brief' };
+}
 
 export default async function BriefPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
@@ -179,7 +187,7 @@ export default async function BriefPage({ params, searchParams }: {
               {visible.length === 0 ? (
                 live.length ? <EmptyState title="Nothing matches these filters" action={<LinkButton href={`/briefs/${id}`} variant="secondary">Clear filters</LinkButton>} /> : (
                 <EmptyState title="No pitches yet">
-                  {brief.status === 'open' ? 'Briefs usually get their first pitch within 24 hours. Researchers in your niche have been notified. Invite researchers you saved to get pitches faster.' : 'Pitches appear here once the brief is live.'}
+                  {brief.status === 'open' ? 'Researchers in your niche have been notified. Invite researchers you saved to get pitches faster.' : 'Pitches appear here once the brief is live.'}
                 </EmptyState>)
               ) : (
                 <div className="grid gap-4 2xl:grid-cols-2">
@@ -251,7 +259,7 @@ export default async function BriefPage({ params, searchParams }: {
             </Card>
             {(brief.status === 'closed' || brief.status === 'settled') && brief.closed_at && (
               <Notice tone="accent">
-                Closed {fmtDate(brief.closed_at, true)}{brief.close_reason === 'max_unlocks' ? ' after all unlocks were used' : brief.close_reason === 'deadline' ? ' at the deadline' : ''}.
+                Closed <When iso={brief.closed_at} />{brief.close_reason === 'max_unlocks' ? ' after all unlocks were used' : brief.close_reason === 'deadline' ? ' at the deadline' : ''}.
                 {left > 0 ? ' Unused budget is refunded to your card.' : ''}
               </Notice>
             )}
@@ -277,7 +285,7 @@ export default async function BriefPage({ params, searchParams }: {
                 </ul>
               </Card>
             )}
-            <p className="text-xs text-muted">Created {fmtDate(brief.created_at)} · Deadline {fmtDate(brief.deadline_at, true)}</p>
+            <p className="text-xs text-muted">Created {fmtDate(brief.created_at)} · Deadline <When iso={brief.deadline_at} /></p>
           </aside>
         </div>
       </>

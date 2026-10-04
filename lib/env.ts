@@ -1,3 +1,4 @@
+import { BRAND } from './brand';
 // Central place to read environment variables with clear errors.
 function need(name: string, value: string | undefined): string {
   if (!value) throw new Error(`Missing environment variable ${name}. Copy .env.example to .env.local and fill it in.`);
@@ -16,7 +17,7 @@ export const env = {
   mockWebhookToken: process.env.MOCK_WEBHOOK_TOKEN ?? 'dev-mock-token',
   cronSecret: () => need('CRON_SECRET', process.env.CRON_SECRET),
   resendKey: process.env.RESEND_API_KEY,
-  emailFrom: process.env.EMAIL_FROM ?? 'Outlier Desk <hello@example.com>',
+  emailFrom: process.env.EMAIL_FROM ?? `${BRAND} <hello@example.com>`,
   /** Emails that become admin on first sign-in (comma separated). */
   adminEmails: (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean),
   isTestMode: (process.env.PAYMENT_PROVIDER ?? 'mock') === 'mock',

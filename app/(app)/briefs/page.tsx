@@ -25,7 +25,7 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<F
         <PageHeader title="My briefs"><LinkButton href="/briefs/new">Post a brief</LinkButton></PageHeader>
         {!visibleBriefs.length ? (
           <EmptyState title="No briefs yet" action={<LinkButton href="/briefs/new">Post a brief</LinkButton>}>
-            Post your first brief and get pitches from verified researchers, usually within a day.
+            Post your first brief. Verified researchers in your niche are notified the moment it goes live.
           </EmptyState>
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">

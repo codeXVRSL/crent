@@ -6,6 +6,7 @@ import type { ActionResult } from '@/lib/errors';
 import { Field, Input, Notice, Select } from './ui';
 import { SubmitButton } from './form';
 import { ID_TYPES } from '@/lib/constants';
+import { BRAND } from '@/lib/brand';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -33,7 +34,7 @@ export function KycForm({ userId }: { userId: string }) {
 
   return (
     <form action={action} className="grid gap-4">
-      <p className="text-sm text-muted">Only you and the Outlier Desk team can see these details. The Philippine Internet Transactions Act (RA 11967) requires marketplaces to verify sellers.</p>
+      <p className="text-sm text-muted">Only you and the {BRAND} team can see these details. The Philippine Internet Transactions Act (RA 11967) requires marketplaces to verify sellers.</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Legal name (as on your ID)" htmlFor="legal_name"><Input id="legal_name" name="legal_name" required minLength={3} maxLength={120} /></Field>
         <Field label="Date of birth" htmlFor="birth_date"><Input id="birth_date" name="birth_date" type="date" required /></Field>

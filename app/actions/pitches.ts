@@ -6,7 +6,8 @@ import { friendlyError, type ActionResult } from '@/lib/errors';
 import { emailUser } from '@/lib/notify-email';
 import { env } from '@/lib/env';
 
-const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
+// Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
+const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
 const num = (fd: FormData, k: string) => Number(str(fd, k).replace(/[,\s]/g, ''));
 
 export async function submitPitch(_: ActionResult | null, fd: FormData): Promise<ActionResult> {

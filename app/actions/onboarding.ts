@@ -8,7 +8,8 @@ import { env } from '@/lib/env';
 import { PLATFORMS } from '@/lib/constants';
 
 const PLATFORM_VALUES = PLATFORMS.map((p) => p.value) as string[];
-const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
+// Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
+const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
 
 export async function setRole(fd: FormData) {
   if (fd.get('role') === 'admin') {

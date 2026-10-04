@@ -3,7 +3,8 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { friendlyError, type ActionResult } from '@/lib/errors';
 
-const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
+// Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
+const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
 
 export async function toggleFavorite(fd: FormData) {
   const supabase = await createClient();

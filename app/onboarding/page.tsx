@@ -4,6 +4,7 @@ import { setRole } from '@/app/actions/onboarding';
 import { Button, PageHeader } from '@/components/ui';
 import { Megaphone, Search, ShieldCheck } from 'lucide-react';
 import { env } from '@/lib/env';
+import { BRAND } from '@/lib/brand';
 
 export default async function Onboarding({ searchParams }: { searchParams: Promise<{ as?: string }> }) {
   const viewer = await getViewer();
@@ -17,7 +18,7 @@ export default async function Onboarding({ searchParams }: { searchParams: Promi
   ];
   return (
     <>
-      <PageHeader eyebrow="Welcome" title={`Hi ${viewer.displayName || 'there'}. How will you use Outlier Desk?`}
+      <PageHeader eyebrow="Welcome" title={`Hi ${viewer.displayName || 'there'}. How will you use ${BRAND}?`}
         description="You can't change this later. If you need both, use a separate account for each." />
       <div className="grid gap-4 md:grid-cols-2">
         {options.map((o) => (

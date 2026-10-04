@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
+import { BRAND, BRAND_TAGLINE } from '@/lib/brand';
 
-export const alt = 'Outlier Desk — proven content ideas, researched by verified experts';
+export const alt = `${BRAND} — ${BRAND_TAGLINE}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -15,7 +16,7 @@ export default function OG() {
             <div style={{ width: 9, height: 20, borderRadius: 3, background: '#8C98A4' }} />
             <div style={{ width: 9, height: 36, borderRadius: 3, background: '#0B7A6B' }} />
           </div>
-          Outlier Desk
+          {BRAND}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ fontSize: 76, fontWeight: 700, lineHeight: 1.02, letterSpacing: -2 }}>Proven content ideas, researched by people who find them every day.</div>

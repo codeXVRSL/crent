@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import { friendlyError, type ActionResult } from '@/lib/errors';
 import { HOOK_CATEGORIES, PLATFORMS } from '@/lib/constants';
 
-const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
+// Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
+const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
 const num = (fd: FormData, k: string) => Number(str(fd, k).replace(/[,\s]/g, ''));
 
 export async function addSwipeItem(_: ActionResult | null, fd: FormData): Promise<ActionResult> {

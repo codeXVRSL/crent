@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { EmptyState, PageHeader } from '@/components/ui';
-import { fmtDate } from '@/components/status';
+import { When } from '@/components/when';
 
 export const metadata = { title: 'Messages' };
 
@@ -28,7 +28,7 @@ export default async function Messages() {
             return (
               <li key={t.id}><Link href={`/messages/${t.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-surface shadow-sm p-4 lift">
                 <span><strong>{other?.display_name ?? 'Unknown'}</strong> <span className="text-sm text-muted">· {(t.briefs as unknown as { title: string } | null)?.title}</span></span>
-                <span className="num text-xs text-muted">{t.last_message_at ? fmtDate(t.last_message_at, true) : 'No messages yet'}</span>
+                <span className="num text-xs text-muted">{t.last_message_at ? <When iso={t.last_message_at} /> : 'No messages yet'}</span>
               </Link></li>
             );
           })}

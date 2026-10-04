@@ -2,9 +2,10 @@ import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { ActionForm, SubmitButton } from '@/components/form';
 import { Card, EmptyState, Input, Notice, PageHeader, Pill } from '@/components/ui';
-import { fmtDate } from '@/components/status';
+
 import { approvePayout, markRefundDone, retryRefund } from '@/app/actions/admin';
 import { formatMoney } from '@/lib/money';
+import { When } from '@/components/when';
 
 export const metadata = { title: 'Payouts & refunds' };
 
@@ -37,7 +38,7 @@ export default async function AdminPayouts({ searchParams }: { searchParams: Pro
             <Card key={p.id} className="grid gap-3">
               <div className="flex flex-wrap justify-between gap-2">
                 <span><strong className="num">{formatMoney(p.amount_cents, p.currency)}</strong> to {who?.display_name} (@{who?.handle})</span>
-                <span className="text-xs text-muted">{fmtDate(p.requested_at, true)} {p.status === 'failed' && <Pill tone="bad">failed: {p.failure_reason}</Pill>}</span>
+                <span className="text-xs text-muted"><When iso={p.requested_at} /> {p.status === 'failed' && <Pill tone="bad">failed: {p.failure_reason}</Pill>}</span>
               </div>
               <p className="text-sm">{m.kind === 'bank' ? `Bank ${m.bank_code}` : m.kind.toUpperCase()} ···{m.account_last4} · {m.account_name}</p>
               <p className="text-xs text-muted">Check that the account name matches the verified legal name before approving.</p>

@@ -3,6 +3,7 @@ import { Logo } from '@/components/logo';
 import { LinkButton } from '@/components/ui';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { getViewer } from '@/lib/auth';
+import { BRAND } from '@/lib/brand';
 
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
   const viewer = await getViewer().catch(() => null);
@@ -51,7 +52,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
         </div>
         <div className="border-t border-line">
           <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-muted sm:px-6">
-            © {new Date().getFullYear()} Outlier Desk · Naga City, Philippines. Business registration details (DTI/SEC, BIR) go here before launch.
+            © {new Date().getFullYear()} {BRAND} · Naga City, Philippines. Business registration details (DTI/SEC, BIR) go here before launch.
           </p>
         </div>
       </footer>

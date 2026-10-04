@@ -134,7 +134,7 @@ export function PitchCard({
           {proofUrl && (
             <div className="grid gap-1.5">
               <span className="label">Proof screenshot</span>
-              <a href={proofUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border border-line">
+              <a href={proofUrl} target="_blank" rel="noopener noreferrer" aria-label="Open the proof screenshot in a new tab" className="block overflow-hidden rounded-lg border border-line">
                 {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL */}
                 <img src={proofUrl} alt="Screenshot of the source video's views" className="max-h-72 w-full bg-surface object-contain" />
               </a>

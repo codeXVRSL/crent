@@ -5,8 +5,11 @@ import { createClient } from '@/lib/supabase/server';
 import { ActionForm, SubmitButton } from '@/components/form';
 import { AutoRefresh } from '@/components/auto-refresh';
 import { PageHeader, Textarea } from '@/components/ui';
-import { fmtDate } from '@/components/status';
+
 import { sendMessage } from '@/app/actions/messages';
+import { When } from '@/components/when';
+
+export const metadata = { title: 'Conversation' };
 
 export default async function Thread({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -34,7 +37,7 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
             return (
               <li key={m.id} className={`grid max-w-[85%] gap-1 rounded-lg px-4 py-3 ${mine ? 'justify-self-end bg-accent-soft' : 'justify-self-start border border-line bg-surface'}`}>
                 <p className="whitespace-pre-wrap break-words text-sm">{m.body}</p>
-                <span className="num text-[0.7rem] text-muted">{fmtDate(m.created_at, true)}{m.was_masked ? ' · contact details hidden' : ''}</span>
+                <span className="num text-[0.7rem] text-muted"><When iso={m.created_at} />{m.was_masked ? ' · contact details hidden' : ''}</span>
               </li>
             );
           })}

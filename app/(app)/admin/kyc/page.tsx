@@ -2,10 +2,11 @@ import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { ActionForm } from '@/components/form';
 import { Card, EmptyState, Input, Notice, PageHeader, Pill } from '@/components/ui';
-import { fmtDate } from '@/components/status';
+
 import { reviewKyc } from '@/app/actions/admin';
 import { ID_TYPES, platformLabel } from '@/lib/constants';
 import { compactViews, formatMultiplier } from '@/lib/outlier';
+import { When } from '@/components/when';
 
 export const metadata = { title: 'Verifications' };
 
@@ -44,7 +45,7 @@ export default async function AdminKyc({ searchParams }: { searchParams: Promise
               <Card key={s.id} className="grid gap-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div><strong>{p?.display_name}</strong> <span className="text-muted">@{p?.handle}</span></div>
-                  <span className="text-xs text-muted">Submitted {fmtDate(s.submitted_at, true)}</span>
+                  <span className="text-xs text-muted">Submitted <When iso={s.submitted_at} /></span>
                 </div>
                 <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
                   <div><dt className="label">Legal name</dt><dd>{s.legal_name}</dd></div>

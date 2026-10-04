@@ -1,8 +1,9 @@
 import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Card, EmptyState, PageHeader, Pill } from '@/components/ui';
-import { fmtDate } from '@/components/status';
+
 import { updateFlag } from '@/app/actions/admin';
+import { When } from '@/components/when';
 
 export const metadata = { title: 'Flags' };
 
@@ -24,7 +25,7 @@ export default async function AdminFlags() {
               <Card key={f.id} className="grid gap-2 text-sm">
                 <div className="flex flex-wrap justify-between gap-2">
                   <span><Pill tone="warn">{f.kind.replace('_', ' ')}</Pill> {p?.display_name} <span className="text-muted">({p?.role})</span></span>
-                  <span className="text-xs text-muted">{fmtDate(f.created_at, true)}</span>
+                  <span className="text-xs text-muted"><When iso={f.created_at} /></span>
                 </div>
                 {f.excerpt && <p className="rounded bg-bg p-2 font-mono text-xs">{f.excerpt}</p>}
                 <div className="flex gap-3">

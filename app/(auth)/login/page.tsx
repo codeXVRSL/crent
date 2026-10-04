@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ActionForm, SubmitButton } from '@/components/form';
 import { Field, Input } from '@/components/ui';
 import { signIn } from '@/app/actions/auth';
+import { BRAND } from '@/lib/brand';
 
 export const metadata = { title: 'Log in' };
 
@@ -9,7 +10,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
   const { next } = await searchParams;
   return (
     <div className="grid gap-6">
-      <div className="grid gap-1"><h1 className="text-[26px] font-semibold tracking-tight">Welcome back</h1><p className="text-sm text-muted">Log in to your Outlier Desk account.</p></div>
+      <div className="grid gap-1"><h1 className="text-[26px] font-semibold tracking-tight">Welcome back</h1><p className="text-sm text-muted">Log in to your {BRAND} account.</p></div>
       <ActionForm action={signIn} className="grid gap-4">
         <input type="hidden" name="next" value={next ?? '/dashboard'} />
         <Field label="Email" htmlFor="email"><Input id="email" name="email" type="email" autoComplete="email" required /></Field>

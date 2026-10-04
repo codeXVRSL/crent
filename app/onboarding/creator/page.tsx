@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui';
 import { CreatorProfileForm } from '@/components/creator-profile-form';
 
+export const metadata = { title: 'Set up your creator profile' };
+
 export default async function CreatorOnboarding() {
   const viewer = await getViewer();
   if (!viewer) redirect('/login');

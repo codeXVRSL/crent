@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { BRAND } from '@/lib/brand';
 
 /** Mark: three bars, the last one an outlier. */
 export function LogoMark({ className = 'size-7' }: { className?: string }) {
@@ -17,7 +18,7 @@ export function Logo({ href = '/' }: { href?: string }) {
   return (
     <Link href={href} className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
       <LogoMark />
-      Outlier Desk
+      {BRAND}
     </Link>
   );
 }

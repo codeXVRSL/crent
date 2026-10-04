@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import type { ActionResult } from '@/lib/errors';
 
 export async function sendFeedback(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
-  const message = String(fd.get('message') ?? '').trim();
+  const message = String(fd.get('message') ?? '').replace(/\r\n/g, '\n').trim();
   const kind = String(fd.get('kind') ?? 'other');
   if (message.length < 5) return { ok: false, message: 'Tell us a bit more (at least 5 characters).' };
   const supabase = await createClient();

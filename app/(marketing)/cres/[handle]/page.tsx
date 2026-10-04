@@ -7,6 +7,15 @@ import { getViewer } from '@/lib/auth';
 import { FavoriteButton } from '@/components/favorite-button';
 import { LevelBadge, type PublicCre } from '@/components/track-record';
 import { levelHint, researcherLevel } from '@/lib/level';
+import { BRAND } from '@/lib/brand';
+
+export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }) {
+  const { handle } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase.from('public_cres').select('display_name, headline, niches').eq('handle', handle.toLowerCase()).maybeSingle();
+  if (!data) return { title: 'Researcher not found' };
+  return { title: `${data.display_name} · verified content researcher`, description: data.headline ?? `Verified content researcher on ${BRAND}. Niches: ${(data.niches as string[]).join(', ')}.` };
+}
 
 export default async function CreProfile({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params;

@@ -109,7 +109,10 @@
   --ease-brand: var(--ease);
 }
 
-html, body { background: var(--bg); color: var(--ink); }
+html, /* Long words, pasted URLs and 3,000-character descriptions must wrap, never widen the page. */
+main, article, [data-card], td, pre, p, li { overflow-wrap: anywhere; }
+
+body { background: var(--bg); color: var(--ink); }
 body {
   font-family: var(--od-sans);
   font-size: 15px;

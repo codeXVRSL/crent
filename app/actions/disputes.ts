@@ -7,7 +7,7 @@ import { emailUser } from '@/lib/notify-email';
 import { env } from '@/lib/env';
 
 export async function openDispute(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
-  const details = String(fd.get('details') ?? '').trim();
+  const details = String(fd.get('details') ?? '').replace(/\r\n/g, '\n').trim();
   if (details.length < 20) return { ok: false, message: 'Explain what went wrong in at least 20 characters.' };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc('open_dispute', {
@@ -20,7 +20,7 @@ export async function openDispute(_: ActionResult | null, fd: FormData): Promise
 }
 
 export async function respondDispute(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
-  const response = String(fd.get('response') ?? '').trim();
+  const response = String(fd.get('response') ?? '').replace(/\r\n/g, '\n').trim();
   if (response.length < 10) return { ok: false, message: 'Write your side of the story.' };
   const supabase = await createClient();
   const id = String(fd.get('dispute_id'));

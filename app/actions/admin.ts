@@ -8,8 +8,10 @@ import { processPendingRefunds, sendPayout } from '@/lib/payments/events';
 import { friendlyError, type ActionResult } from '@/lib/errors';
 import { emailUser } from '@/lib/notify-email';
 import { env } from '@/lib/env';
+import { BRAND } from '@/lib/brand';
 
-const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
+// Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
+const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
 
 export async function reviewKyc(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   await requireViewer(['admin']);
@@ -18,7 +20,7 @@ export async function reviewKyc(_: ActionResult | null, fd: FormData): Promise<A
   const supabase = await createClient();
   const { error } = await supabase.rpc('review_kyc', { p_user: userId, p_approve: approve, p_reason: str(fd, 'reason') || null });
   if (error) return { ok: false, message: friendlyError(error) };
-  await emailUser(userId, approve ? "You're verified on Outlier Desk" : 'Your Outlier Desk verification needs changes',
+  await emailUser(userId, approve ? `You're verified on ${BRAND}` : `Your ${BRAND} verification needs changes`,
     approve ? `You can now pitch on open briefs: ${env.appUrl}/briefs` : `Reason: ${str(fd, 'reason')}\nUpdate it here: ${env.appUrl}/onboarding/cre`);
   revalidatePath('/admin/kyc');
   // The card leaves the queue, so confirm at the top of the page instead of on the card.
