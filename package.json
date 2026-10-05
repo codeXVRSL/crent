@@ -8,6 +8,7 @@
     "start": "next start",
     "setup": "node scripts/setup.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
+    "deploy": "node scripts/deploy.mjs",
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",

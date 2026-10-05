@@ -167,6 +167,13 @@ Log out and back in. You'll land on `/admin`. Use a **different** email for your
 ---
 
 ## Deploy (Vercel)
+**One command.** Create a Supabase access token (supabase.com → Account → Access Tokens) and a Vercel token (vercel.com → Account Settings → Tokens), then:
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_... VERCEL_TOKEN=... ADMIN_EMAILS=you@example.com npm run deploy
+```
+It creates a Supabase project in Singapore, runs the database setup, turns on authenticator-app two-factor, creates the Vercel project with every environment variable, deploys, and prints the live link. Payments stay simulated. Generated secrets go to `.env.production.local`: back that file up, because the payout encryption key in it must never change. Don't run `npm run seed:demo` against the live database: the demo admin has a published password.
+
+**By hand** instead:
 1. Push this folder to a GitHub repo and import it in Vercel.
 2. Add every variable from `.env.example` in Vercel → Settings → Environment Variables. Set `NEXT_PUBLIC_APP_URL` to your domain.
 3. `vercel.json` runs `/api/cron` once a day (midnight Manila time) so it works on Vercel's free Hobby plan. While testing, use **Admin → Run scheduled jobs now**. For launch, either move to Pro and set the schedule to `*/15 * * * *`, or keep Hobby and point a free external scheduler (e.g. cron-job.org) at `https://YOUR_DOMAIN/api/cron` with header `Authorization: Bearer <CRON_SECRET>` every 15 minutes.
