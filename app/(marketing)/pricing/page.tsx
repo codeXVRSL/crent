@@ -1,15 +1,27 @@
 import { LinkButton } from '@/components/ui';
-export const metadata = { title: 'Pricing', description: 'Pay per idea, from $3. A 5% marketplace fee on what you use, refunded on unused budget. Researchers keep 90% of every unlock.' };
+import { briefCharge, feeCents, formatMoney, unlockSplit } from '@/lib/money';
+import { getSettings, pct, usd } from '@/lib/settings';
 
-const rows = [
-  ['You post', '5 ideas × $8.00 = $40.00 budget'],
-  ['You pay today', '$40.00 + $2.00 marketplace fee (5%) = $42.00'],
-  ['You unlock 3 ideas', 'Each researcher receives $7.20 ($8.00 − 10% fee)'],
-  ['The brief closes', 'You get back $16.00 unused budget + $0.80 of the fee = $16.80'],
-  ['Total spent', '$25.20 for 3 researched ideas'],
-];
+export async function generateMetadata() {
+  const s = await getSettings();
+  return { title: 'Pricing', description: `Pay per idea, from ${usd(s.minPriceCents)}. A ${pct(s.creatorFeeBps)} marketplace fee on what you use, refunded on unused budget. Researchers keep ${pct(10000 - s.creFeeBps)} of every unlock.` };
+}
 
-export default function Pricing() {
+export default async function Pricing() {
+  const s = await getSettings();
+  // Worked example, computed with the same fee maths the database uses: 5 ideas at $8, 3 unlocked.
+  const price = 800, ideas = 5, used = 3;
+  const charge = briefCharge(price, ideas, s.creatorFeeBps);
+  const split = unlockSplit(price, s.creFeeBps);
+  const feeKept = feeCents(used * price, s.creatorFeeBps);
+  const refund = (ideas - used) * price + (charge.fee - feeKept);
+  const rows = [
+    ['You post', `${ideas} ideas × ${formatMoney(price)} = ${formatMoney(charge.budget)} budget`],
+    ['You pay today', `${formatMoney(charge.budget)} + ${formatMoney(charge.fee)} marketplace fee (${pct(s.creatorFeeBps)}) = ${formatMoney(charge.total)}`],
+    [`You unlock ${used} ideas`, `Each researcher receives ${formatMoney(split.net)} (${formatMoney(price)} − ${pct(s.creFeeBps)} fee)`],
+    ['The brief closes', `You get back ${formatMoney((ideas - used) * price)} unused budget + ${formatMoney(charge.fee - feeKept)} of the fee = ${formatMoney(refund)}`],
+    ['Total spent', `${formatMoney(charge.total - refund)} for ${used} researched ideas`],
+  ];
   return (
     <div className="mx-auto grid max-w-3xl gap-8 px-4 py-14">
       <div className="grid gap-2">
@@ -20,8 +32,8 @@ export default function Pricing() {
         <table className="w-full min-w-[480px] text-sm">
           <thead><tr className="border-b border-line text-left"><th className="label p-3">Fee</th><th className="label p-3">Rate</th><th className="label p-3">Paid by</th></tr></thead>
           <tbody>
-            <tr className="border-b border-line"><td className="p-3">Marketplace fee</td><td className="num p-3">5%</td><td className="p-3">Creator, added when funding a brief</td></tr>
-            <tr><td className="p-3">Service fee</td><td className="num p-3">10%</td><td className="p-3">Researcher, taken from each unlock</td></tr>
+            <tr className="border-b border-line"><td className="p-3">Marketplace fee</td><td className="num p-3">{pct(s.creatorFeeBps)}</td><td className="p-3">Creator, added when funding a brief</td></tr>
+            <tr><td className="p-3">Service fee</td><td className="num p-3">{pct(s.creFeeBps)}</td><td className="p-3">Researcher, taken from each unlock</td></tr>
           </tbody>
         </table>
       </div>
@@ -32,7 +44,7 @@ export default function Pricing() {
             <div key={k} className="grid gap-1 sm:grid-cols-[160px_1fr]"><dt className="font-semibold">{k}</dt><dd className="num">{v}</dd></div>
           ))}
         </dl>
-        <p className="text-sm text-muted">Price per idea can be anywhere from $3 to $500. Most briefs pay $5–$15 per idea.</p>
+        <p className="text-sm text-muted">Price per idea can be anywhere from {usd(s.minPriceCents)} to {usd(s.maxPriceCents)}. Most briefs pay $5–$15 per idea.</p>
       </div>
       <LinkButton href="/signup?as=creator" className="justify-self-start">Post a brief</LinkButton>
     </div>

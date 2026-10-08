@@ -6,6 +6,7 @@ import { ActionForm, SubmitButton } from '@/components/form';
 import { joinWaitlist } from '@/app/actions/waitlist';
 
 import { BRAND } from '@/lib/brand';
+import { getSettings, pct, times } from '@/lib/settings';
 export const metadata = { title: { absolute: `${BRAND} · proven content ideas, researched by verified experts` } };
 
 function BentoTile({ className = '', icon, title, children, visual }: {
@@ -23,7 +24,8 @@ function BentoTile({ className = '', icon, title, children, visual }: {
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const s = await getSettings();
   return (
     <>
       {/* ---------- Hero ---------- */}
@@ -50,7 +52,7 @@ export default function Home() {
             <ul className="flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-muted">
               <li className="flex items-center gap-1.5"><BadgeCheck className="size-4 text-accent" aria-hidden="true" /> ID-verified researchers</li>
               <li className="flex items-center gap-1.5"><ShieldCheck className="size-4 text-accent" aria-hidden="true" /> Budget held in escrow</li>
-              <li className="flex items-center gap-1.5"><Timer className="size-4 text-accent" aria-hidden="true" /> 72-hour dispute window</li>
+              <li className="flex items-center gap-1.5"><Timer className="size-4 text-accent" aria-hidden="true" /> {s.holdHours}-hour dispute window</li>
             </ul>
           </div>
           <div className="anim-fade-up [animation-delay:120ms]"><PitchDemo /></div>
@@ -60,7 +62,7 @@ export default function Home() {
       {/* ---------- Facts strip ---------- */}
       <section className="border-y border-line bg-surface">
         <dl className="mx-auto grid max-w-6xl grid-cols-2 divide-line px-4 sm:px-6 md:grid-cols-4 md:divide-x">
-          {[['3×', 'minimum outlier score on every pitch'], ['90%', 'of each unlock goes to the researcher'], ['5%', 'marketplace fee for creators'], ['72h', 'to report a problem after unlocking']].map(([n, l]) => (
+          {[[times(s.minMultiplier), 'minimum outlier score on every pitch'], [pct(10000 - s.creFeeBps), 'of each unlock goes to the researcher'], [pct(s.creatorFeeBps), 'marketplace fee for creators'], [`${s.holdHours}h`, 'to report a problem after unlocking']].map(([n, l]) => (
             <div key={l} className="grid gap-1 px-2 py-6 md:px-6">
               <dt className="order-2 text-[13px] text-muted">{l}</dt>
               <dd className="num text-[30px] font-medium tracking-tight">{n}</dd>
@@ -133,7 +135,7 @@ export default function Home() {
             Chat hides emails, numbers and handles, so every deal keeps escrow, reviews and dispute support.
           </BentoTile>
           <BentoTile className="md:col-span-2" icon={<Banknote className="size-4" />} title="Paid in pesos">
-            Researchers keep 90% of each unlock and withdraw to GCash, Maya or a Philippine bank.
+            Researchers keep {pct(10000 - s.creFeeBps)} of each unlock and withdraw to GCash, Maya or a Philippine bank.
           </BentoTile>
         </div>
       </section>

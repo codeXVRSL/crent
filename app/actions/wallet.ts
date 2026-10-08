@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { encryptSecret } from '@/lib/crypto';
 import { friendlyError, type ActionResult } from '@/lib/errors';
+import { friendlyErrorWithLimits } from '@/lib/settings';
 
 export async function addPayoutMethod(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   const kind = String(fd.get('kind'));
@@ -42,7 +43,7 @@ export async function deletePayoutMethod(_: ActionResult | null, fd: FormData): 
 export async function requestPayout(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.rpc('request_payout', { p_method_id: String(fd.get('method_id')) });
-  if (error) return { ok: false, message: friendlyError(error) };
+  if (error) return { ok: false, message: await friendlyErrorWithLimits(error) };
   revalidatePath('/wallet');
   return { ok: true, message: 'Withdrawal requested. Payouts are usually sent within 1–2 business days.' };
 }

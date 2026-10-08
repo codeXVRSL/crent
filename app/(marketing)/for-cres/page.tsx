@@ -1,7 +1,13 @@
 import { LinkButton } from '@/components/ui';
-export const metadata = { title: 'For researchers', description: 'Earn per proven idea. Creators fund briefs before you pitch, you keep 90% of every unlock, and withdraw to GCash, Maya or a Philippine bank.' };
+import { getSettings, holdHoursText, pct, usd } from '@/lib/settings';
+import { formatMoney, unlockSplit } from '@/lib/money';
+export async function generateMetadata() {
+  const s = await getSettings();
+  return { title: 'For researchers', description: `Earn per proven idea. Creators fund briefs before you pitch, you keep ${pct(10000 - s.creFeeBps)} of every unlock, and withdraw to GCash, Maya or a Philippine bank.` };
+}
 
-export default function ForCres() {
+export default async function ForCres() {
+  const s = await getSettings();
   return (
     <div className="mx-auto grid max-w-3xl gap-8 px-4 py-14">
       <div className="grid gap-3">
@@ -21,9 +27,9 @@ export default function ForCres() {
       <section className="grid gap-3">
         <h2 className="text-lg font-semibold tracking-tight">How you get paid</h2>
         <ul className="grid gap-2 text-muted">
-          <li>You keep 90% of each unlock. Example: an $8 unlock pays you $7.20.</li>
-          <li>Earnings are on hold for 72 hours after an unlock, in case the creator reports a problem.</li>
-          <li>Withdraw once you have $10 or more, to GCash, Maya or a Philippine bank account, in pesos.</li>
+          <li>You keep {pct(10000 - s.creFeeBps)} of each unlock. Example: an $8 unlock pays you {formatMoney(unlockSplit(800, s.creFeeBps).net)}.</li>
+          <li>Earnings are on hold for {holdHoursText(s.holdHours)} after an unlock, in case the creator reports a problem.</li>
+          <li>Withdraw once you have {usd(s.minPayoutCents)} or more, to GCash, Maya or a Philippine bank account, in pesos.</li>
         </ul>
       </section>
       <section className="grid gap-3">

@@ -11,7 +11,9 @@ export type BriefSeed = {
   example_urls?: string[]; min_multiplier?: number; max_video_age_days?: number | null; price?: string; max_unlocks?: string;
 };
 
-export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial }: {
+export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial, limits = { minPriceCents: 300, maxPriceCents: 50000, minMultiplier: 3 } }: {
+  /** Live platform limits (Admin → Settings), so the form and its hints match what the database enforces. */
+  limits?: { minPriceCents: number; maxPriceCents: number; minMultiplier: number };
   niches: { id: number; name: string }[];
   creatorFeeBps: number;
   defaultPlatform?: string | null;
@@ -33,7 +35,7 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial }: {
   const maxAge = seed.max_video_age_days === undefined ? '180' : seed.max_video_age_days === null ? '' : String(seed.max_video_age_days);
   const cents = parseDollarsToCents(price);
   const n = Number(max);
-  const valid = cents != null && cents >= 300 && cents <= 50000 && n >= 1 && n <= 100;
+  const valid = cents != null && cents >= limits.minPriceCents && cents <= limits.maxPriceCents && n >= 1 && n <= 100;
   const charge = valid ? briefCharge(cents!, n, creatorFeeBps) : null;
 
   return (
@@ -74,8 +76,8 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial }: {
           <Textarea id="example_urls" name="example_urls" rows={3} placeholder="https://" defaultValue={seed.example_urls?.join('\n')} />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Minimum outlier score" htmlFor="min_multiplier" hint="Views ÷ channel median. 3× minimum.">
-            <Input id="min_multiplier" name="min_multiplier" type="number" min={3} max={100} step={0.5} defaultValue={seed.min_multiplier ?? 3} />
+          <Field label="Minimum outlier score" htmlFor="min_multiplier" hint={`Views ÷ channel median. ${limits.minMultiplier}× minimum.`}>
+            <Input id="min_multiplier" name="min_multiplier" type="number" min={limits.minMultiplier} max={100} step={0.5} defaultValue={Math.max(seed.min_multiplier ?? limits.minMultiplier, limits.minMultiplier)} />
           </Field>
           <Field label="Oldest source video allowed" htmlFor="max_video_age_days">
             <Select id="max_video_age_days" name="max_video_age_days" defaultValue={maxAge}>
@@ -87,7 +89,7 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial }: {
       </div>
 
       <aside className="grid content-start gap-4 rounded-2xl border border-line bg-surface shadow-sm p-5 lg:sticky lg:top-6">
-        <Field label="Price per unlocked idea (USD)" htmlFor="price" hint="$3–$500. Most briefs pay $5–$15.">
+        <Field label="Price per unlocked idea (USD)" htmlFor="price" hint={`${formatMoney(limits.minPriceCents)}–${formatMoney(limits.maxPriceCents)}. Most briefs pay $5–$15.`}>
           <Input id="price" name="price" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} required />
         </Field>
         <Field label="Max ideas to unlock" htmlFor="max_unlocks">
@@ -105,7 +107,7 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial }: {
               <div className="flex justify-between text-muted"><dt>Marketplace fee ({creatorFeeBps / 100}%)</dt><dd>{formatMoney(charge.fee)}</dd></div>
               <div className="flex justify-between border-t border-line pt-1 font-semibold"><dt>You pay today</dt><dd>{formatMoney(charge.total)}</dd></div>
             </>
-          ) : <p className="text-bad">Enter a price between $3 and $500 and up to 100 ideas.</p>}
+          ) : <p className="text-bad">Enter a price between {formatMoney(limits.minPriceCents)} and {formatMoney(limits.maxPriceCents)} and up to 100 ideas.</p>}
         </dl>
         <p className="text-xs text-muted">Unused budget and its share of the fee are refunded when the brief closes.</p>
         <SubmitButton pendingText="Going to payment…">Continue to payment</SubmitButton>

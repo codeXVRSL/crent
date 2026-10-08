@@ -53,7 +53,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <Card className="mb-6 grid gap-3">
         <div className="grid gap-1">
           <span className="label">Scheduled jobs</span>
-          <p className="text-sm text-muted">These run automatically (daily on the free plan): close briefs past their deadline, release 72-hour holds, send refunds. Run them now when testing.</p>
+          <p className="text-sm text-muted">These run automatically (daily on the free plan): close briefs past their deadline, release finished holds, send refunds. Run them now when testing.</p>
         </div>
         <ActionForm action={runJobsNow} className="grid justify-items-start gap-2"><SubmitButton variant="secondary">Run scheduled jobs now</SubmitButton></ActionForm>
       </Card>

@@ -7,6 +7,7 @@ import { emailUser } from '@/lib/notify-email';
 import { env } from '@/lib/env';
 import { failBack } from '@/lib/flash';
 import { parseViews, VIEWS_HINT } from '@/lib/parse';
+import { friendlyErrorWithLimits } from '@/lib/settings';
 
 // Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
@@ -37,7 +38,7 @@ export async function submitPitch(_: ActionResult | null, fd: FormData): Promise
     p_instructions: str(fd, 'instructions'),
     p_adaptation_notes: str(fd, 'adaptation_notes'),
   });
-  if (error) return { ok: false, message: friendlyError(error) };
+  if (error) return { ok: false, message: await friendlyErrorWithLimits(error) };
   const proofPath = str(fd, 'proof_path');
   if (proofPath && pitchId) {
     const { error: pe } = await supabase.rpc('attach_pitch_proof', { p_pitch_id: pitchId, p_path: proofPath });

@@ -202,6 +202,11 @@ await step('admin settings: hold period to 0 and back; validation on bad values'
   await p.goto(`${BASE}/admin/settings`); await p.getByLabel('Creator marketplace fee (%)').fill('99');
   await p.getByRole('button', { name: 'Save settings' }).click(); await sleep(2000);
   const [s2] = await rest('platform_settings?select=creator_fee_bps'); expect(s2.creator_fee_bps !== 9900, '99% fee was accepted');
+  // Public pages quote the live settings: a 7% fee shows on Pricing, then goes back to what it was.
+  await p.goto(`${BASE}/admin/settings`); await p.getByLabel('Creator marketplace fee (%)').fill('7'); await p.getByRole('button', { name: 'Save settings' }).click(); await visible(p, 'Saved.');
+  const pricing = await (await fetch(`${BASE}/pricing`)).text();
+  await rest('platform_settings?id=eq.true', { method: 'PATCH', body: JSON.stringify({ creator_fee_bps: s2.creator_fee_bps }) });
+  expect(pricing.includes('7%') && pricing.includes('$42.80'), 'pricing page does not follow the fee setting');
 });
 
 // ============ 3. Brief → pitch (with proof) → unlock ============

@@ -1,17 +1,21 @@
 import { notFound } from 'next/navigation';
 import { Notice } from '@/components/ui';
 import { BRAND } from '@/lib/brand';
+import { DEFAULT_SETTINGS, getSettings, pct, type PublicSettings } from '@/lib/settings';
+
+// Re-read the live fees and hold time every few minutes so the terms always quote the current numbers.
+export const revalidate = 300;
 
 // DRAFTS ONLY. Have a Philippine lawyer review every page before launch.
-const DOCS: Record<string, { title: string; sections: [string, string][] }> = {
+const docsFor = (s: PublicSettings): Record<string, { title: string; sections: [string, string][] }> => ({
   terms: {
     title: 'Terms of Service',
     sections: [
       [`What ${BRAND} is`, `${BRAND} is an online marketplace that connects content creators ("Creators") with Content Research Experts ("Researchers"). We provide the platform, payments through a licensed payment provider, and dispute handling. We are not a party to the research service between a Creator and a Researcher.`],
       ['Accounts', 'You must be at least 18 years old and give accurate information. Each account has one role: Creator or Researcher. You are responsible for activity on your account.'],
       ['Briefs and funding', 'A Creator funds a brief in advance. Funds are held by our payment provider until they are used for unlocks or refunded. Briefs are shown to Researchers only after payment is confirmed.'],
-      ['Unlocks', 'Unlocking a pitch uses one idea from the brief budget and releases payment to the Researcher, subject to a 72-hour hold. Unlocks are final except through the dispute process.'],
-      ['Fees', 'Creators pay a marketplace fee (currently 5%) when funding a brief. Researchers pay a service fee (currently 10%) on each unlock. Fee changes apply only to briefs created after the change.'],
+      ['Unlocks', `Unlocking a pitch uses one idea from the brief budget and releases payment to the Researcher, subject to a ${s.holdHours}-hour hold. Unlocks are final except through the dispute process.`],
+      ['Fees', `Creators pay a marketplace fee (currently ${pct(s.creatorFeeBps)}) when funding a brief. Researchers pay a service fee (currently ${pct(s.creFeeBps)}) on each unlock. Fee changes apply only to briefs created after the change.`],
       ['Staying on the platform', `For 12 months after you first connect with another user through ${BRAND}, you agree to pay for research work with that user through ${BRAND}. Sharing contact details to move work off the platform may lead to suspension.`],
       ['Prohibited conduct', 'No false view counts or proof, no copying other Researchers’ locked content, no harassment, no illegal or adult niches, and no attempts to get around payments.'],
       ['Complaints', 'Under the Internet Transactions Act (RA 11967), you must first use our internal complaint process (Help page or support email). If your complaint is not resolved within 7 calendar days, you may go to the Department of Trade and Industry or the courts.'],
@@ -36,7 +40,7 @@ const DOCS: Record<string, { title: string; sections: [string, string][] }> = {
     sections: [
       ['Unused budget', 'When a brief closes, at its deadline or when you close it early, the unused budget and its share of the marketplace fee are refunded to your original payment method.'],
       ['Unlocked ideas', 'Unlocked ideas are not refundable except through a dispute.'],
-      ['Disputes', 'You can open a dispute within 72 hours of an unlock if the source is gone, the stats were false, the idea does not match its card, instructions are missing, or it was copied. The Researcher has 48 hours to reply before our team decides.'],
+      ['Disputes', `You can open a dispute within ${s.holdHours} hours of an unlock if the source is gone, the stats were false, the idea does not match its card, instructions are missing, or it was copied. The Researcher has 48 hours to reply before our team decides.`],
       ['Timing', 'Card refunds usually appear within 5–10 business days, depending on your bank.'],
     ],
   },
@@ -50,20 +54,20 @@ const DOCS: Record<string, { title: string; sections: [string, string][] }> = {
       ['Verification', `You consent to identity verification and to ${BRAND} keeping your verification data as described in the Privacy Policy.`],
     ],
   },
-};
+});
 
 export function generateStaticParams() {
-  return Object.keys(DOCS).map((slug) => ({ slug }));
+  return Object.keys(docsFor(DEFAULT_SETTINGS)).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  return { title: DOCS[slug]?.title ?? 'Legal' };
+  return { title: docsFor(DEFAULT_SETTINGS)[slug]?.title ?? 'Legal' };
 }
 
 export default async function LegalPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const doc = DOCS[slug];
+  const doc = docsFor(await getSettings())[slug];
   if (!doc) notFound();
   return (
     <article className="mx-auto grid max-w-3xl gap-6 px-4 py-14">

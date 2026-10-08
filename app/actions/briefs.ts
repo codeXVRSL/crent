@@ -10,6 +10,7 @@ import { parseDollarsToCents } from '@/lib/money';
 import { env } from '@/lib/env';
 import { BRAND } from '@/lib/brand';
 import { failBack } from '@/lib/flash';
+import { friendlyErrorWithLimits } from '@/lib/settings';
 
 // Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
@@ -61,7 +62,7 @@ export async function createBrief(_: ActionResult | null, fd: FormData): Promise
     p_max_unlocks: Number(str(fd, 'max_unlocks')),
     p_deadline_at: new Date(Date.now() + days * 86_400_000).toISOString(),
   });
-  if (error) return { ok: false, message: friendlyError(error) };
+  if (error) return { ok: false, message: await friendlyErrorWithLimits(error) };
 
   let url: string;
   try {

@@ -7,10 +7,12 @@ import { deletePayoutMethod, requestPayout, cancelPayout } from '@/app/actions/w
 import { formatMoney } from '@/lib/money';
 import { When } from '@/components/when';
 import { PayoutMethodForm } from '@/components/payout-method-form';
+import { getSettings, holdHoursText } from '@/lib/settings';
 
 export const metadata = { title: 'Wallet' };
 
 export default async function Wallet({ searchParams }: { searchParams: Promise<{ done?: string }> }) {
+  const live = await getSettings();
   const v = await requireViewer(['cre']);
   const { done } = await searchParams;
   const supabase = await createClient();
@@ -31,7 +33,7 @@ export default async function Wallet({ searchParams }: { searchParams: Promise<{
       {done === 'removed' && <div className="mb-6"><Notice tone="good">Payout method removed.</Notice></div>}
       {done === 'cancelled' && <div className="mb-6"><Notice tone="good">Withdrawal cancelled. The money is back in your available balance.</Notice></div>}
       <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Stat label="On hold" value={formatMoney(bal?.held_cents ?? 0)} sub="Released 72 hours after each unlock" />
+        <Stat label="On hold" value={formatMoney(bal?.held_cents ?? 0)} sub={`Released ${holdHoursText(live.holdHours)} after each unlock`} />
         <Stat label="Available" value={formatMoney(available)} />
         <Stat label="In payout" value={formatMoney(bal?.in_payout_cents ?? 0)} />
         <Stat label="Paid out" value={formatMoney(bal?.paid_out_cents ?? 0)} />

@@ -25,6 +25,7 @@ export async function saveIdeaTracking(_: ActionResult | null, fd: FormData): Pr
   const resultViews = views(fd, 'result_views');
   const usualViews = views(fd, 'usual_views');
   if ([resultViews, usualViews].some((n) => n != null && !Number.isFinite(n))) return { ok: false, message: `Check the views. ${VIEWS_HINT}` };
+  if (usualViews === 0) return { ok: false, message: 'Your usual views must be more than 0. Use the median of your last 10 or so posts.' };
   if ((resultViews == null) !== (usualViews == null)) return { ok: false, message: 'Add both the views it got and your usual views, so we can work out the result.' };
 
   const supabase = await createClient();
