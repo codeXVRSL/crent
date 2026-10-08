@@ -33,8 +33,16 @@ export function timeLeft(iso: string): string {
   return `${Math.floor(h / 24)}d left`;
 }
 
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Formats a date for display. A plain calendar date ("2026-10-08") is shown as that same day for every
+ * viewer; parsing it as a moment would shift it a day back west of UTC and break hydration.
+ * Timestamps with a time of day should use <When>, which renders in the viewer's own time zone.
+ */
 export function fmtDate(iso: string, withTime = false) {
+  if (DATE_ONLY.test(iso)) return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
   return new Date(iso).toLocaleString('en-US', withTime
-    ? { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }
-    : { day: 'numeric', month: 'short', year: 'numeric' });
+    ? { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' }
+    : { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Manila' });
 }

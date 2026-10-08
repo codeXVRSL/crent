@@ -8,6 +8,8 @@ psql -q -X -v ON_ERROR_STOP=1 -d postgres -c "drop database if exists $DB" -c "c
 psql -q -X -v ON_ERROR_STOP=1 -d $DB -f tests/00_supabase_shim.sql || exit 1
 for f in migrations/*.sql; do psql -q -X -v ON_ERROR_STOP=1 -d $DB -f "$f" || exit 1; done
 psql -q -X -v ON_ERROR_STOP=1 -d $DB -f seed.sql || exit 1
+# The flow tests act as admin without a two-factor token; test 50 turns the requirement back on and checks it.
+psql -q -X -d $DB -c "update platform_settings set admin_mfa_required = false" >/dev/null
 out=$(psql -X -v ON_ERROR_STOP=1 -d $DB -f tests/10_marketplace_flow.sql 2>&1); status=$?
 echo "$out" | grep -E "✓|FAIL|ERROR|CONTEXT|LINE"
 if [ $status -ne 0 ] || echo "$out" | grep -q "FAIL"; then echo "DATABASE TESTS FAILED"; exit 1; fi
@@ -25,6 +27,9 @@ out=$(psql -X -v ON_ERROR_STOP=1 -d $DB -f tests/30_creator_researcher_tools.sql
 echo "$out" | grep -E "✓|FAIL|ERROR|CONTEXT|LINE"
 if [ $status -ne 0 ] || echo "$out" | grep -q "FAIL"; then echo "DATABASE TESTS FAILED"; exit 1; fi
 out=$(psql -X -v ON_ERROR_STOP=1 -d $DB -f tests/40_rate_limits_and_closure.sql 2>&1); status=$?
+echo "$out" | grep -E "✓|FAIL|ERROR|CONTEXT|LINE"
+if [ $status -ne 0 ] || echo "$out" | grep -q "FAIL"; then echo "DATABASE TESTS FAILED"; exit 1; fi
+out=$(psql -X -v ON_ERROR_STOP=1 -d $DB -f tests/50_security.sql 2>&1); status=$?
 echo "$out" | grep -E "✓|FAIL|ERROR|CONTEXT|LINE"
 if [ $status -ne 0 ] || echo "$out" | grep -q "FAIL"; then echo "DATABASE TESTS FAILED"; exit 1; fi
 echo "ALL DATABASE TESTS PASSED"

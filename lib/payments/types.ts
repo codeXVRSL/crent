@@ -38,6 +38,8 @@ export interface PaymentProvider {
   }): Promise<{ status: 'succeeded' | 'pending' | 'unsupported' | 'failed'; providerRef?: string; failure?: string }>;
 
   payout(input: {
+    /** Increases each time an admin approves the payout, so a retry is a new transfer at the provider. */
+    attempt?: number;
     payoutId: string;
     amountCents: number; // in the destination currency
     currency: Currency;

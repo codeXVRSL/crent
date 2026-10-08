@@ -22,6 +22,7 @@ import { HOOK_CATEGORIES, passReasonLabel, platformLabel } from '@/lib/constants
 import { formatMultiplier } from '@/lib/outlier';
 import { buildScriptPrompt } from '@/lib/script-prompt';
 import { When } from '@/components/when';
+import { PITCH_COLUMNS } from '@/lib/pitch-columns';
 
 type CreInfo = {
   id: string; display_name: string; handle: string; unlock_rate_pct: number | null; avg_rating: number | null; review_count: number;
@@ -93,7 +94,7 @@ export default async function BriefPage({ params, searchParams }: {
   // ---------------- Creator (owner) view ----------------
   if (isOwner || v.role === 'admin') {
     const [{ data: pitches }, { data: unlocks }, { data: refunds }] = await Promise.all([
-      supabase.from('pitches').select('*').eq('brief_id', id).order('submitted_at'),
+      supabase.from('pitches').select(PITCH_COLUMNS).eq('brief_id', id).order('submitted_at'),
       supabase.from('unlocks').select('id, pitch_id, status, available_at').eq('brief_id', id),
       supabase.from('refunds').select('id, amount_cents, status, reason').eq('brief_id', id),
     ]);
@@ -295,7 +296,7 @@ export default async function BriefPage({ params, searchParams }: {
   // ---------------- Researcher view ----------------
   const [{ data: creator }, { data: mine }] = await Promise.all([
     supabase.from('public_creators').select('*').eq('id', brief.creator_id).maybeSingle(),
-    supabase.from('pitches').select('*').eq('brief_id', id).eq('cre_id', v.id).order('submitted_at'),
+    supabase.from('pitches').select(PITCH_COLUMNS).eq('brief_id', id).eq('cre_id', v.id).order('submitted_at'),
   ]);
   const myIds = (mine ?? []).map((p) => p.id);
   const [{ data: mySecrets }, { data: myFeedback }, { data: invite }] = await Promise.all([

@@ -39,7 +39,10 @@ export async function approvePayout(_: ActionResult | null, fd: FormData): Promi
   try {
     status = await sendPayout(id);
   } catch (e) {
-    return { ok: false, message: `Couldn't send the payout: ${(e as Error).message}` };
+    // Don't leave it stuck in "processing": mark it failed so it can be approved again or cancelled.
+    await createAdminClient().rpc('complete_payout', { p_payout_id: id, p_provider_ref: null, p_success: false, p_failure: (e as Error).message });
+    revalidatePath('/admin/payouts');
+    return { ok: false, message: `Couldn't send the payout: ${(e as Error).message}. It's marked failed; fix the cause and approve it again.` };
   }
   revalidatePath('/admin/payouts');
   // The card leaves the queue, so confirm at the top of the page instead of on the card.
@@ -77,7 +80,10 @@ export async function markRefundDone(_: ActionResult | null, fd: FormData): Prom
 export async function retryRefund(fd: FormData) {
   const v = await requireViewer(['admin']);
   const db = createAdminClient();
-  await db.from('refunds').update({ status: 'pending', failure_reason: null }).eq('id', str(fd, 'refund_id'));
+  // Only failed or manual refunds can be retried; a succeeded or in-flight one must never be sent twice.
+  const { data: reset } = await db.from('refunds').update({ status: 'pending', failure_reason: null })
+    .eq('id', str(fd, 'refund_id')).in('status', ['failed', 'manual']).select('id');
+  if (!reset?.length) { revalidatePath('/admin/payouts'); return; }
   await db.from('audit_log').insert({ actor_id: v.id, action: 'refund.retry', entity_type: 'refund', entity_id: str(fd, 'refund_id') });
   await processPendingRefunds();
   revalidatePath('/admin/payouts');

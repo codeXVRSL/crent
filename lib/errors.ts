@@ -48,6 +48,8 @@ const MESSAGES: Record<string, string> = {
   ALREADY_REVIEWED: "You've already reviewed this.",
   CRE_NOT_FOUND: "We couldn't find that researcher, or they're not verified yet.",
   TOO_MANY_INVITES: 'You can invite up to 25 researchers to one brief.',
+  ACCOUNT_SUSPENDED: 'Your account is suspended, so this is not available. Contact support if you think this is a mistake.',
+  CRE_SUSPENDED: 'This researcher\'s account is suspended, so their ideas can\'t be unlocked right now. Nothing was charged.',
   ADMIN_CANNOT_CLOSE: 'Admin accounts are closed by another admin.',
   EARNINGS_PENDING: 'You still have earnings on hold or available. Withdraw them first, then close the account.',
   PAYOUT_PENDING: 'A withdrawal is still being processed. Close the account once it has been paid.',

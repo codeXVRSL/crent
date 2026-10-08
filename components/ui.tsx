@@ -107,12 +107,12 @@ export function Stat({ label, value, sub, icon, emphasis }: { label: string; val
   return (
     <div data-card="" className={cx('grid content-between gap-3 rounded-2xl border p-4 shadow-sm', emphasis ? 'border-transparent bg-accent text-accent-ink' : 'border-line bg-surface')}>
       <div className="flex items-center justify-between gap-2">
-        <span className={cx('label', emphasis && '!text-accent-ink/80')}>{label}</span>
+        <span className={cx('label', emphasis && '!text-accent-ink/90')}>{label}</span>
         {icon && <span className={cx('opacity-70', emphasis ? '' : 'text-muted')}>{icon}</span>}
       </div>
       <div className="grid gap-0.5">
         <span className="num text-[26px] font-medium leading-none tracking-tight">{value}</span>
-        {sub && <span className={cx('text-xs', emphasis ? 'text-accent-ink/80' : 'text-muted')}>{sub}</span>}
+        {sub && <span className={cx('text-xs', emphasis ? 'text-accent-ink/90' : 'text-muted')}>{sub}</span>}
       </div>
     </div>
   );

@@ -16,12 +16,12 @@ export async function addPayoutMethod(_: ActionResult | null, fd: FormData): Pro
   if (kind === 'bank' && (!/^\d{6,20}$/.test(number) || !bankCode)) return { ok: false, message: 'Enter the bank and a 6–20 digit account number.' };
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  await supabase.from('payout_methods').update({ is_default: false }).eq('user_id', user!.id);
-  const { error } = await supabase.from('payout_methods').insert({
+  const { data: added, error } = await supabase.from('payout_methods').insert({
     user_id: user!.id, kind, bank_code: bankCode, account_name: accountName,
     account_last4: number.slice(-4), account_number_enc: encryptSecret(number), is_default: true,
-  });
+  }).select('id').single();
   if (error) return { ok: false, message: friendlyError(error) };
+  await supabase.rpc('make_default_payout_method', { p_id: added.id }); // the newest method becomes the only default
   revalidatePath('/wallet');
   return { ok: true, message: 'Payout method saved.' };
 }

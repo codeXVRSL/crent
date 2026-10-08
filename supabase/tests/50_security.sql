@@ -1,0 +1,97 @@
+-- Security fixes: admin two-factor in the database, hidden source_key, suspended accounts, payout default,
+-- dispute resolution ledger. Runs after 40 and reuses its users.
+\set ON_ERROR_STOP 1
+\set QUIET 1
+\set admin '00000000-0000-0000-0000-00000000000a'
+\set c1 '00000000-0000-0000-0000-0000000000c1'
+\set r1 '00000000-0000-0000-0000-0000000000e1'
+\set r2 '00000000-0000-0000-0000-0000000000e2'
+
+-- ---------- admin powers need aal2 ----------
+update platform_settings set admin_mfa_required = true;
+select set_config('request.jwt.claim.sub', :'admin', false);
+select set_config('request.jwt.claims', '{"aal":"aal1"}', false);
+set role authenticated;
+do $$ begin
+  perform update_settings(500, 1000, 72, 300, 3.0, 1000); raise exception 'FAIL: admin with a password-only token changed settings';
+exception when others then if sqlerrm = 'NOT_ADMIN' then raise notice '✓ admin functions refuse a password-only (aal1) token'; else raise; end if; end $$;
+select case when (select count(*) from kyc_submissions) = 0 then '✓ ID submissions hidden from an aal1 admin token' else 'FAIL: aal1 admin can read ID submissions' end;
+reset role;
+select set_config('request.jwt.claims', '{"aal":"aal2"}', false);
+set role authenticated;
+select case when is_admin() then '✓ the same admin after the authenticator code (aal2) is admin' else 'FAIL: aal2 admin refused' end;
+reset role;
+select set_config('request.jwt.claims', '', false);
+update platform_settings set admin_mfa_required = false;
+
+-- ---------- source_key is not readable ----------
+select set_config('request.jwt.claim.sub', :'c1', false); set role authenticated;
+do $$ begin
+  perform source_key from pitches limit 1; raise exception 'FAIL: creator can read source_key';
+exception when insufficient_privilege then raise notice '✓ source_key cannot be read by signed-in users'; end $$;
+select case when (select count(*) from pitches) > 0 then '✓ the other pitch columns are still readable' else 'FAIL: pitches unreadable' end;
+reset role;
+
+-- ---------- suspended accounts ----------
+select b.id as sb, p.cre_id as scre from briefs b join pitches p on p.brief_id = b.id where b.creator_id = :'c1' limit 1 \gset
+select set_config('my.sb', :'sb', false), set_config('my.scre', :'scre', false) \gset
+update profiles set suspended_at = now(), suspended_reason = 'test' where id = :'c1';
+select set_config('request.jwt.claim.sub', :'c1', false); set role authenticated;
+do $$ begin
+  perform get_or_create_thread(current_setting('my.sb')::uuid, current_setting('my.scre')::uuid);
+  raise exception 'FAIL: suspended creator could start a conversation';
+exception when others then if sqlerrm = 'ACCOUNT_SUSPENDED' then raise notice '✓ suspended accounts cannot start conversations'; else raise; end if; end $$;
+reset role;
+update profiles set suspended_at = null, suspended_reason = null where id = :'c1';
+
+-- A suspended researcher's pitch can't be unlocked.
+select set_config('request.jwt.claim.sub', :'c1', false); set role authenticated;
+select create_brief('Security test brief', repeat('Ideas for a security test brief, nothing more. ', 2),
+  'tiktok', (select id from niches where slug='personal-finance'), null, null, '{}', 3.0, null, 600, 2, now() + interval '5 days') as sbr \gset
+select external_id as sext from prepare_brief_payment(:'sbr', 'mock') \gset
+reset role;
+set role service_role; select mark_payment_paid(:'sext', 'prov_s1', (select total_charge_cents from briefs where id = :'sbr'), 'card'); reset role;
+select set_config('request.jwt.claim.sub', :'r2', false); set role authenticated;
+select submit_pitch(:'sbr', 'tiktok', 'Talking head', 40, 'story',
+  'A short story about the first payday and what went wrong after', 900000, 60000, current_date - 15, null,
+  'https://www.tiktok.com/@sec/video/7400000000000000051', null, 'My first payday went wrong in the funniest way',
+  'A relatable mistake with real numbers keeps people watching to the end.',
+  repeat('HOOK: the payslip. BEATS: each purchase, then the empty wallet. ', 3), null) as spitch \gset
+reset role;
+select set_config('my.spitch', :'spitch', false) \gset
+update profiles set suspended_at = now(), suspended_reason = 'test' where id = :'r2';
+select set_config('request.jwt.claim.sub', :'c1', false); set role authenticated;
+do $$ begin
+  perform unlock_pitch(current_setting('my.spitch')::uuid); raise exception 'FAIL: unlocked a suspended researcher''s pitch';
+exception when others then if sqlerrm = 'CRE_SUSPENDED' then raise notice '✓ a suspended researcher''s pitch cannot be unlocked'; else raise; end if; end $$;
+reset role;
+update profiles set suspended_at = null, suspended_reason = null where id = :'r2';
+
+-- ---------- default payout method ----------
+insert into payout_methods(user_id, kind, account_name, account_last4, account_number_enc, is_default)
+values (:'r1', 'gcash', 'Rina Test', '1111', 'x', true), (:'r1', 'maya', 'Rina Test', '2222', 'y', true);
+select id as pm2 from payout_methods where user_id = :'r1' and account_last4 = '2222' \gset
+select set_config('my.pm2', :'pm2', false) \gset
+select set_config('request.jwt.claim.sub', :'r1', false); set role authenticated;
+select make_default_payout_method(:'pm2');
+reset role;
+select case when (select count(*) from payout_methods where user_id = :'r1' and is_default) = 1
+             and (select is_default from payout_methods where id = :'pm2') then '✓ exactly one default payout method after switching' else 'FAIL: default payout method' end;
+select set_config('request.jwt.claim.sub', :'c1', false); set role authenticated;
+do $$ begin
+  perform make_default_payout_method(current_setting('my.pm2')::uuid); raise exception 'FAIL: changed someone else''s payout method';
+exception when others then if sqlerrm = 'NOT_FOUND' then raise notice '✓ cannot change another person''s payout method'; else raise; end if; end $$;
+reset role;
+
+-- ---------- dispute resolved for the researcher after the hold ended keeps the ledger balanced ----------
+select set_config('request.jwt.claim.sub', :'c1', false); set role authenticated;
+select unlock_pitch(:'spitch') as sunl \gset
+select open_dispute(:'sunl', 'source_dead', 'The numbers in this pitch do not match the source video at all.');
+reset role;
+update unlocks set available_at = now() - interval '1 hour' where id = :'sunl';
+select set_config('request.jwt.claim.sub', :'admin', false); set role authenticated;
+select resolve_dispute((select id from disputes where unlock_id = :'sunl'), false, 'The pitch matches the source; researcher keeps it.');
+reset role;
+select case when (select status from unlocks where id = :'sunl') = 'available'
+             and (select count(*) from ledger_entries where unlock_id = :'sunl' and kind = 'hold_release') = 1
+        then '✓ late dispute win for the researcher releases the hold with its ledger entry' else 'FAIL: hold_release missing after late dispute resolution' end;

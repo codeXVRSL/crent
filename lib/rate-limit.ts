@@ -29,4 +29,5 @@ export const LIMITS = {
   resetIp: { limit: 10, window: 3600 },
   resetEmail: { limit: 3, window: 3600 },
   mfaIp: { limit: 20, window: 900 },
+  mfaUser: { limit: 8, window: 900 },
 } as const;

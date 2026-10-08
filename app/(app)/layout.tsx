@@ -123,7 +123,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <main className="mx-auto w-full max-w-[1160px] px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
         {env.isTestMode && (
           <div className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-warn/40 bg-warn-soft px-3.5 py-2 text-[13px] text-ink-2">
-            <span className="rounded-md bg-warn px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white">Test mode</span>
+            <span className="rounded-md bg-warn px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-bg">Test mode</span>
             Payments are simulated. No real money moves. Use the Feedback button to report anything odd.
           </div>
         )}

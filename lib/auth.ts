@@ -2,7 +2,6 @@ import 'server-only';
 import { redirect } from 'next/navigation';
 import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
-import { env } from '@/lib/env';
 
 export type Role = 'creator' | 'cre' | 'admin';
 export type Viewer = {
@@ -51,6 +50,13 @@ export const getMfaState = cache(async (): Promise<'ok' | 'verify' | 'enroll'> =
   return data.nextLevel === 'aal2' ? 'verify' : 'enroll';
 });
 
+/** Whether admins need two-factor. Same switch the database's is_admin() reads, so app and database agree. */
+export const adminMfaRequired = cache(async (): Promise<boolean> => {
+  const supabase = await createClient();
+  const { data } = await supabase.from('platform_settings').select('admin_mfa_required').single();
+  return data?.admin_mfa_required !== false;
+});
+
 /** Use at the top of app pages. Redirects if not signed in, no role yet, suspended, wrong role, or an admin without two-factor. */
 export async function requireViewer(roles?: Role[]): Promise<Viewer> {
   const v = await getViewer();
@@ -58,7 +64,7 @@ export async function requireViewer(roles?: Role[]): Promise<Viewer> {
   if (v.suspended) redirect('/suspended');
   if (!v.role) redirect('/onboarding');
   if (roles && !roles.includes(v.role)) redirect('/dashboard');
-  if (v.role === 'admin' && env.adminMfaRequired) {
+  if (v.role === 'admin' && (await adminMfaRequired())) {
     const mfa = await getMfaState();
     if (mfa === 'verify') redirect('/mfa');
     if (mfa === 'enroll') redirect('/mfa/setup');

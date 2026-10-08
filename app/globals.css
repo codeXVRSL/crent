@@ -11,17 +11,17 @@
   --surface-2: #F1F3F6;          /* insets, table heads, code */
   --ink: #0F1720;
   --ink-2: #334150;              /* secondary text */
-  --muted: #647282;
+  --muted: #5B6876;
   --line: rgba(15, 23, 32, 0.09);
   --line-strong: rgba(15, 23, 32, 0.16);
-  --accent: #0B7A6B;
-  --accent-hover: #09685B;
+  --accent: #08705F;
+  --accent-hover: #075E50;
   --accent-ink: #FFFFFF;
   --accent-soft: rgba(11, 122, 107, 0.10);
   --accent-glow: rgba(11, 122, 107, 0.22);
-  --warn: #9A5A00;   --warn-soft: rgba(214, 140, 20, 0.14);
+  --warn: #8A5000;   --warn-soft: rgba(214, 140, 20, 0.14);
   --bad: #B3372A;    --bad-soft: rgba(179, 55, 42, 0.10);
-  --good: #1B7F3D;   --good-soft: rgba(27, 127, 61, 0.11);
+  --good: #17733A;   --good-soft: rgba(27, 127, 61, 0.11);
   --shadow-sm: 0 1px 2px rgba(15, 23, 32, 0.05);
   --shadow-md: 0 1px 2px rgba(15, 23, 32, 0.04), 0 6px 16px -4px rgba(15, 40, 60, 0.10);
   --shadow-lg: 0 2px 4px rgba(15, 23, 32, 0.04), 0 24px 48px -12px rgba(15, 40, 60, 0.18);

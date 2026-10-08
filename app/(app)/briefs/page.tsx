@@ -16,7 +16,7 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<F
 
   if (v.role === 'creator') {
     const { data: allBriefs } = await supabase.from('briefs')
-      .select('id, title, status, close_reason, platform, price_per_idea_cents, currency, max_unlocks, unlocks_used, deadline_at, created_at, pitches(count)')
+      .select('id, title, status, close_reason, platform, price_per_idea_cents, currency, max_unlocks, unlocks_used, deadline_at, created_at, pitches(id)')
       .eq('creator_id', v.id).order('created_at', { ascending: false });
     // A deleted draft is marked cancelled (never paid, nothing to refund). Nobody needs to see it again.
     const visibleBriefs = (allBriefs ?? []).filter((b) => !(b.status === 'cancelled' && b.unlocks_used === 0 && b.close_reason === 'cancelled_unpaid'));
@@ -39,7 +39,7 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<F
                   <tr key={b.id} className="border-b border-line last:border-0">
                     <td className="p-3"><Link href={`/briefs/${b.id}`} className="font-semibold hover:text-accent">{b.title}</Link><div className="text-xs text-muted">{platformLabel(b.platform)}</div></td>
                     <td className="p-3"><BriefStatus status={b.status} /></td>
-                    <td className="num p-3">{(b.pitches as unknown as { count: number }[])[0]?.count ?? 0}</td>
+                    <td className="num p-3">{(b.pitches as unknown as { id: string }[] | null)?.length ?? 0}</td>
                     <td className="num p-3">{b.unlocks_used} / {b.max_unlocks}</td>
                     <td className="num p-3">{formatMoney(b.price_per_idea_cents, b.currency)}</td>
                     <td className="num p-3">{b.status === 'open' ? timeLeft(b.deadline_at) : '—'}</td>

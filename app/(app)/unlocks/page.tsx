@@ -9,6 +9,7 @@ import { signProofs } from '@/lib/proof';
 import { HOOK_CATEGORIES, IDEA_STAGES, stageLabel } from '@/lib/constants';
 import { buildScriptPrompt } from '@/lib/script-prompt';
 import { formatMultiplier } from '@/lib/outlier';
+import { PITCH_COLUMNS } from '@/lib/pitch-columns';
 
 export const metadata = { title: 'Unlocked ideas' };
 
@@ -25,7 +26,7 @@ export default async function Unlocks({ searchParams }: { searchParams: Promise<
   const ids = (unlocks ?? []).map((u) => u.pitch_id);
   const [{ data: pitches }, { data: secrets }, { data: reviews }, { data: tracking }] = ids.length
     ? await Promise.all([
-        supabase.from('pitches').select('*').in('id', ids),
+        supabase.from('pitches').select(PITCH_COLUMNS).in('id', ids),
         supabase.from('pitch_secrets').select('*').in('pitch_id', ids),
         supabase.from('reviews').select('unlock_id, rating').eq('reviewer_id', v.id),
         supabase.from('idea_tracking').select('unlock_id, stage, result_multiple').eq('creator_id', v.id),

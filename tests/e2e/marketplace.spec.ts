@@ -87,7 +87,7 @@ test('brief → pitch → locked → unlock → close/refund → payout → chat
 
   // ---------- Creator posts and pays for a brief ($12 × 2) ----------
   await creator.page.goto('/briefs/new');
-  await creator.page.getByLabel('Title').fill('Finance TikTok ideas for a coach');
+  await creator.page.getByLabel('Title').fill(`Finance TikTok ideas for a coach ${run}`);
   await creator.page.getByLabel('Niche').selectOption({ label: 'Personal finance' });
   await creator.page.getByLabel('What you need').fill('Proven personal finance ideas for a coach who talks to young professionals.');
   await creator.page.getByLabel('Price per unlocked idea (USD)').fill('12');
@@ -102,7 +102,7 @@ test('brief → pitch → locked → unlock → close/refund → payout → chat
 
   // ---------- Researcher pitches ----------
   await cre.page.goto('/briefs');
-  await cre.page.getByText('Finance TikTok ideas for a coach').click();
+  await cre.page.getByText(`Finance TikTok ideas for a coach ${run}`).click();
   await cre.page.getByRole('link', { name: 'Pitch an idea' }).click();
   const HOOK = `I tracked every peso for thirty days ${run}`;
   const SOURCE = `https://www.youtube.com/watch?v=${('abc' + run).padEnd(11, 'x').slice(0, 11)}`;

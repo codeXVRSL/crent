@@ -39,8 +39,9 @@ const statusPill: Record<string, { tone: 'neutral' | 'accent' | 'good' | 'muted'
   refunded: { tone: 'bad', label: 'Refunded after dispute' },
 };
 
+// source_posted_on is a calendar date; format it in UTC so every viewer (and server/browser) agrees.
 function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(d.length === 10 ? `${d}T00:00:00Z` : d).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
 
 /** Two bars on one scale: the channel's usual views vs. this video. The gap is the outlier. */

@@ -12,8 +12,11 @@ export async function handlePaymentEvent(event: PaymentEvent): Promise<string> {
     id: event.eventId, provider: getProvider().name, type: event.type, payload: event.raw ?? {},
   });
   if (dupErr) {
-    if (dupErr.code === '23505') return 'duplicate';
-    throw dupErr;
+    if (dupErr.code !== '23505') throw dupErr;
+    // Seen before. Skip it only if it was fully processed; a delivery that failed half-way (and made the
+    // provider retry) must run again. The database functions below are safe to repeat.
+    const { data: prev } = await db.from('webhook_events').select('processed_at').eq('id', event.eventId).single();
+    if (prev?.processed_at) return 'duplicate';
   }
 
   let result = 'ignored';
@@ -110,13 +113,14 @@ export async function processPendingRefunds(): Promise<number> {
 export async function sendPayout(payoutId: string) {
   const db = createAdminClient();
   const { data: po, error } = await db.from('payouts')
-    .select('id, amount_cents, amount_local_cents, currency, status, payout_methods(kind, bank_code, account_name, account_number_enc)')
+    .select('id, attempt, amount_cents, amount_local_cents, currency, status, payout_methods(kind, bank_code, account_name, account_number_enc)')
     .eq('id', payoutId).single();
   if (error || !po) throw new Error('PAYOUT_NOT_FOUND');
   const m = po.payout_methods as unknown as { kind: 'gcash' | 'maya' | 'bank'; bank_code: string | null; account_name: string; account_number_enc: string };
   const local = po.amount_local_cents != null;
   const res = await getProvider().payout({
     payoutId: po.id,
+    attempt: po.attempt ?? 1,
     amountCents: local ? po.amount_local_cents! : po.amount_cents,
     currency: local ? 'PHP' : (po.currency as Currency),
     destination: { kind: m.kind, bankCode: m.bank_code, accountName: m.account_name, accountNumber: decryptSecret(m.account_number_enc) },

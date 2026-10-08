@@ -19,7 +19,7 @@ Run `npm run seed:demo` once against the test database to get a ready-made creat
 
 ## 1 · Set up the admin (Save, once)
 1. Sign up with your admin email. On the "How will you use Outlier Desk?" screen, choose **Continue as admin**.
-   The site then asks you to set up an authenticator app (Google Authenticator, Microsoft Authenticator, Authy or 1Password): scan the QR code and type the 6-digit code. From then on every admin login asks for a code. If you are testing on a local database without a phone handy, put `ADMIN_MFA_REQUIRED=false` in `.env.local`.
+   The site then asks you to set up an authenticator app (Google Authenticator, Microsoft Authenticator, Authy or 1Password): scan the QR code and type the 6-digit code. From then on every admin login asks for a code. If you are testing on a local database without a phone handy, run `update platform_settings set admin_mfa_required = false;` in the SQL editor (never on the live site).
 2. Leave **Hold period** at 72 hours for now. The hold is also the dispute window, so set it to **0 hours** (Admin → Settings) only when you reach step 6 and want to test payouts; after that, disputes can't be opened on new unlocks.
 
 ## 2 · Researcher gets verified (Jamaica)

@@ -16,7 +16,7 @@ export async function setRole(fd: FormData) {
     // Only for emails listed in ADMIN_EMAILS, and only while the account has no role yet.
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.email || !env.adminEmails.includes(user.email.toLowerCase())) throw new Error('Not allowed.');
+    if (!user?.email || !user.email_confirmed_at || !env.adminEmails.includes(user.email.toLowerCase())) throw new Error('Not allowed.');
     const db = createAdminClient();
     const { data: p } = await db.from('profiles').select('role').eq('id', user.id).single();
     if (p?.role) throw new Error(friendlyError('ROLE_ALREADY_SET'));

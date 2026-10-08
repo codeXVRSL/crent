@@ -94,7 +94,6 @@ const env = {
   MOCK_WEBHOOK_TOKEN: secrets.MOCK_WEBHOOK_TOKEN,
   CRON_SECRET: secrets.CRON_SECRET,
   ADMIN_EMAILS: adminEmails,
-  ADMIN_MFA_REQUIRED: 'true',
   ...(process.env.RESEND_API_KEY ? { RESEND_API_KEY: process.env.RESEND_API_KEY } : {}),
   ...(process.env.EMAIL_FROM ? { EMAIL_FROM: process.env.EMAIL_FROM } : {}),
 };

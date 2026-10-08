@@ -102,9 +102,10 @@ In Supabase → SQL Editor, run these files in order:
 5. `supabase/migrations/20260928000005_feedback_and_proof.sql`
 6. `supabase/migrations/20260929000006_creator_researcher_tools.sql`
 7. `supabase/migrations/20261004000007_rate_limits_and_account_closure.sql`
-8. `supabase/seed.sql`
+8. `supabase/migrations/20261008000008_security_fixes.sql`
+9. `supabase/seed.sql`
 
-Or run `supabase/setup_all.sql`, which is all of the above in one file (for a new, empty project). If your database already has migrations 1–6, run only file 7.
+Or run `supabase/setup_all.sql`, which is all of the above in one file (for a new, empty project). If your database already has migrations 1–7, run only file 8.
 
 ### 4. Configure Supabase Auth
 Supabase → Authentication → URL Configuration:
@@ -190,14 +191,16 @@ It creates a Supabase project in Singapore, runs the database setup, turns on au
 ## Tests
 ```bash
 npm test                 # unit tests: fee math matches the database, outlier score, researcher levels, AI prompt
-npm run db:test          # database: whole marketplace flow, security rules, race condition, idea board / invites / swipe file privacy
+npm run db:test          # database: whole marketplace flow, security rules, race condition, idea board / invites / swipe file
+                         # privacy, rate limits, account closure, admin two-factor in the database, suspension
                          # needs a throwaway Postgres 15+: PGHOST=... PGPORT=... PGUSER=postgres npm run db:test
 npx playwright test      # browser test of the full flow; needs the app + Supabase running and
                          # SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY set (local Supabase recommended)
-```
-node tests/e2e/exploratory.mjs   # 34-step exploratory run through everything TESTING.md asks a human to try
+node tests/e2e/exploratory.mjs   # 38-step exploratory run through everything TESTING.md asks a human to try
                                  # (ID upload, disputes, feedback, suspension, every admin page, phone sweep);
                                  # same requirements as the Playwright tests, plus `npm run seed:demo` first
+node tests/e2e/a11y.mjs          # WCAG 2.1 AA audit (axe-core) of every main page, all roles, light and dark
+```
 
 The browser test skips the ID-photo upload (it writes the verification row directly) and makes one account admin through the API.
 
@@ -232,4 +235,4 @@ app/api/               payment webhook, scheduled job, health check
 - Register the business (DTI or SEC) and with the BIR; put the registration numbers in the site footer.
 - Check the trade name "Outlier Desk" with IPOPHL before buying a domain.
 - Set up SPF/DKIM for your email domain in Resend.
-- Turn on Authentication → Multi-factor → **TOTP** in the Supabase dashboard (free tier includes it). Admins are then asked to set up an authenticator app at their first login; `ADMIN_MFA_REQUIRED=false` skips this on a local test database only.
+- Turn on Authentication → Multi-factor → **TOTP** in the Supabase dashboard (free tier includes it). Admins are then asked to set up an authenticator app at their first login; On a local test database only, `update platform_settings set admin_mfa_required = false;` in SQL skips it. Also lower Authentication → Rate Limits → "Sign-ins and sign-ups" and "Token verifications" to about 30 per 5 minutes per IP, because those Supabase endpoints can be called directly.

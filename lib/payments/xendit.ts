@@ -98,7 +98,7 @@ export const xenditProvider: PaymentProvider = {
     }
   },
 
-  async payout({ payoutId, amountCents, currency, destination }) {
+  async payout({ payoutId, attempt = 1, amountCents, currency, destination }) {
     try {
       const channel = destination.kind === 'bank' ? destination.bankCode ?? '' : CHANNEL[destination.kind];
       const r = await call('/v2/payouts', {
@@ -108,7 +108,7 @@ export const xenditProvider: PaymentProvider = {
         amount: amountCents / 100,
         currency,
         description: `${BRAND} earnings`,
-      }, { 'Idempotency-key': `payout_${payoutId}` });
+      }, { 'Idempotency-key': `payout_${payoutId}_${attempt}` });
       const s = String(r.status).toUpperCase();
       return { status: s === 'SUCCEEDED' ? 'succeeded' : s === 'FAILED' ? 'failed' : 'pending', providerRef: r.id, failure: r.failure_code };
     } catch (e) {
