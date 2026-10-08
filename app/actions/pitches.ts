@@ -8,6 +8,9 @@ import { env } from '@/lib/env';
 import { failBack } from '@/lib/flash';
 import { parseViews, VIEWS_HINT } from '@/lib/parse';
 import { friendlyErrorWithLimits } from '@/lib/settings';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { formatMoney } from '@/lib/money';
+import { getSettings } from '@/lib/settings';
 
 // Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
@@ -67,10 +70,13 @@ export async function unlockPitch(_: ActionResult | null, fd: FormData): Promise
   const supabase = await createClient();
   const { error } = await supabase.rpc('unlock_pitch', { p_pitch_id: pitchId });
   if (error) return { ok: false, message: friendlyError(error) };
-  const { data: p } = await supabase.from('pitches').select('cre_id, brief_id').eq('id', pitchId).single();
+  const { data: p } = await supabase.from('pitches').select('cre_id, brief_id, briefs(title)').eq('id', pitchId).single();
   if (p) {
-    await emailUser(p.cre_id, 'Your pitch was unlocked',
-      `A creator unlocked your pitch. Your earning becomes available after the 72-hour hold.\n${env.appUrl}/pitches`);
+    const { data: u } = await createAdminClient().from('unlocks').select('net_cents, currency').eq('pitch_id', pitchId).order('created_at', { ascending: false }).limit(1).maybeSingle();
+    const { holdHours } = await getSettings();
+    const title = (p.briefs as unknown as { title: string } | null)?.title ?? 'a brief';
+    await emailUser(p.cre_id, u ? `Your pitch was unlocked: you earned ${formatMoney(u.net_cents, u.currency)}` : 'Your pitch was unlocked',
+      `A creator unlocked your pitch on "${title}". ${holdHours > 0 ? `Your earning becomes available to withdraw after the ${holdHours}-hour hold, which gives the creator time to report a problem.` : 'Your earning is available to withdraw now.'}\n\nSee your pitches: ${env.appUrl}/pitches`);
     revalidatePath(`/briefs/${p.brief_id}`);
   }
   return { ok: true, message: 'Unlocked.' };

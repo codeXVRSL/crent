@@ -4,6 +4,7 @@ import { decryptSecret } from '@/lib/crypto';
 import { sendEmail } from '@/lib/email';
 import { getProvider } from './index';
 import type { Currency, PaymentEvent } from './types';
+import { emailPayoutResult, emailRefundSent } from '@/lib/notify-email';
 
 /** Applies a verified provider event exactly once. Used by the webhook route and the test-mode checkout. */
 export async function handlePaymentEvent(event: PaymentEvent): Promise<string> {
@@ -49,6 +50,7 @@ export async function handlePaymentEvent(event: PaymentEvent): Promise<string> {
           p_success: event.type === 'refund.succeeded', p_failure: event.failure ?? null,
         });
         if (error) throw error;
+        if (event.type === 'refund.succeeded') await emailRefundSent(event.reference!);
         result = event.type;
         break;
       }
@@ -59,6 +61,7 @@ export async function handlePaymentEvent(event: PaymentEvent): Promise<string> {
           p_success: event.type === 'payout.succeeded', p_failure: event.failure ?? null,
         });
         if (error) throw error;
+        await emailPayoutResult(event.reference!, event.type === 'payout.succeeded', event.failure);
         result = event.type;
         break;
       }
@@ -98,6 +101,7 @@ export async function processPendingRefunds(): Promise<number> {
     });
     if (res.status === 'succeeded') {
       await db.rpc('complete_refund', { p_refund_id: r.id, p_provider_ref: res.providerRef ?? null, p_success: true, p_failure: null });
+      await emailRefundSent(r.id);
     } else if (res.status === 'pending') {
       await db.rpc('mark_refund_processing', { p_refund_id: r.id, p_provider_ref: res.providerRef ?? null });
     } else {
@@ -132,6 +136,7 @@ export async function sendPayout(payoutId: string) {
       p_payout_id: po.id, p_provider_ref: res.providerRef ?? null,
       p_success: res.status === 'succeeded', p_failure: res.failure ?? null,
     });
+    await emailPayoutResult(po.id, res.status === 'succeeded', res.failure);
   }
   return res.status;
 }

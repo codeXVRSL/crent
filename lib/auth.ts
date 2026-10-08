@@ -44,10 +44,12 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
  */
 export const getMfaState = cache(async (): Promise<'ok' | 'verify' | 'enroll'> => {
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (error || !data) return 'enroll';
-  if (data.currentLevel === 'aal2') return 'ok';
-  return data.nextLevel === 'aal2' ? 'verify' : 'enroll';
+  // Both calls verify the token (getClaims checks its signature; getUser asks the Auth server), unlike
+  // getAuthenticatorAssuranceLevel(), which reads the cookie's session without verifying it.
+  const [{ data: c }, { data: u }] = await Promise.all([supabase.auth.getClaims(), supabase.auth.getUser()]);
+  if (!c?.claims || !u.user) return 'enroll';
+  if (c.claims.aal === 'aal2') return 'ok';
+  return u.user.factors?.some((f) => f.status === 'verified') ? 'verify' : 'enroll';
 });
 
 /** Whether admins need two-factor. Same switch the database's is_admin() reads, so app and database agree. */

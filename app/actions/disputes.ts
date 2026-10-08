@@ -15,7 +15,10 @@ export async function openDispute(_: ActionResult | null, fd: FormData): Promise
   });
   if (error) return { ok: false, message: friendlyError(error) };
   const { data: u } = await supabase.from('unlocks').select('cre_id').eq('id', String(fd.get('unlock_id'))).single();
-  if (u) await emailUser(u.cre_id, 'A creator opened a dispute', `Reply within 48 hours: ${env.appUrl}/disputes/${data}`);
+  if (u) {
+    await emailUser(u.cre_id, 'A creator reported a problem with your idea',
+      `A creator opened a dispute on one of your unlocked ideas. Their words:\n\n"${details.slice(0, 500)}"\n\nReply within 48 hours with your side and any proof (for example a screenshot of the views). After that, our team decides, with or without your reply. Your earning stays on hold until then.\n\nReply here: ${env.appUrl}/disputes/${data}`);
+  }
   redirect(`/disputes/${data}`);
 }
 

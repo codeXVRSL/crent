@@ -9,6 +9,7 @@ import { friendlyError, type ActionResult } from '@/lib/errors';
 import { emailUser } from '@/lib/notify-email';
 import { env } from '@/lib/env';
 import { BRAND } from '@/lib/brand';
+import { emailDisputeResolved, emailPayoutResult } from '@/lib/notify-email';
 
 // Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
@@ -41,6 +42,7 @@ export async function approvePayout(_: ActionResult | null, fd: FormData): Promi
   } catch (e) {
     // Don't leave it stuck in "processing": mark it failed so it can be approved again or cancelled.
     await createAdminClient().rpc('complete_payout', { p_payout_id: id, p_provider_ref: null, p_success: false, p_failure: (e as Error).message });
+    await emailPayoutResult(id, false, null);
     revalidatePath('/admin/payouts');
     return { ok: false, message: `Couldn't send the payout: ${(e as Error).message}. It's marked failed; fix the cause and approve it again.` };
   }
@@ -57,6 +59,7 @@ export async function resolveDispute(_: ActionResult | null, fd: FormData): Prom
   const supabase = await createClient();
   const { error } = await supabase.rpc('resolve_dispute', { p_dispute_id: id, p_for_creator: fd.get('outcome') === 'creator', p_note: note });
   if (error) return { ok: false, message: friendlyError(error) };
+  await emailDisputeResolved(id, fd.get('outcome') === 'creator', note);
   await processPendingRefunds().catch((e) => console.error('[refunds]', e));
   revalidatePath(`/disputes/${id}`);
   // The decision form goes away once resolved, so confirm at the top of the page.
