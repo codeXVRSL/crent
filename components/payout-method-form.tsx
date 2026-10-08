@@ -38,7 +38,7 @@ export function PayoutMethodForm() {
         <Field label="Bank code" htmlFor="bank_code" hint="As your bank lists it for transfers, e.g. PH_AUB."><Input id="bank_code" name="bank_code" required /></Field>
       )}
       {isBank && bank !== '' && <input type="hidden" name="bank_code" value={bank} />}
-      <Field label="Account name" htmlFor="account_name" hint="Must match your verified legal name."><Input id="account_name" name="account_name" required autoComplete="name" /></Field>
+      <Field label="Account name" htmlFor="account_name" hint="Must match your verified legal name."><Input id="account_name" name="account_name" required minLength={3} maxLength={120} autoComplete="name" /></Field>
       <Field label={isBank ? 'Account number' : `${kind === 'maya' ? 'Maya' : 'GCash'} mobile number`} htmlFor="account_number"
         hint={isBank ? '6–20 digits.' : '11 digits starting with 09.'}>
         <Input id="account_number" name="account_number" required inputMode="numeric" autoComplete="off" />

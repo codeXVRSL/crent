@@ -36,7 +36,7 @@ export async function submitReview(_: ActionResult | null, fd: FormData): Promis
   if (!(rating >= 1 && rating <= 5)) return { ok: false, message: 'Pick a rating from 1 to 5.' };
   const supabase = await createClient();
   const { error } = await supabase.rpc('submit_review', {
-    p_unlock_id: String(fd.get('unlock_id')), p_rating: rating, p_body: String(fd.get('body') ?? ''),
+    p_unlock_id: String(fd.get('unlock_id')), p_rating: rating, p_body: String(fd.get('body') ?? '').replace(/\r\n/g, '\n').trim(),
   });
   if (error) return { ok: false, message: friendlyError(error) };
   revalidatePath('/unlocks');

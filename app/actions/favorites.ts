@@ -2,6 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { friendlyError, type ActionResult } from '@/lib/errors';
+import { failBack } from '@/lib/flash';
 
 // Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
@@ -9,7 +10,7 @@ const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g
 export async function toggleFavorite(fd: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.rpc('toggle_favorite_cre', { p_cre_id: str(fd, 'cre_id'), p_on: str(fd, 'on') === '1' });
-  if (error) throw new Error(friendlyError(error));
+  if (error) return failBack(error);
   const back = str(fd, 'back');
   if (back.startsWith('/')) revalidatePath(back);
   revalidatePath('/favorites');

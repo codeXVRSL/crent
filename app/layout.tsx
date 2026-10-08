@@ -4,6 +4,8 @@ import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 import { BRAND } from '@/lib/brand';
+import { Suspense } from 'react';
+import { ErrorFlash } from '@/components/error-flash';
 
 // Self-hosted fonts: no third-party requests, no layout shift.
 const instrument = localFont({
@@ -36,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased"><Suspense fallback={null}><ErrorFlash /></Suspense>{children}</body>
     </html>
   );
 }

@@ -9,6 +9,7 @@ import { friendlyError, type ActionResult } from '@/lib/errors';
 import { parseDollarsToCents } from '@/lib/money';
 import { env } from '@/lib/env';
 import { BRAND } from '@/lib/brand';
+import { failBack } from '@/lib/flash';
 
 // Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
@@ -36,10 +37,13 @@ async function startCheckout(briefId: string): Promise<string> {
 
 export async function createBrief(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   const price = parseDollarsToCents(str(fd, 'price'));
-  if (price == null) return { ok: false, message: 'Enter the price per idea in dollars, e.g. 8 or 8.50.' };
+  if (price == null) return { ok: false, message: 'Enter the price per idea in dollars, e.g. 8 or 8.50. Use a dot for cents.' };
   const days = Number(str(fd, 'deadline_days'));
   if (!(days >= 1 && days <= 30)) return { ok: false, message: 'Pick a deadline between 1 and 30 days.' };
-  const exampleUrls = str(fd, 'example_urls').split(/\s+/).filter((u) => /^https?:\/\//i.test(u)).slice(0, 5);
+  const rawUrls = str(fd, 'example_urls').split(/\s+/).filter(Boolean);
+  if (rawUrls.length > 5) return { ok: false, message: 'Add up to 5 example links.' };
+  const exampleUrls = rawUrls.map((u) => (/^https?:\/\//i.test(u) ? u : `https://${u}`));
+  if (exampleUrls.some((u) => !/^https:\/\/[^\s/]+\.[a-z]{2,}/i.test(u) || u.length > 500)) return { ok: false, message: 'Each example must be a full video link, one per line.' };
   const maxAge = Number(str(fd, 'max_video_age_days')) || null;
 
   const supabase = await createClient();
@@ -70,7 +74,8 @@ export async function createBrief(_: ActionResult | null, fd: FormData): Promise
 }
 
 export async function payBrief(fd: FormData) {
-  const url = await startCheckout(str(fd, 'brief_id'));
+  let url: string;
+  try { url = await startCheckout(str(fd, 'brief_id')); } catch (e) { return failBack((e as Error).message); }
   redirect(url);
 }
 
@@ -87,6 +92,6 @@ export async function closeBrief(_: ActionResult | null, fd: FormData): Promise<
 export async function cancelDraft(fd: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.rpc('delete_draft_brief', { p_brief_id: str(fd, 'brief_id') });
-  if (error) throw new Error(friendlyError(error));
+  if (error) return failBack(error);
   redirect('/briefs');
 }

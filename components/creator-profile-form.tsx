@@ -19,7 +19,7 @@ export function CreatorProfileForm({ displayName, cp, redirectAfter }: {
         </Select>
       </Field>
       <Field label="Channel link" htmlFor="channel_url" hint="Only shown to researchers who pitch on your briefs.">
-        <Input id="channel_url" name="channel_url" type="url" placeholder="https://www.tiktok.com/@yourname" defaultValue={cp?.channel_url ?? ''} />
+        <Input id="channel_url" name="channel_url" type="url" maxLength={300} placeholder="https://www.tiktok.com/@yourname" defaultValue={cp?.channel_url ?? ''} />
       </Field>
       <Field label="Followers" htmlFor="follower_band">
         <Select id="follower_band" name="follower_band" defaultValue={cp?.follower_band ?? ''}>

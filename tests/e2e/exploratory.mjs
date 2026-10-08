@@ -125,6 +125,9 @@ await step('researcher signs up, builds profile, uploads ID photos', async () =>
   const p = cre.page;
   await p.getByRole('button', { name: 'Continue as researcher' }).click();
   await p.waitForURL(/onboarding\/cre/);
+  // A brand-new researcher's dashboard shows the get-started checklist, not a misleading "no briefs".
+  await p.goto(`${BASE}/dashboard`); await visible(p, 'Get started'); await visible(p, '0 of 5 done'); await visible(p, 'Briefs show up here once your ID is verified.');
+  await p.getByRole('link', { name: /Set up your public profile/ }).click(); await p.waitForURL(/onboarding\/cre#profile/);
   await p.getByLabel('Handle').fill(`rina_${run}`.slice(0, 24));
   await p.getByLabel('Headline').fill('Food and cooking outlier researcher');
   await p.getByLabel('About you').fill('I research cooking and recipe outliers on Reels and TikTok every day.');
@@ -220,7 +223,7 @@ await step('brief form rejects contact details and keeps what was typed', async 
   await p.getByLabel('What you need').fill('Please send everything to cara@gmail.com or DM my telegram @caracooks for the details.');
   await p.getByLabel('Price per unlocked idea (USD)').fill('6');
   await p.getByRole('button', { name: 'Continue to payment' }).click();
-  await visible(p, /Remove emails, phone numbers/);
+  await visible(p, /Remove emails, phone or account numbers/);
   expect((await p.getByLabel('Title').inputValue()) === 'Email me for the brief details', 'form lost its values after rejection');
 });
 await step('failed test payment leaves brief payable; draft can be deleted', async () => {
@@ -239,7 +242,7 @@ await step('researcher sees brief via notification, pitches with proof screensho
   await p.getByRole('link', { name: 'Pitch an idea' }).click();
   await p.getByLabel('Format').fill('Overhead cook-along');
   await p.getByLabel('Angle (teaser)').fill('A five-ingredient dinner that shows the full cost on screen');
-  await p.getByLabel('Source video views').fill('900000'); await p.getByLabel('Channel median views').fill('60000');
+  await p.getByLabel('Source video views').fill('0.9M'); await p.getByLabel('Channel median views').fill('60k'); // typed the way people read them
   await p.getByLabel('Source posted on').fill(daysAgo(10));
   await p.getByLabel('Source video link').fill(`https://www.instagram.com/reel/P${vid}1/`);
   await p.getByLabel('Hook (exact words)').fill('This whole dinner cost me less than a coffee');
@@ -432,6 +435,12 @@ await step('swipe file: add, archive, delete; pitch prefill marks it pitched', a
   await p.getByRole('button', { name: 'Delete' }).first().click(); await sleep(1000); await p.goto(`${BASE}/swipe?view=archived`); expect(!(await text(p)).includes('Soup hack'), 'not deleted');
 });
 await step('researcher settings, public profile, directory filters', async () => {
+  { // the public profile's share image (what Facebook/Messenger shows) renders as a PNG
+    const html = await (await fetch(`${BASE}/cres/rina_${run}`.slice(0, 200))).text();
+    const og = html.match(/property="og:image" content="([^"]+)"/)?.[1]?.replace(/&amp;/g, '&');
+    const r = og ? await fetch(og) : null;
+    expect(r?.ok && r.headers.get('content-type') === 'image/png', `profile share image: ${og} → ${r?.status} ${r?.headers.get('content-type')}`);
+  }
   const p = cre.page; await p.goto(`${BASE}/settings`); await visible(p, 'Researcher profile');
   await p.goto(`${BASE}/cres?sort=rating&available=1`); await visible(p, `Rina${run}`);
   await p.goto(`${BASE}/cres?platform=youtube_long`); expect(!(await text(p)).includes(`Rina${run}`), 'platform filter ignored');

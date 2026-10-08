@@ -5,12 +5,13 @@ import { Field, Input, Select, Textarea } from './ui';
 import { addSwipeItem } from '@/app/actions/swipe';
 import { HOOK_CATEGORIES, PLATFORMS } from '@/lib/constants';
 import { formatMultiplier } from '@/lib/outlier';
+import { manilaToday, parseViews } from '@/lib/parse';
 
 export function SwipeForm({ niches, defaultNiche }: { niches: { id: number; name: string }[]; defaultNiche?: number }) {
   const [views, setViews] = useState('');
   const [median, setMedian] = useState('');
-  const v = Number(views.replace(/[,\s]/g, ''));
-  const m = Number(median.replace(/[,\s]/g, ''));
+  const v = parseViews(views) ?? NaN;
+  const m = parseViews(median) ?? NaN;
   const mult = v > 0 && m > 0 ? Math.round((v / m) * 10) / 10 : null;
   return (
     <ActionForm action={addSwipeItem} resetOnSuccess className="grid gap-4">
@@ -27,7 +28,7 @@ export function SwipeForm({ niches, defaultNiche }: { niches: { id: number; name
           <span className="label">Outlier score</span>
           <span className={`num text-2xl font-medium ${mult != null && mult >= 3 ? 'text-accent' : 'text-muted'}`}>{mult != null ? formatMultiplier(mult) : '–'}</span>
         </div>
-        <Field label="Posted on" htmlFor="sw-posted"><Input id="sw-posted" name="source_posted_on" type="date" max={new Date().toISOString().slice(0, 10)} /></Field>
+        <Field label="Posted on" htmlFor="sw-posted"><Input id="sw-posted" name="source_posted_on" type="date" max={manilaToday()} /></Field>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
         <Field label="Platform" htmlFor="sw-platform">

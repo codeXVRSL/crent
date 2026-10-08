@@ -18,7 +18,7 @@ const MESSAGES: Record<string, string> = {
   MAX_UNLOCKS_OUT_OF_RANGE: 'Max unlocks must be between 1 and 100.',
   DEADLINE_OUT_OF_RANGE: 'Pick a deadline between 1 and 30 days from now.',
   TOO_MANY_OPEN_BRIEFS: 'You have 10 open briefs. Close one before posting another.',
-  CONTACT_DETAILS_NOT_ALLOWED: 'Remove emails, phone numbers, links and social handles. Contact details stay private so both sides keep escrow protection.',
+  CONTACT_DETAILS_NOT_ALLOWED: 'Remove emails, phone or account numbers, links, @handles and messaging app names (WhatsApp, Telegram, Viber…). Contact details stay private so both sides keep escrow protection.',
   BRIEF_NOT_FOUND: "We couldn't find that brief.",
   BRIEF_ALREADY_PAID: 'This brief is already paid for.',
   DEADLINE_TOO_CLOSE: 'The deadline is too close to pay for this brief. Post a new one.',
@@ -26,7 +26,10 @@ const MESSAGES: Record<string, string> = {
   TOO_MANY_PITCHES: "You've reached the pitch limit for this brief (5).",
   INVALID_VIEWS: 'Views and median views must be greater than zero.',
   MULTIPLIER_TOO_LOW: "The outlier score is below this brief's minimum.",
-  POSTED_DATE_IN_FUTURE: "The source posted date can't be in the future.",
+  POSTED_DATE_IN_FUTURE: "The posted date can't be later than today.",
+  NOT_THREAD_MEMBER: "You're not part of this conversation.",
+  ROLE_CHANGE_NOT_ALLOWED: "Your account type can't be changed. Use a separate account for the other role.",
+  INVALID_ROLE: 'Pick creator or researcher.',
   SOURCE_TOO_OLD: 'The source video is older than this brief allows.',
   TEASER_REVEALS_HOOK: 'Your teaser gives away the hook. Describe the angle without the exact words.',
   INVALID_SOURCE_URL: 'Enter the full link to the source video, starting with https://',
@@ -69,8 +72,11 @@ export function friendlyError(err: unknown): string {
       instructions: 'Instructions', hook_text: 'Hook', teaser: 'Angle (teaser)', why_it_worked: 'Why it worked', adaptation_notes: 'How to adapt it',
       format_label: 'Format', title: 'Title', description: 'What you need', must_include: 'Must include', avoid: 'Avoid', bio: 'About you',
       headline: 'Headline', display_name: 'Display name', handle: 'Handle', notes: 'Notes', body: 'Message', details: 'Details', source_url: 'Video link',
+      reviews_body: 'Review', source_channel_url: 'Channel link', channel_url: 'Channel link', account_name: 'Account name', board: 'Board',
+      note: 'Note', result_note: 'Result', brand_name: 'Brand or channel name', posted_url: 'Posted link', reason: 'Reason',
     };
-    const col = Object.keys(names).find((k) => m?.[1]?.endsWith('_' + k));
+    // Longest key first so "source_channel_url" wins over "channel_url", and a table-specific key over a column.
+    const col = Object.keys(names).sort((a, b) => b.length - a.length).find((k) => m?.[1] === k || m?.[1]?.endsWith('_' + k));
     const field = col ? names[col] : m?.[1]?.split('_').slice(-1)[0];
     console.error('[check constraint]', raw);
     return field ? `${field}: too short, too long or in the wrong format. Check the limit shown under that field.` : 'Some fields are too short or too long. Check the limits under each field.';

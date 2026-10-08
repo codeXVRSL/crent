@@ -8,6 +8,7 @@ import { Field, Input, Select, Textarea } from './ui';
 import { submitPitch } from '@/app/actions/pitches';
 import { HOOK_CATEGORIES, INSTRUCTIONS_TEMPLATE, PLATFORMS, SIZE_BANDS } from '@/lib/constants';
 import { formatMultiplier } from '@/lib/outlier';
+import { manilaToday, parseViews } from '@/lib/parse';
 
 // The Supabase client (~70 KB) is only needed when a file is uploaded, so it loads on submit, not with the page.
 const loadSupabase = () => import('@/lib/supabase/client').then((m) => m.createBrowserSupabase());
@@ -23,10 +24,10 @@ export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays
 }) {
   const [views, setViews] = useState(prefill ? String(prefill.source_views) : '');
   const [median, setMedian] = useState(prefill ? String(prefill.channel_median_views) : '');
-  const v = Number(views.replace(/[,\s]/g, ''));
-  const m = Number(median.replace(/[,\s]/g, ''));
+  const v = parseViews(views) ?? NaN;
+  const m = parseViews(median) ?? NaN;
   const mult = v > 0 && m > 0 ? Math.round((v / m) * 10) / 10 : null;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = manilaToday();
   const minDate = maxAgeDays ? new Date(Date.now() - maxAgeDays * 86_400_000).toISOString().slice(0, 10) : undefined;
 
   // Upload the optional proof screenshot to private storage first, then submit the pitch.
@@ -106,8 +107,8 @@ export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays
           <p className="text-sm text-muted">Locked until the creator pays. Nobody else can see it.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Source video link" htmlFor="source_url"><Input id="source_url" name="source_url" type="url" required placeholder="https://" defaultValue={prefill?.source_url} /></Field>
-          <Field label="Source channel link (optional)" htmlFor="source_channel_url"><Input id="source_channel_url" name="source_channel_url" type="url" placeholder="https://" /></Field>
+          <Field label="Source video link" htmlFor="source_url"><Input id="source_url" name="source_url" type="url" required maxLength={500} placeholder="https://" defaultValue={prefill?.source_url} /></Field>
+          <Field label="Source channel link (optional)" htmlFor="source_channel_url"><Input id="source_channel_url" name="source_channel_url" type="url" maxLength={500} placeholder="https://" /></Field>
         </div>
         <Field label="Hook (exact words)" htmlFor="hook_text"><Input id="hook_text" name="hook_text" required minLength={5} maxLength={300} /></Field>
         <Field label="Why it worked" htmlFor="why_it_worked" hint="40–2000 characters.">

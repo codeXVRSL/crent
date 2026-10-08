@@ -103,13 +103,24 @@ export default async function Dashboard() {
   }
 
   // Researcher
-  const [{ data: bal }, { data: stats }, { data: pitches }, { data: nicheRows }, { data: inviteRows }] = await Promise.all([
+  const [{ data: bal }, { data: stats }, { data: pitches }, { data: nicheRows }, { data: inviteRows }, { count: portfolioCount }, { count: methodCount }] = await Promise.all([
     supabase.from('cre_balances').select('*').eq('cre_id', v.id).maybeSingle(),
     supabase.from('public_cres').select('unlock_rate_pct, avg_rating, review_count, results_logged, avg_result_multiple, repeat_buyers').eq('id', v.id).maybeSingle(),
     supabase.from('pitches').select('id, brief_id, status, multiplier, format_label, submitted_at, briefs(title)').eq('cre_id', v.id).order('submitted_at', { ascending: false }).limit(6),
     supabase.from('cre_niches').select('niche_id').eq('user_id', v.id),
     supabase.from('brief_invites').select('brief_id').eq('cre_id', v.id).order('invited_at', { ascending: false }).limit(20),
+    supabase.from('portfolio_items').select('id', { count: 'exact', head: true }).eq('cre_id', v.id),
+    supabase.from('payout_methods').select('id', { count: 'exact', head: true }).eq('user_id', v.id),
   ]);
+  const verified = v.kycStatus === 'approved';
+  const steps: { label: string; detail: string; href: string; done: boolean; pending?: boolean }[] = [
+    { label: 'Set up your public profile', detail: 'Handle, headline and the niches you research.', href: '/onboarding/cre#profile', done: !!v.handle && (nicheRows?.length ?? 0) > 0 },
+    { label: 'Add three portfolio finds', detail: `Outliers you found before, with views and channel median. ${Math.min(portfolioCount ?? 0, 3)} of 3 added.`, href: '/onboarding/cre#portfolio', done: (portfolioCount ?? 0) >= 3 },
+    { label: 'Verify your ID', detail: v.kycStatus === 'pending' ? 'Submitted. We usually reply within 2 business days.' : v.kycStatus === 'rejected' ? 'Needs changes. Open it to see why.' : 'A photo of your ID and a selfie. Only admins see them.', href: '/onboarding/cre#verify', done: verified, pending: v.kycStatus === 'pending' },
+    { label: 'Add GCash, Maya or a bank account', detail: 'Where your earnings are sent.', href: '/wallet', done: (methodCount ?? 0) > 0 },
+    { label: 'Pitch your first idea', detail: verified ? 'Open briefs are waiting.' : 'Unlocks after verification.', href: '/briefs', done: (pitches?.length ?? 0) > 0 },
+  ];
+  const stepsLeft = steps.filter((st) => !st.done).length;
   const inviteIds = (inviteRows ?? []).map((i) => i.brief_id);
   const { data: invited } = v.kycStatus === 'approved' && inviteIds.length
     ? await supabase.from('briefs').select('id, title, price_per_idea_cents, currency, deadline_at')
@@ -126,6 +137,27 @@ export default async function Dashboard() {
       <PageHeader eyebrow="Dashboard" title={`Hi ${v.displayName}`} description="Your earnings and the briefs that match your niches.">
         {v.kycStatus === 'approved' && <LinkButton href="/briefs">Browse briefs</LinkButton>}
       </PageHeader>
+      {stepsLeft > 0 && (
+        <Card className="mb-8 grid gap-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-lg font-semibold tracking-tight">Get started</h2>
+            <span className="num text-sm text-muted">{steps.length - stepsLeft} of {steps.length} done</span>
+          </div>
+          <ol className="grid gap-1">
+            {steps.map((st, i) => (
+              <li key={st.label}>
+                <Link href={st.href} className="flex items-start gap-3 rounded-xl p-2.5 hover:bg-surface-2">
+                  <span className={`num mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${st.done ? 'bg-good-soft text-good' : st.pending ? 'bg-warn-soft text-warn' : 'border border-line-strong text-muted'}`} aria-hidden="true">{st.done ? '✓' : i + 1}</span>
+                  <span className="grid gap-0.5">
+                    <span className={`font-medium ${st.done ? 'text-muted line-through' : ''}`}>{st.label}<span className="sr-only">{st.done ? ' (done)' : st.pending ? ' (in review)' : ''}</span></span>
+                    {!st.done && <span className="text-sm text-muted">{st.detail}</span>}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </Card>
+      )}
       <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Available" value={formatMoney(bal?.available_cents ?? 0)} icon={<Wallet className="size-4" />} emphasis sub={(bal?.available_cents ?? 0) > 0 ? <Link href="/wallet" className="underline">Withdraw</Link> : 'Nothing to withdraw yet'} />
         <Stat label="On hold" value={formatMoney(bal?.held_cents ?? 0)} icon={<Timer className="size-4" />} sub="72-hour dispute window" />
@@ -151,7 +183,7 @@ export default async function Dashboard() {
       <div className="grid gap-8 lg:grid-cols-2">
         <section className="grid content-start gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Briefs in your niches</h2>
-          {!matching?.length ? <p className="text-muted">No open briefs in your niches right now.</p> : (
+          {!matching?.length ? <p className="text-muted">{!verified ? 'Briefs show up here once your ID is verified.' : !nicheIds.length ? 'Pick your niches in your profile to see matching briefs.' : 'No open briefs in your niches right now. New ones are announced in Notifications.'}</p> : (
             <ul className="grid gap-2">
               {matching.map((b) => (
                 <li key={b.id}><Link href={`/briefs/${b.id}`} className="grid gap-1 rounded-2xl border border-line bg-surface shadow-sm p-4 lift">
@@ -164,7 +196,7 @@ export default async function Dashboard() {
         </section>
         <section className="grid content-start gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Your recent pitches</h2>
-          {!pitches?.length ? <p className="text-muted">You haven&apos;t pitched yet.</p> : (
+          {!pitches?.length ? <p className="text-muted">You haven&apos;t pitched yet.{verified ? ' Pick a brief and send your first idea.' : ''}</p> : (
             <ul className="grid gap-2">
               {pitches.map((p) => (
                 <li key={p.id}><Link href={`/briefs/${p.brief_id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-surface shadow-sm p-4 lift">

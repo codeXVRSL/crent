@@ -3,13 +3,14 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { friendlyError, type ActionResult } from '@/lib/errors';
+import { failBack } from '@/lib/flash';
 
 export async function startThread(fd: FormData) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc('get_or_create_thread', {
     p_brief_id: String(fd.get('brief_id')), p_cre_id: String(fd.get('cre_id')),
   });
-  if (error) throw new Error(friendlyError(error));
+  if (error) return failBack(error);
   redirect(`/messages/${data}`);
 }
 
@@ -20,7 +21,8 @@ export async function sendMessage(_: ActionResult | null, fd: FormData): Promise
   if (body.length > 4000) return { ok: false, message: 'Messages can be up to 4,000 characters.' };
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data, error } = await supabase.from('messages').insert({ thread_id: threadId, sender_id: user!.id, body }).select('was_masked').single();
+  if (!user) return { ok: false, message: 'Your session ended. Log in again.' };
+  const { data, error } = await supabase.from('messages').insert({ thread_id: threadId, sender_id: user.id, body }).select('was_masked').single();
   if (error) return { ok: false, message: friendlyError(error) };
   revalidatePath(`/messages/${threadId}`);
   return data?.was_masked

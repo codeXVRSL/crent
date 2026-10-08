@@ -6,6 +6,8 @@ import { friendlyError, type ActionResult } from '@/lib/errors';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { env } from '@/lib/env';
 import { PLATFORMS } from '@/lib/constants';
+import { failBack } from '@/lib/flash';
+import { parseViews, VIEWS_HINT } from '@/lib/parse';
 
 const PLATFORM_VALUES = PLATFORMS.map((p) => p.value) as string[];
 // Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
@@ -16,17 +18,17 @@ export async function setRole(fd: FormData) {
     // Only for emails listed in ADMIN_EMAILS, and only while the account has no role yet.
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.email || !user.email_confirmed_at || !env.adminEmails.includes(user.email.toLowerCase())) throw new Error('Not allowed.');
+    if (!user?.email || !user.email_confirmed_at || !env.adminEmails.includes(user.email.toLowerCase())) return failBack('Only the admin emails set up for this site can choose admin.');
     const db = createAdminClient();
     const { data: p } = await db.from('profiles').select('role').eq('id', user.id).single();
-    if (p?.role) throw new Error(friendlyError('ROLE_ALREADY_SET'));
+    if (p?.role) return failBack('ROLE_ALREADY_SET');
     await db.from('profiles').update({ role: 'admin' }).eq('id', user.id);
     redirect('/admin');
   }
   const role = fd.get('role') === 'cre' ? 'cre' : 'creator';
   const supabase = await createClient();
   const { error } = await supabase.rpc('set_initial_role', { p_role: role });
-  if (error && !error.message.startsWith('ROLE_ALREADY_SET')) throw new Error(friendlyError(error));
+  if (error && !error.message.startsWith('ROLE_ALREADY_SET')) return failBack(error);
   redirect(role === 'cre' ? '/onboarding/cre' : '/onboarding/creator');
 }
 
@@ -34,6 +36,8 @@ export async function saveCreatorProfile(_: ActionResult | null, fd: FormData): 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: 'Please sign in again.' };
+  const channel = str(fd, 'channel_url');
+  if (channel && !/^https?:\/\//i.test(channel)) return { ok: false, message: 'The channel link must start with https://' };
   const platform = str(fd, 'main_platform');
   const { error } = await supabase.from('creator_profiles').update({
     brand_name: str(fd, 'brand_name') || null,
@@ -44,7 +48,10 @@ export async function saveCreatorProfile(_: ActionResult | null, fd: FormData): 
   }).eq('user_id', user.id);
   if (error) return { ok: false, message: friendlyError(error) };
   const name = str(fd, 'display_name');
-  if (name) await supabase.from('profiles').update({ display_name: name.slice(0, 50) }).eq('id', user.id);
+  if (name) {
+    const { error: nameErr } = await supabase.from('profiles').update({ display_name: name.slice(0, 50) }).eq('id', user.id);
+    if (nameErr) return { ok: false, message: friendlyError(nameErr) };
+  }
   if (fd.get('redirect') === '1') redirect('/dashboard');
   revalidatePath('/settings');
   return { ok: true, message: 'Saved.' };
@@ -87,9 +94,9 @@ export async function addPortfolioItem(_: ActionResult | null, fd: FormData): Pr
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: 'Please sign in again.' };
-  const views = Number(str(fd, 'source_views').replace(/[,\s]/g, ''));
-  const median = Number(str(fd, 'channel_median_views').replace(/[,\s]/g, ''));
-  if (!(views > 0) || !(median > 0)) return { ok: false, message: 'Enter views and median views as whole numbers.' };
+  const views = parseViews(str(fd, 'source_views')) ?? 0;
+  const median = parseViews(str(fd, 'channel_median_views')) ?? 0;
+  if (!(views > 0) || !(median > 0)) return { ok: false, message: `Check the views and median views. ${VIEWS_HINT}` };
   if (views / median < 3) return { ok: false, message: 'Portfolio finds need an outlier score of at least 3×.' };
   const url = str(fd, 'source_url');
   if (!/^https?:\/\//i.test(url)) return { ok: false, message: 'Enter the full link, starting with https://' };

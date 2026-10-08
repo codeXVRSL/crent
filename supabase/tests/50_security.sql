@@ -95,3 +95,8 @@ reset role;
 select case when (select status from unlocks where id = :'sunl') = 'available'
              and (select count(*) from ledger_entries where unlock_id = :'sunl' and kind = 'hold_release') = 1
         then '✓ late dispute win for the researcher releases the hold with its ledger entry' else 'FAIL: hold_release missing after late dispute resolution' end;
+
+-- ---------- Philippine-friendly checks ----------
+select case when not (mask_contacts('Budgeting with GCash and PayPal for new grads')).hit then '✓ payment app names are allowed as topics' else 'FAIL: GCash topic blocked' end;
+select case when (mask_contacts('message me on telegram or call 0917 123 4567')).hit then '✓ phone numbers and messaging apps are still caught' else 'FAIL: contact details not caught' end;
+select case when (select proconfig::text from pg_proc where proname = 'submit_pitch') like '%Asia/Manila%' then '✓ pitch dates are checked against the Philippine date' else 'FAIL: submit_pitch not on Manila time' end;

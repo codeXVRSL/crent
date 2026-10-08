@@ -3,6 +3,7 @@ import { ActionForm, SubmitButton } from './form';
 import { Field, Input, Select, Textarea } from './ui';
 import { saveIdeaTracking } from '@/app/actions/ideas';
 import { IDEA_STAGES } from '@/lib/constants';
+import { manilaToday } from '@/lib/parse';
 
 export type Tracking = {
   stage: string; board: string | null; planned_on: string | null; notes: string | null; posted_url: string | null;
@@ -40,7 +41,7 @@ export function IdeaTrackerForm({ unlockId, t, boards, boardFilter }: { unlockId
             <Input id={id('posted_url')} name="posted_url" type="url" maxLength={500} defaultValue={t?.posted_url ?? ''} placeholder="https://" />
           </Field>
           <Field label="Posted on" htmlFor={id('posted_on')}>
-            <Input id={id('posted_on')} name="posted_on" type="date" max={new Date().toISOString().slice(0, 10)} defaultValue={t?.posted_on ?? ''} />
+            <Input id={id('posted_on')} name="posted_on" type="date" max={manilaToday()} defaultValue={t?.posted_on ?? ''} />
           </Field>
           <Field label="Views it got" htmlFor={id('result_views')}>
             <Input id={id('result_views')} name="result_views" inputMode="numeric" defaultValue={t?.result_views ?? ''} />

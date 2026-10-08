@@ -38,13 +38,13 @@ export default async function CreOnboarding() {
       {status === 'approved' && <Notice tone="good">You&apos;re verified. You can pitch on open briefs.</Notice>}
       {status === 'rejected' && <Notice tone="bad">We couldn&apos;t verify your details: {cp?.kyc_reject_reason}. Fix it below and submit again.</Notice>}
 
-      <Card className="grid gap-4">
+      <Card id="profile" className="grid scroll-mt-24 gap-4">
         <div className="flex items-center justify-between"><h2 className="text-lg font-semibold tracking-tight">1. Public profile</h2>{profileDone && <Pill tone="good">Done</Pill>}</div>
         <ActionForm action={saveCreProfile} className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Display name" htmlFor="display_name"><Input id="display_name" name="display_name" defaultValue={viewer.displayName} required maxLength={50} /></Field>
             <Field label="Handle" htmlFor="handle" hint="Your profile link: /cres/yourhandle">
-              <Input id="handle" name="handle" defaultValue={viewer.handle ?? ''} required pattern="[a-z0-9_]{3,24}" placeholder="maria_research" />
+              <Input id="handle" name="handle" defaultValue={viewer.handle ?? ''} required pattern="[A-Za-z0-9_]{3,24}" title="3–24 letters, numbers or underscores" placeholder="maria_research" />
             </Field>
           </div>
           <Field label="Headline" htmlFor="headline" hint="Up to 90 characters.">
@@ -80,7 +80,7 @@ export default async function CreOnboarding() {
         </ActionForm>
       </Card>
 
-      <Card className="grid gap-4">
+      <Card id="portfolio" className="grid scroll-mt-24 gap-4">
         <div className="flex items-center justify-between"><h2 className="text-lg font-semibold tracking-tight">2. Portfolio finds</h2>{portfolioDone ? <Pill tone="good">Done</Pill> : <Pill tone="warn">{portfolio?.length ?? 0} of 3</Pill>}</div>
         <p className="text-sm text-muted">Outliers you&apos;ve found before. These are public on your profile, so creators can judge your eye.</p>
         {(portfolio ?? []).length > 0 && (
@@ -100,7 +100,7 @@ export default async function CreOnboarding() {
               <Select id="pf_platform" name="platform">{PLATFORMS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}</Select>
             </Field>
           </div>
-          <Field label="Link to the video" htmlFor="pf_url"><Input id="pf_url" name="source_url" type="url" required placeholder="https://" /></Field>
+          <Field label="Link to the video" htmlFor="pf_url"><Input id="pf_url" name="source_url" type="url" required maxLength={500} placeholder="https://" /></Field>
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Video views" htmlFor="pf_views"><Input id="pf_views" name="source_views" inputMode="numeric" required placeholder="1300000" /></Field>
             <Field label="Channel median views" htmlFor="pf_median"><Input id="pf_median" name="channel_median_views" inputMode="numeric" required placeholder="92000" /></Field>
@@ -113,7 +113,7 @@ export default async function CreOnboarding() {
         </ActionForm>
       </Card>
 
-      <Card className="grid gap-4">
+      <Card id="verify" className="grid scroll-mt-24 gap-4">
         <div className="flex items-center justify-between"><h2 className="text-lg font-semibold tracking-tight">3. Verification</h2>
           {status === 'approved' ? <Pill tone="good">Verified</Pill> : status === 'pending' ? <Pill tone="warn">In review</Pill> : null}</div>
         {status === 'approved' || status === 'pending' ? (

@@ -4,12 +4,16 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { friendlyError, type ActionResult } from '@/lib/errors';
 import { IDEA_STAGES } from '@/lib/constants';
+import { failBack } from '@/lib/flash';
+import { parseViews, VIEWS_HINT } from '@/lib/parse';
+import { manilaToday } from '@/lib/parse';
 
 // Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
+// Empty → null (not logged yet); otherwise a whole number, or NaN so the check below reports it.
 const views = (fd: FormData, k: string) => {
-  const s = str(fd, k).replace(/[,\s]/g, '');
-  return s === '' ? null : Number(s);
+  const s = str(fd, k);
+  return s === '' ? null : parseViews(s) ?? NaN;
 };
 
 /** Saves an unlocked idea's place on the creator's idea board, and its result once posted. */
@@ -20,7 +24,7 @@ export async function saveIdeaTracking(_: ActionResult | null, fd: FormData): Pr
   if (postedUrl && !/^https?:\/\//i.test(postedUrl)) return { ok: false, message: 'The posted link must start with https://' };
   const resultViews = views(fd, 'result_views');
   const usualViews = views(fd, 'usual_views');
-  if ([resultViews, usualViews].some((n) => n != null && !Number.isFinite(n))) return { ok: false, message: 'Views must be whole numbers.' };
+  if ([resultViews, usualViews].some((n) => n != null && !Number.isFinite(n))) return { ok: false, message: `Check the views. ${VIEWS_HINT}` };
   if ((resultViews == null) !== (usualViews == null)) return { ok: false, message: 'Add both the views it got and your usual views, so we can work out the result.' };
 
   const supabase = await createClient();
@@ -57,10 +61,10 @@ export async function moveIdea(fd: FormData) {
     p_planned_on: cur?.planned_on ?? null,
     p_notes: cur?.notes ?? null,
     p_posted_url: cur?.posted_url ?? null,
-    p_posted_on: cur?.posted_on ?? (str(fd, 'stage') === 'posted' ? new Date().toISOString().slice(0, 10) : null),
+    p_posted_on: cur?.posted_on ?? (str(fd, 'stage') === 'posted' ? manilaToday() : null),
     p_result_views: cur?.result_views ?? null,
     p_usual_views: cur?.usual_views ?? null,
   });
-  if (error) throw new Error(friendlyError(error));
+  if (error) return failBack(error);
   revalidatePath('/ideas');
 }

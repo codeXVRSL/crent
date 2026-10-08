@@ -23,9 +23,4 @@ export function formatMoney(cents: number, currency = 'USD'): string {
   }).format(cents / 100);
 }
 
-/** Parses "8", "8.5", "$8.50" into cents. Returns null if invalid. */
-export function parseDollarsToCents(input: string): number | null {
-  const clean = input.replace(/[$,\s]/g, '');
-  if (!/^\d+(\.\d{1,2})?$/.test(clean)) return null;
-  return Math.round(parseFloat(clean) * 100);
-}
+export { parseDollarsToCents } from './parse';

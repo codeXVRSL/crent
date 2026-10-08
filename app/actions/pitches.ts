@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server';
 import { friendlyError, type ActionResult } from '@/lib/errors';
 import { emailUser } from '@/lib/notify-email';
 import { env } from '@/lib/env';
+import { failBack } from '@/lib/flash';
+import { parseViews, VIEWS_HINT } from '@/lib/parse';
 
 // Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
@@ -12,6 +14,10 @@ const num = (fd: FormData, k: string) => Number(str(fd, k).replace(/[,\s]/g, '')
 
 export async function submitPitch(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   const briefId = str(fd, 'brief_id');
+  const sourceViews = parseViews(str(fd, 'source_views'));
+  const medianViews = parseViews(str(fd, 'channel_median_views'));
+  if (!sourceViews || !medianViews) return { ok: false, message: `Check the video views and channel median. ${VIEWS_HINT}` };
+  if (!str(fd, 'source_posted_on')) return { ok: false, message: 'Add the date the source video was posted.' };
   const supabase = await createClient();
   const { data: pitchId, error } = await supabase.rpc('submit_pitch', {
     p_brief_id: briefId,
@@ -20,8 +26,8 @@ export async function submitPitch(_: ActionResult | null, fd: FormData): Promise
     p_duration_seconds: num(fd, 'duration_seconds') || null,
     p_hook_category: str(fd, 'hook_category'),
     p_teaser: str(fd, 'teaser'),
-    p_source_views: num(fd, 'source_views'),
-    p_channel_median_views: num(fd, 'channel_median_views'),
+    p_source_views: sourceViews,
+    p_channel_median_views: medianViews,
     p_source_posted_on: str(fd, 'source_posted_on'),
     p_source_channel_size_band: str(fd, 'source_channel_size_band') || null,
     p_source_url: str(fd, 'source_url'),
@@ -51,7 +57,7 @@ export async function submitPitch(_: ActionResult | null, fd: FormData): Promise
 export async function withdrawPitch(fd: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.rpc('withdraw_pitch', { p_pitch_id: str(fd, 'pitch_id') });
-  if (error) throw new Error(friendlyError(error));
+  if (error) return failBack(error);
   revalidatePath('/pitches');
 }
 
@@ -72,7 +78,7 @@ export async function unlockPitch(_: ActionResult | null, fd: FormData): Promise
 export async function toggleShortlist(fd: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.rpc('set_pitch_shortlist', { p_pitch_id: str(fd, 'pitch_id'), p_on: str(fd, 'on') === '1' });
-  if (error) throw new Error(friendlyError(error));
+  if (error) return failBack(error);
   revalidatePath(`/briefs/${str(fd, 'brief_id')}`);
 }
 
@@ -89,6 +95,6 @@ export async function passPitch(_: ActionResult | null, fd: FormData): Promise<A
 export async function unpassPitch(fd: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.rpc('unpass_pitch', { p_pitch_id: str(fd, 'pitch_id') });
-  if (error) throw new Error(friendlyError(error));
+  if (error) return failBack(error);
   revalidatePath(`/briefs/${str(fd, 'brief_id')}`);
 }
