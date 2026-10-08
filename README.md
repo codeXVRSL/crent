@@ -177,7 +177,7 @@ It creates a Supabase project in Singapore, runs the database setup, turns on au
 **By hand** instead:
 1. Push this folder to a GitHub repo and import it in Vercel.
 2. Add every variable from `.env.example` in Vercel → Settings → Environment Variables. Set `NEXT_PUBLIC_APP_URL` to your domain.
-3. `vercel.json` runs `/api/cron` once a day (midnight Manila time) so it works on Vercel's free Hobby plan. While testing, use **Admin → Run scheduled jobs now**. For launch, either move to Pro and set the schedule to `*/15 * * * *`, or keep Hobby and point a free external scheduler (e.g. cron-job.org) at `https://YOUR_DOMAIN/api/cron` with header `Authorization: Bearer <CRON_SECRET>` every 15 minutes.
+3. `vercel.json` runs the site in Singapore (`sin1`), next to the Supabase project, so each database call from a page is a few milliseconds instead of a trip across the Pacific. Create the Supabase project in Singapore too (the deploy script does). It also runs `/api/cron` once a day (midnight Manila time) so it works on Vercel's free Hobby plan. While testing, use **Admin → Run scheduled jobs now**. For launch, either move to Pro and set the schedule to `*/15 * * * *`, or keep Hobby and point a free external scheduler (e.g. cron-job.org) at `https://YOUR_DOMAIN/api/cron` with header `Authorization: Bearer <CRON_SECRET>` every 15 minutes.
 4. Add your domain's `/auth/callback` to Supabase Redirect URLs and change the Site URL.
 
 ## Switching to real payments (Xendit)
@@ -200,6 +200,7 @@ node tests/e2e/exploratory.mjs   # 38-step exploratory run through everything TE
                                  # (ID upload, disputes, feedback, suspension, every admin page, phone sweep);
                                  # same requirements as the Playwright tests, plus `npm run seed:demo` first
 node tests/e2e/a11y.mjs          # WCAG 2.1 AA audit (axe-core) of every main page, all roles, light and dark
+npm run test:deploy              # dry run of the one-command deploy against simulated Supabase and Vercel APIs
 ```
 
 The browser test skips the ID-photo upload (it writes the verification row directly) and makes one account admin through the API.

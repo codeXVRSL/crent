@@ -127,7 +127,7 @@ export default async function Dashboard() {
         {v.kycStatus === 'approved' && <LinkButton href="/briefs">Browse briefs</LinkButton>}
       </PageHeader>
       <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Available" value={formatMoney(bal?.available_cents ?? 0)} icon={<Wallet className="size-4" />} emphasis sub={<Link href="/wallet" className="underline">Withdraw</Link>} />
+        <Stat label="Available" value={formatMoney(bal?.available_cents ?? 0)} icon={<Wallet className="size-4" />} emphasis sub={(bal?.available_cents ?? 0) > 0 ? <Link href="/wallet" className="underline">Withdraw</Link> : 'Nothing to withdraw yet'} />
         <Stat label="On hold" value={formatMoney(bal?.held_cents ?? 0)} icon={<Timer className="size-4" />} sub="72-hour dispute window" />
         <Stat label="Unlock rate" value={stats?.unlock_rate_pct != null ? `${stats.unlock_rate_pct}%` : '–'} icon={<Percent className="size-4" />} />
         <Stat label="Rating" value={stats?.avg_rating ? `${stats.avg_rating}★` : '–'} icon={<Star className="size-4" />} sub={`${stats?.review_count ?? 0} reviews`} />

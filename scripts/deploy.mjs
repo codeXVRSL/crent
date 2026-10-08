@@ -13,8 +13,11 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 
-const SB = 'https://api.supabase.com/v1';
-const VC = 'https://api.vercel.com';
+// Overridable only so the script can be dry-run against simulated APIs (tests/deploy-dry-run.mjs).
+const SB = process.env.SUPABASE_API_URL ?? 'https://api.supabase.com/v1';
+const VC = process.env.VERCEL_API_URL ?? 'https://api.vercel.com';
+const VERCEL_CLI = process.env.VERCEL_CLI ? [process.env.VERCEL_CLI] : ['npx', '--yes', 'vercel@latest'];
+const POLL_MS = Number(process.env.DEPLOY_POLL_MS ?? 10_000);
 const need = (k) => { const v = process.env[k]; if (!v) { console.error(`Missing ${k}. See the header of scripts/deploy.mjs.`); process.exit(1); } return v; };
 const sbToken = need('SUPABASE_ACCESS_TOKEN');
 const vcToken = need('VERCEL_TOKEN');
@@ -34,7 +37,7 @@ const sb = (p, i) => api(SB, sbToken, p, i);
 const vc = (p, i) => api(VC, vcToken, p + (team ? (p.includes('?') ? '&' : '?') + team : ''), i);
 
 // ---------- secrets kept between runs ----------
-const SECRETS = '.env.production.local';
+const SECRETS = process.env.DEPLOY_SECRETS_FILE ?? '.env.production.local';
 const saved = existsSync(SECRETS) ? Object.fromEntries(readFileSync(SECRETS, 'utf8').split('\n').filter((l) => l.includes('=')).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)])) : {};
 const secrets = {
   PAYOUT_ENCRYPTION_KEY: saved.PAYOUT_ENCRYPTION_KEY ?? randomBytes(48).toString('base64'),
@@ -61,7 +64,7 @@ for (let i = 0; ; i++) {
   const p = await sb(`/projects/${ref}`);
   if (p.status === 'ACTIVE_HEALTHY') break;
   if (i > 60) throw new Error(`Project still ${p.status} after 10 minutes.`);
-  await sleep(10_000);
+  await sleep(POLL_MS);
 }
 const sql = (query) => sb(`/projects/${ref}/database/query`, { method: 'POST', body: JSON.stringify({ query }) });
 
@@ -78,7 +81,7 @@ const supabaseUrl = `https://${ref}.supabase.co`;
 
 // ---------- 3. Vercel project + env ----------
 log(`Linking Vercel project "${projectName}"…`);
-const cli = (args) => execFileSync('npx', ['--yes', 'vercel@latest', ...args, '--token', vcToken, ...(process.env.VERCEL_TEAM_ID ? ['--scope', process.env.VERCEL_TEAM_ID] : [])], { stdio: ['ignore', 'pipe', 'inherit'] }).toString();
+const cli = (args) => execFileSync(VERCEL_CLI[0], [...VERCEL_CLI.slice(1), ...args, '--token', vcToken, ...(process.env.VERCEL_TEAM_ID ? ['--scope', process.env.VERCEL_TEAM_ID] : [])], { stdio: ['ignore', 'pipe', 'inherit'] }).toString();
 cli(['link', '--yes', '--project', projectName]);
 const { projectId } = JSON.parse(readFileSync('.vercel/project.json', 'utf8'));
 const proj = await vc(`/v9/projects/${projectId}`);

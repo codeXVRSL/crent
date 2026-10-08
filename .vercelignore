@@ -1,0 +1,15 @@
+# Never upload local secrets or build output when deploying from this folder with the Vercel CLI.
+.env*
+!.env.example
+.vercel
+.next
+node_modules
+supabase/.temp
+supabase/.branches
+test-results
+playwright-report
+exploratory-results
+# Large documents and marketing assets aren't part of the site.
+docs
+reports
+research_notes

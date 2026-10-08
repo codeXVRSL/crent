@@ -3,12 +3,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useActionState } from 'react';
 import { restoreForm, SubmitButton } from './form';
 import { Notice } from './ui';
-import { createBrowserSupabase } from '@/lib/supabase/client';
 import type { ActionResult } from '@/lib/errors';
 import { Field, Input, Select, Textarea } from './ui';
 import { submitPitch } from '@/app/actions/pitches';
 import { HOOK_CATEGORIES, INSTRUCTIONS_TEMPLATE, PLATFORMS, SIZE_BANDS } from '@/lib/constants';
 import { formatMultiplier } from '@/lib/outlier';
+
+// The Supabase client (~70 KB) is only needed when a file is uploaded, so it loads on submit, not with the page.
+const loadSupabase = () => import('@/lib/supabase/client').then((m) => m.createBrowserSupabase());
 
 /** Details carried over from a swipe-file item so the researcher doesn't retype them. */
 export type PitchPrefill = {
@@ -40,7 +42,7 @@ export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays
       if (file.size > 5 * 1024 * 1024) return { ok: false, message: 'The screenshot must be 5 MB or smaller.' };
       const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
       const path = `${userId}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await createBrowserSupabase().storage.from('pitch-proof').upload(path, file, { contentType: file.type });
+      const { error } = await (await loadSupabase()).storage.from('pitch-proof').upload(path, file, { contentType: file.type });
       if (error) return { ok: false, message: `Screenshot upload failed: ${error.message}` };
       fd.set('proof_path', path);
     }

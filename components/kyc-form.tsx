@@ -1,6 +1,5 @@
 'use client';
 import { useActionState } from 'react';
-import { createBrowserSupabase } from '@/lib/supabase/client';
 import { submitKyc } from '@/app/actions/onboarding';
 import type { ActionResult } from '@/lib/errors';
 import { Field, Input, Notice, Select } from './ui';
@@ -8,13 +7,16 @@ import { SubmitButton } from './form';
 import { ID_TYPES } from '@/lib/constants';
 import { BRAND } from '@/lib/brand';
 
+// The Supabase client (~70 KB) is only needed when a file is uploaded, so it loads on submit, not with the page.
+const loadSupabase = () => import('@/lib/supabase/client').then((m) => m.createBrowserSupabase());
+
 const MAX_BYTES = 5 * 1024 * 1024;
 const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 /** Uploads ID images straight to private storage (path starts with the user id), then submits the form. */
 export function KycForm({ userId }: { userId: string }) {
   const [state, action] = useActionState(async (_: ActionResult | null, fd: FormData): Promise<ActionResult> => {
-    const supabase = createBrowserSupabase();
+    const supabase = await loadSupabase();
     for (const [field, pathField] of [['id_front', 'id_front_path'], ['selfie', 'selfie_path']] as const) {
       const file = fd.get(field);
       if (!(file instanceof File) || file.size === 0) return { ok: false, message: 'Add both photos: your ID and a selfie holding it.' };

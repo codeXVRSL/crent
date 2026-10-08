@@ -14,10 +14,11 @@ export function FeedbackButton() {
   useEffect(() => { if (state?.ok) { const t = setTimeout(() => setOpen(false), 1800); return () => clearTimeout(t); } }, [state]);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-40 flex h-10 items-center gap-2 rounded-full border border-line-strong bg-surface px-4 text-[13px] font-medium text-ink shadow-md hover:bg-surface-2"
+      {/* Icon-only circle on phones so it doesn't sit on top of card text; labelled pill from sm up. */}
+      <button type="button" onClick={() => setOpen(true)} aria-label="Feedback"
+        className="fixed bottom-4 right-4 z-40 flex size-11 items-center justify-center gap-2 rounded-full border border-line-strong bg-surface text-[13px] font-medium text-ink shadow-md hover:bg-surface-2 sm:h-10 sm:w-auto sm:px-4"
         style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        <MessageCircleHeart className="size-4 text-accent" aria-hidden="true" /> Feedback
+        <MessageCircleHeart className="size-5 text-accent sm:size-4" aria-hidden="true" /> <span className="hidden sm:inline">Feedback</span>
       </button>
       {open && (
         <div className="fixed inset-0 z-[55] grid items-end justify-items-end p-4 sm:items-end" role="dialog" aria-modal="true" aria-label="Send feedback">

@@ -368,7 +368,7 @@ await step('dispute window closes after the hold: no "Report a problem" on an av
 await step('researcher adds GCash, withdraws; admin approves; researcher sees pesos', async () => {
   const a = admin.page; await a.goto(`${BASE}/admin/settings`); await a.getByLabel('Minimum withdrawal ($)').fill('1'); await a.getByRole('button', { name: 'Save settings' }).click(); await visible(a, 'Saved.');
   const p = cre.page; await p.goto(`${BASE}/wallet`);
-  await p.getByLabel('Account name').fill('Rina Santos'); await p.getByLabel('Mobile or account number').fill('09171234567');
+  await p.getByLabel('Account name').fill('Rina Santos'); await p.getByLabel('GCash mobile number').fill('09171234567');
   await p.getByRole('button', { name: 'Save payout method' }).click(); await visible(p, 'Payout method saved.');
   await p.reload(); const t = await text(p); expect(t.includes('···4567'), 'method not listed'); expect(!t.includes('09171234567'), 'full account number shown');
   await p.getByRole('button', { name: /^Withdraw \$5\.40/ }).click(); await visible(p, /waiting for approval/);

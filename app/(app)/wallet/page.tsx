@@ -1,11 +1,12 @@
 import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { ActionForm, SubmitButton } from '@/components/form';
-import { Card, Field, Input, Notice, PageHeader, Pill, Select, Stat } from '@/components/ui';
+import { Card, Field, Notice, PageHeader, Pill, Select, Stat } from '@/components/ui';
 import { fmtDate, UnlockStatus } from '@/components/status';
-import { addPayoutMethod, deletePayoutMethod, requestPayout, cancelPayout } from '@/app/actions/wallet';
+import { deletePayoutMethod, requestPayout, cancelPayout } from '@/app/actions/wallet';
 import { formatMoney } from '@/lib/money';
 import { When } from '@/components/when';
+import { PayoutMethodForm } from '@/components/payout-method-form';
 
 export const metadata = { title: 'Wallet' };
 
@@ -67,25 +68,19 @@ export default async function Wallet({ searchParams }: { searchParams: Promise<{
               <ActionForm action={deletePayoutMethod}><input type="hidden" name="id" value={m.id} /><button className="text-xs text-bad" aria-label={`Remove ${m.kind} ···${m.account_last4}`}>Remove</button></ActionForm>
             </div>
           ))}
-          <ActionForm action={addPayoutMethod} className="grid gap-3 border-t border-line pt-3" resetOnSuccess>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Type" htmlFor="kind"><Select id="kind" name="kind"><option value="gcash">GCash</option><option value="maya">Maya</option><option value="bank">Bank account</option></Select></Field>
-              <Field label="Bank code (banks only)" htmlFor="bank_code" hint="e.g. PH_BDO, PH_BPI"><Input id="bank_code" name="bank_code" /></Field>
-            </div>
-            <Field label="Account name" htmlFor="account_name" hint="Must match your verified legal name."><Input id="account_name" name="account_name" required /></Field>
-            <Field label="Mobile or account number" htmlFor="account_number"><Input id="account_number" name="account_number" required inputMode="numeric" /></Field>
-            <SubmitButton variant="secondary">Save payout method</SubmitButton>
-          </ActionForm>
+          <PayoutMethodForm />
         </Card>
       </div>
 
       <section className="mt-8 grid gap-3">
         <h2 className="text-lg font-semibold tracking-tight">Earnings</h2>
+        {(unlocks ?? []).length === 0 ? (
+          <Card><p className="text-sm text-muted">Earnings show up here after a creator unlocks your pitch.</p></Card>
+        ) : (
         <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">
           <table className="w-full min-w-[560px] text-sm">
             <thead><tr className="border-b border-line text-left"><th className="label p-3">Brief</th><th className="label p-3">You earned</th><th className="label p-3">Status</th><th className="label p-3">Available from</th></tr></thead>
             <tbody>
-              {(unlocks ?? []).length === 0 && <tr><td colSpan={4} className="p-3 text-muted">Earnings show up here after a creator unlocks your pitch.</td></tr>}
               {(unlocks ?? []).map((u) => (
                 <tr key={u.id} className="border-b border-line last:border-0">
                   <td className="p-3">{(u.briefs as unknown as { title: string } | null)?.title}</td>
@@ -97,6 +92,7 @@ export default async function Wallet({ searchParams }: { searchParams: Promise<{
             </tbody>
           </table>
         </div>
+        )}
       </section>
 
       {(payouts ?? []).length > 0 && (

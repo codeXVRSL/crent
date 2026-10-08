@@ -175,7 +175,7 @@ test('brief → pitch → locked → unlock → close/refund → payout → chat
   await cre.page.goto('/wallet');
   await expect(cre.page.getByText('$10.80').first()).toBeVisible(); // $12 − 10%
   await cre.page.getByLabel('Account name').fill('Rico Santos');
-  await cre.page.getByLabel('Mobile or account number').fill('09171234567');
+  await cre.page.getByLabel('GCash mobile number').fill('09171234567');
   await cre.page.getByRole('button', { name: 'Save payout method' }).click();
   await flash(cre.page, 'Payout method saved.');
   await cre.page.reload();
