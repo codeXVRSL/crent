@@ -77,14 +77,25 @@ export default async function AdminPayouts({ searchParams }: { searchParams: Pro
 
       {!!rest.length && (
         <section className="mt-8 grid gap-3">
-          <h2 className="text-lg font-semibold tracking-tight">History</h2>
+          <h2 className="text-lg font-semibold tracking-tight">History <span className="text-sm font-normal text-muted">(latest 100)</span></h2>
           <ul className="grid gap-2 text-sm">
-            {rest.map((p) => (
-              <li key={p.id} className="flex flex-wrap justify-between gap-2 rounded-md border border-line bg-surface p-3">
-                <span className="num">{formatMoney(p.amount_cents, p.currency)}{p.amount_local_cents ? ` → ${formatMoney(p.amount_local_cents, 'PHP')}` : ''} · {pMap.get(p.cre_id)?.display_name}</span>
-                <Pill tone={p.status === 'paid' ? 'good' : 'neutral'}>{p.status}</Pill>
-              </li>
-            ))}
+            {rest.map((p) => {
+              const m = p.payout_methods as unknown as { kind: string; bank_code: string | null; account_last4: string } | null;
+              return (
+                <li key={p.id} className="grid gap-1 rounded-md border border-line bg-surface p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="num">{formatMoney(p.amount_cents, p.currency)}{p.amount_local_cents ? ` → ${formatMoney(p.amount_local_cents, 'PHP')}` : ''} · {pMap.get(p.cre_id)?.display_name}</span>
+                    <Pill tone={p.status === 'paid' ? 'good' : p.status === 'failed' ? 'bad' : 'neutral'}>{p.status}</Pill>
+                  </div>
+                  <span className="text-xs text-muted">
+                    {m ? `${m.kind === 'bank' ? `Bank ${m.bank_code ?? ''}` : m.kind.toUpperCase()} ···${m.account_last4}` : 'Method removed'} · requested <When iso={p.requested_at} />
+                    {p.paid_at && <> · paid <When iso={p.paid_at} /></>}
+                    {p.provider_ref && <> · ref <span className="num select-all">{p.provider_ref}</span></>}
+                  </span>
+                  {p.status === 'failed' && p.failure_reason && <span className="text-xs text-bad">Failed: {p.failure_reason}</span>}
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

@@ -101,7 +101,9 @@ export async function setSuspended(_: ActionResult | null, fd: FormData): Promis
   const { error } = await supabase.rpc('set_suspended', { p_user: str(fd, 'user_id'), p_suspend: suspend, p_reason: reason || null });
   if (error) return { ok: false, message: friendlyError(error) };
   revalidatePath('/admin/users');
-  return { ok: true, message: suspend ? 'User suspended.' : 'Suspension lifted.' };
+  // The row's form changes (Suspend ↔ Lift), so confirm at the top of the page, keeping the search.
+  const q = str(fd, 'q');
+  redirect(`/admin/users?done=${suspend ? 'suspended' : 'lifted'}${q ? `&q=${encodeURIComponent(q)}` : ''}`);
 }
 
 export async function updateFlag(fd: FormData) {

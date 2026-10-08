@@ -388,8 +388,8 @@ await step('researcher adds GCash, withdraws; admin approves; researcher sees pe
 // ============ 6. Admin: users, suspension, audit ============
 await step('admin suspends the creator; they land on /suspended; lifting restores access', async () => {
   const a = admin.page; await a.goto(`${BASE}/admin/users?q=Cara${run}`);
-  const row = a.locator('tr', { hasText: `Cara${run}` }); await row.getByLabel('Reason').fill('Testing suspension flow');
-  await row.getByRole('button', { name: 'Suspend' }).click(); await visible(a, 'User suspended.');
+  const row = a.locator('tr', { hasText: `Cara${run}` }); await row.getByText('Suspend…').click(); await row.getByLabel('Reason').fill('Testing suspension flow');
+  await row.getByRole('button', { name: 'Suspend', exact: true }).click(); await visible(a, 'User suspended.');
   const p = creator.page; await p.goto(`${BASE}/dashboard`); expect(p.url().includes('/suspended'), 'suspended user not redirected: ' + p.url());
   await a.goto(`${BASE}/admin/users?q=Cara${run}`); await a.locator('tr', { hasText: `Cara${run}` }).getByRole('button', { name: 'Lift suspension' }).click(); await visible(a, 'Suspension lifted.');
   await p.goto(`${BASE}/dashboard`); expect(p.url().includes('/dashboard'), 'access not restored');
