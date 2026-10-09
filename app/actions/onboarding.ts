@@ -7,7 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { env } from '@/lib/env';
 import { PLATFORMS } from '@/lib/constants';
 import { failBack } from '@/lib/flash';
-import { parseViews, VIEWS_HINT } from '@/lib/parse';
+import { parseDollarsToCents, parseViews, VIEWS_HINT } from '@/lib/parse';
 
 const PLATFORM_VALUES = PLATFORMS.map((p) => p.value) as string[];
 // Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
@@ -140,4 +140,34 @@ export async function submitKyc(_: ActionResult | null, fd: FormData): Promise<A
   revalidatePath('/onboarding/cre');
   revalidatePath('/dashboard');
   return { ok: true, message: "Submitted. We'll review your verification within 2 business days." };
+}
+
+/** Creator persona: audience, voice and topics to avoid, prefilled into new briefs and the AI script prompt. */
+export async function savePersona(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: 'Your session ended. Log in again.' };
+  const fields = { audience: str(fd, 'audience'), voice: str(fd, 'voice'), avoid_topics: str(fd, 'avoid_topics') };
+  if (Object.values(fields).some((v) => v.length > 300)) return { ok: false, message: 'Keep each answer under 300 characters.' };
+  const { error } = await supabase.from('creator_profiles').update({
+    audience: fields.audience || null, voice: fields.voice || null, avoid_topics: fields.avoid_topics || null,
+  }).eq('user_id', user.id);
+  if (error) return { ok: false, message: friendlyError(error) };
+  revalidatePath('/settings');
+  return { ok: true, message: 'Saved. New briefs will start with this.' };
+}
+
+/** Researcher brief alerts: only be notified about briefs at or above a price, on chosen platforms. */
+export async function saveAlerts(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: 'Your session ended. Log in again.' };
+  const raw = str(fd, 'alert_min_price');
+  const minCents = raw === '' ? 0 : parseDollarsToCents(raw);
+  if (minCents == null || minCents > 50000) return { ok: false, message: 'Enter a minimum price in dollars, e.g. 5 or 7.50, or leave it empty.' };
+  const platforms = fd.getAll('alert_platforms').map(String).filter((p) => PLATFORM_VALUES.includes(p));
+  const { error } = await supabase.from('cre_profiles').update({ alert_min_price_cents: minCents, alert_platforms: platforms }).eq('user_id', user.id);
+  if (error) return { ok: false, message: friendlyError(error) };
+  revalidatePath('/settings');
+  return { ok: true, message: 'Saved. You\'ll be notified only about briefs that match.' };
 }

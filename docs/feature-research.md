@@ -34,9 +34,9 @@ September 2026. The goal was to find what Outlier Desk was missing for its two s
 ## Next, ranked
 
 1. **Request a variation.** One free alternate hook or angle per unlock, answered through the existing thread. This is the Fiverr "revision" pattern. (M)
-2. **Saved-search alerts.** Notify researchers only for briefs above a price they set, or on specific platforms. This needs a small change to `mark_payment_paid`. (S)
+2. ✅ *Built 9 Oct.* **Saved-search alerts.** Notify researchers only for briefs above a price they set, or on specific platforms. This needs a small change to `mark_payment_paid`. (S)
 3. **Response time badge.** Median time for a researcher's first reply in threads, and time from a brief opening to their first pitch. (M)
-4. **Creator persona.** Audience, voice and banned topics, saved once, prefilled into every brief and into the AI prompt. (S)
+4. ✅ *Built 9 Oct.* **Creator persona.** Audience, voice and banned topics, saved once, prefilled into every brief and into the AI prompt. (S)
 5. **"More like this"** on unlocked ideas, matched by hook type, format and niche. (S)
 6. **Weekly digest email.** For creators: ideas past their film date and posted ideas with no views logged. For researchers: new briefs and results. (S, reuses Resend)
 7. **Retainers.** Recurring briefs sent to a saved researcher (spec Phase 9). (L)

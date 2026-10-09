@@ -21,14 +21,14 @@ export default async function NewBrief({ searchParams }: { searchParams: Promise
   const [{ data: niches }, { data: settings }, { data: cp }] = await Promise.all([
     supabase.from('niches').select('id, name').order('name'),
     supabase.from('platform_settings').select('creator_fee_bps, min_price_per_idea_cents, max_price_per_idea_cents, min_multiplier').single(),
-    supabase.from('creator_profiles').select('main_platform').eq('user_id', v.id).single(),
+    supabase.from('creator_profiles').select('main_platform, audience, voice, avoid_topics').eq('user_id', v.id).single(),
   ]);
   return (
     <>
       <PageHeader eyebrow="New brief" title="Tell researchers what you need"
         description="Your brief goes live after payment. Verified researchers in your niche are notified right away." />
       <BriefForm niches={niches ?? []} creatorFeeBps={settings?.creator_fee_bps ?? 500}
-        limits={{ minPriceCents: settings?.min_price_per_idea_cents ?? 300, maxPriceCents: settings?.max_price_per_idea_cents ?? 50000, minMultiplier: Number(settings?.min_multiplier ?? 3) }} defaultPlatform={cp?.main_platform} initial={initial} />
+        limits={{ minPriceCents: settings?.min_price_per_idea_cents ?? 300, maxPriceCents: settings?.max_price_per_idea_cents ?? 50000, minMultiplier: Number(settings?.min_multiplier ?? 3) }} defaultPlatform={cp?.main_platform} initial={initial} persona={cp} />
     </>
   );
 }

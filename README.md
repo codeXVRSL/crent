@@ -104,9 +104,10 @@ In Supabase → SQL Editor, run these files in order:
 7. `supabase/migrations/20261004000007_rate_limits_and_account_closure.sql`
 8. `supabase/migrations/20261008000008_security_fixes.sql`
 9. `supabase/migrations/20261008000009_ph_friendly_checks.sql`
-10. `supabase/seed.sql`
+10. `supabase/migrations/20261009000010_alerts_and_persona.sql`
+11. `supabase/seed.sql`
 
-Or run `supabase/setup_all.sql`, which is all of the above in one file (for a new, empty project). If your database already has migrations 1–7, run files 8 and 9.
+Or run `supabase/setup_all.sql`, which is all of the above in one file (for a new, empty project). If your database already has migrations 1–7, run files 8, 9 and 10.
 
 ### 4. Configure Supabase Auth
 Supabase → Authentication → URL Configuration:

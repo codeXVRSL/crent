@@ -93,10 +93,11 @@ export default async function BriefPage({ params, searchParams }: {
 
   // ---------------- Creator (owner) view ----------------
   if (isOwner || v.role === 'admin') {
-    const [{ data: pitches }, { data: unlocks }, { data: refunds }] = await Promise.all([
+    const [{ data: pitches }, { data: unlocks }, { data: refunds }, { data: persona }] = await Promise.all([
       supabase.from('pitches').select(PITCH_COLUMNS).eq('brief_id', id).order('submitted_at'),
       supabase.from('unlocks').select('id, pitch_id, status, available_at').eq('brief_id', id),
       supabase.from('refunds').select('id, amount_cents, status, reason').eq('brief_id', id),
+      supabase.from('creator_profiles').select('brand_name, audience, voice, avoid_topics').eq('user_id', v.id).maybeSingle(),
     ]);
     const ids = (pitches ?? []).map((p) => p.id);
     const creIds = [...new Set((pitches ?? []).map((p) => p.cre_id))];
@@ -201,7 +202,7 @@ export default async function BriefPage({ params, searchParams }: {
                     const starred = shortlisted.has(p.id);
                     return (
                       <PitchCard key={p.id} pitch={p as PitchPublic} secret={secret} proofUrl={proofMap.get(p.id)}
-                        scriptPrompt={secret && isOwner ? buildScriptPrompt({ ...(p as PitchPublic), ...secret }) : undefined}
+                        scriptPrompt={secret && isOwner ? buildScriptPrompt({ ...(p as PitchPublic), ...secret }, { brand: persona?.brand_name, audience: persona?.audience, voice: persona?.voice, avoid_topics: persona?.avoid_topics }) : undefined}
                         priceLabel={p.status === 'submitted' ? price : undefined}
                         byline={c ? <span className="inline-flex flex-wrap items-center gap-1.5"><Link href={`/cres/${c.handle}`} className="underline">@{c.handle}</Link> <LevelBadge cre={c} /> {c.unlock_rate_pct ?? '–'}% unlock rate{c.avg_rating ? ` · ${c.avg_rating}★` : ''}{c.results_logged ? ` · ideas avg ${formatMultiplier(c.avg_result_multiple ?? 0)} for creators` : ''}{fb && p.status === 'submitted' ? ` · You passed: ${passReasonLabel(fb.reason)}` : ''}</span> : null}
                         actions={<>

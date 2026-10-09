@@ -6,11 +6,13 @@ type Idea = {
 };
 
 /** A ready-to-paste prompt for any AI writing assistant. Text only; nothing is sent anywhere. */
-export function buildScriptPrompt(i: Idea, creator?: { brand?: string | null; audience?: string | null }): string {
+export function buildScriptPrompt(i: Idea, creator?: { brand?: string | null; audience?: string | null; voice?: string | null; avoid_topics?: string | null }): string {
   const lines = [
     `Write a ${platformLabel(i.platform)} script${i.duration_seconds ? ` of about ${i.duration_seconds} seconds` : ''} based on a proven outlier video.`,
     creator?.brand ? `It's for my channel: ${creator.brand}.` : '',
     creator?.audience ? `My audience: ${creator.audience}` : '',
+    creator?.voice ? `My voice and style: ${creator.voice}` : '',
+    creator?.avoid_topics ? `Never mention: ${creator.avoid_topics}` : '',
     '',
     `The original got ${Number(i.multiplier).toFixed(1)}× its channel's usual views.`,
     `Format: ${i.format_label}`,

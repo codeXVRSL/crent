@@ -11,7 +11,7 @@ export type BriefSeed = {
   example_urls?: string[]; min_multiplier?: number; max_video_age_days?: number | null; price?: string; max_unlocks?: string;
 };
 
-export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial, limits = { minPriceCents: 300, maxPriceCents: 50000, minMultiplier: 3 } }: {
+export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial, persona, limits = { minPriceCents: 300, maxPriceCents: 50000, minMultiplier: 3 } }: {
   /** Live platform limits (Admin → Settings), so the form and its hints match what the database enforces. */
   limits?: { minPriceCents: number; maxPriceCents: number; minMultiplier: number };
   niches: { id: number; name: string }[];
@@ -19,17 +19,22 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial, lim
   defaultPlatform?: string | null;
   /** Prefill from an earlier brief ("Post a similar brief"). */
   initial?: BriefSeed | null;
+  /** The creator's saved audience, voice and topics to avoid (Settings), added to new briefs. */
+  persona?: { audience: string | null; voice: string | null; avoid_topics: string | null } | null;
 }) {
+  const personaText = [persona?.audience && `My audience: ${persona.audience}`, persona?.voice && `My voice: ${persona.voice}`].filter(Boolean).join('\n');
+  const withPersona = (description: string) => (personaText && !description.includes(personaText) ? `${description}${description ? '\n\n' : ''}${personaText}` : description);
+  const withAvoid = (avoid: string) => (persona?.avoid_topics && !avoid.includes(persona.avoid_topics) ? [avoid, persona.avoid_topics].filter(Boolean).join('; ') : avoid);
   const [price, setPrice] = useState(initial?.price ?? '8');
   const [max, setMax] = useState(initial?.max_unlocks ?? '5');
   // Picking a template re-mounts the fields with new default values; nothing is lost silently
   // because templates only fill the text fields.
-  const [seed, setSeed] = useState<BriefSeed>(initial ?? {});
+  const [seed, setSeed] = useState<BriefSeed>(initial ?? { description: withPersona(''), avoid: withAvoid('') });
   const [version, setVersion] = useState(0);
   const applyTemplate = (tid: string) => {
     const t = BRIEF_TEMPLATES.find((x) => x.id === tid);
     if (!t) return;
-    setSeed((cur) => ({ ...cur, title: t.title, description: t.description, must_include: t.must_include, avoid: t.avoid }));
+    setSeed((cur) => ({ ...cur, title: t.title, description: withPersona(t.description), must_include: t.must_include, avoid: withAvoid(t.avoid) }));
     setVersion((n) => n + 1);
   };
   const maxAge = seed.max_video_age_days === undefined ? '180' : seed.max_video_age_days === null ? '' : String(seed.max_video_age_days);

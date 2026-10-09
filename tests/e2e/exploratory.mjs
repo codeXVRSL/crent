@@ -463,8 +463,24 @@ await step('researcher settings, public profile, directory filters', async () =>
   await p.goto(`${BASE}/cres?sort=rating&available=1`); await visible(p, `Rina${run}`);
   await p.goto(`${BASE}/cres?platform=youtube_long`); expect(!(await text(p)).includes(`Rina${run}`), 'platform filter ignored');
 });
+await step('creator persona prefills new briefs; researcher alert filters save', async () => {
+  const c = creator.page; await c.goto(`${BASE}/settings`);
+  await c.getByLabel('Who watches you').fill('Pinoy fresh grads on their first salary');
+  await c.getByLabel('Your voice').fill('Taglish, funny, no hard selling');
+  await c.getByLabel('Topics to avoid').fill('crypto, gambling');
+  await c.getByRole('button', { name: 'Save audience and voice' }).click(); await visible(c, 'New briefs will start with this.');
+  await c.goto(`${BASE}/briefs/new`);
+  const desc = await c.getByLabel('What you need').inputValue(); const avoid = await c.getByLabel('Avoid').inputValue();
+  expect(desc.includes('My audience: Pinoy fresh grads') && desc.includes('My voice: Taglish') && avoid.includes('crypto, gambling'), `persona not prefilled: ${desc} | ${avoid}`);
+  const r = cre.page; await r.goto(`${BASE}/settings#alerts`);
+  await r.getByLabel(/Only notify me for briefs paying at least/).fill('6'); await r.getByLabel('TikTok').check();
+  await r.getByRole('button', { name: 'Save alerts' }).click(); await visible(r, "You'll be notified only about briefs that match.");
+  const [cp] = await rest(`cre_profiles?select=alert_min_price_cents,alert_platforms&user_id=eq.${cre.id}`);
+  expect(cp.alert_min_price_cents === 600 && cp.alert_platforms.includes('tiktok'), 'alerts not saved: ' + JSON.stringify(cp));
+  await rest(`cre_profiles?user_id=eq.${cre.id}`, { method: 'PATCH', body: JSON.stringify({ alert_min_price_cents: 0, alert_platforms: [] }) });
+});
 await step('creator settings save and command palette', async () => {
-  const p = creator.page; await p.goto(`${BASE}/settings`); await p.getByLabel('Brand or channel name').fill('Cara Cooks Daily'); await p.getByRole('button', { name: 'Save' }).click(); await visible(p, /Saved|updated/i);
+  const p = creator.page; await p.goto(`${BASE}/settings`); await p.getByLabel('Brand or channel name').fill('Cara Cooks Daily'); await p.getByRole('button', { name: 'Save channel profile' }).click(); await visible(p, /Saved|updated/i);
   await p.keyboard.press('Control+K'); await p.getByPlaceholder(/Search|Type/i).fill('idea board'); await p.keyboard.press('Enter'); await p.waitForURL(/\/ideas/, { timeout: 5000 });
 });
 await step('password reset page and forgot-password form', async () => {

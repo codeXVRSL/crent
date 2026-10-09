@@ -28,7 +28,7 @@ export function CreatorProfileForm({ displayName, cp, redirectAfter }: {
         </Select>
       </Field>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_agency" defaultChecked={cp?.is_agency} /> I&apos;m an agency posting for clients</label>
-      <SubmitButton>{redirectAfter ? 'Go to dashboard' : 'Save'}</SubmitButton>
+      <SubmitButton>{redirectAfter ? 'Go to dashboard' : 'Save channel profile'}</SubmitButton>
     </ActionForm>
   );
 }

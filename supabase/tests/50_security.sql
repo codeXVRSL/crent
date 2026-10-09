@@ -100,3 +100,24 @@ select case when (select status from unlocks where id = :'sunl') = 'available'
 select case when not (mask_contacts('Budgeting with GCash and PayPal for new grads')).hit then '✓ payment app names are allowed as topics' else 'FAIL: GCash topic blocked' end;
 select case when (mask_contacts('message me on telegram or call 0917 123 4567')).hit then '✓ phone numbers and messaging apps are still caught' else 'FAIL: contact details not caught' end;
 select case when (select proconfig::text from pg_proc where proname = 'submit_pitch') like '%Asia/Manila%' then '✓ pitch dates are checked against the Philippine date' else 'FAIL: submit_pitch not on Manila time' end;
+
+-- ---------- researcher brief alerts ----------
+update cre_profiles set alert_min_price_cents = 50000 where user_id = :'r1';           -- only $500+ briefs
+update cre_profiles set alert_platforms = '{youtube_shorts}' where user_id = :'r2';     -- only YouTube Shorts
+select set_config('request.jwt.claim.sub', :'c1', false); set role authenticated;
+select create_brief('Alert filter brief A', repeat('Checking that alert filters stop notifications. ', 2),
+  'tiktok', (select id from niches where slug='personal-finance'), null, null, '{}', 3.0, null, 600, 1, now() + interval '5 days') as ab \gset
+select external_id as aext from prepare_brief_payment(:'ab', 'mock') \gset
+reset role;
+set role service_role; select mark_payment_paid(:'aext', 'prov_a', (select total_charge_cents from briefs where id = :'ab'), 'card'); reset role;
+select case when not exists (select 1 from notifications where kind = 'new_brief' and link = '/briefs/' || :'ab' and user_id in (:'r1', :'r2'))
+        then '✓ alert filters: below the price floor or on another platform, no notification' else 'FAIL: filtered researcher was notified' end;
+update cre_profiles set alert_min_price_cents = 0, alert_platforms = '{}' where user_id in (:'r1', :'r2');
+select set_config('request.jwt.claim.sub', :'c1', false); set role authenticated;
+select create_brief('Alert filter brief B', repeat('Checking that cleared filters notify again. ', 2),
+  'tiktok', (select id from niches where slug='personal-finance'), null, null, '{}', 3.0, null, 600, 1, now() + interval '5 days') as bb \gset
+select external_id as bext from prepare_brief_payment(:'bb', 'mock') \gset
+reset role;
+set role service_role; select mark_payment_paid(:'bext', 'prov_b', (select total_charge_cents from briefs where id = :'bb'), 'card'); reset role;
+select case when (select count(*) from notifications where kind = 'new_brief' and link = '/briefs/' || :'bb' and user_id in (:'r1', :'r2')) = 2
+        then '✓ alert filters cleared: both researchers notified again' else 'FAIL: notifications after clearing filters: ' || (select count(*) from notifications where kind = 'new_brief' and link = '/briefs/' || :'bb' and user_id in (:'r1', :'r2')) end;
