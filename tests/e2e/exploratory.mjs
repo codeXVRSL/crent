@@ -304,6 +304,13 @@ await step('close account is refused while earnings are on hold', async () => {
   await visible(c, /earnings on hold or available/);
   const [prof] = await rest(`profiles?select=display_name&id=eq.${cre.id}`); expect(prof.display_name !== 'Deleted user', 'account was closed despite held earnings');
 });
+await step('billing shows a printable payment summary with budget, fee and total', async () => {
+  const p = creator.page; await p.goto(`${BASE}/billing`);
+  await p.getByRole('link', { name: 'Summary' }).first().click(); await p.waitForURL(/\/receipt\//);
+  await visible(p, 'Payment summary'); await visible(p, 'Total paid'); await visible(p, /Marketplace fee \(/); await visible(p, 'not a BIR-registered official receipt');
+  const other = await cre.page.request.get(p.url()); const t = await other.text();
+  expect(!t.includes('Total paid'), 'a researcher could open the creator\'s payment summary');
+});
 await step('CSV export has the idea-board columns and the hook', async () => {
   const p = creator.page; await p.goto(`${BASE}/unlocks`);
   const [dl] = await Promise.all([p.waitForEvent('download'), p.getByRole('link', { name: 'Download CSV' }).click()]);
@@ -383,6 +390,12 @@ await step('researcher adds GCash, withdraws; admin approves; researcher sees pe
   await a.goto(`${BASE}/admin/payouts`); const card = a.locator('[data-card]', { hasText: `rina_${run}`.slice(0, 20) }).first();
   await card.getByLabel('USD → PHP rate').fill('58.5'); await card.getByRole('button', { name: 'Approve and send' }).click(); await visible(a, /Payout sent/);
   await p.goto(`${BASE}/wallet`); await visible(p, '₱315.90'); await visible(p, 'paid');
+  // Downloads for the books: the researcher's earnings CSV and the admin's payouts CSV include this payout.
+  const mine = await p.request.get(`${BASE}/wallet/export`); const csv = await mine.text();
+  expect(mine.ok() && csv.includes('"Payout"') && csv.includes('"315.90"') && csv.includes('"Earning"'), 'earnings CSV missing rows: ' + csv.slice(0, 200));
+  const all = await a.request.get(`${BASE}/admin/payouts/export`); const csv2 = await all.text();
+  expect(all.ok() && csv2.includes(`rina_${run}`.slice(0, 20)) && csv2.includes('"58.5'), 'admin payouts CSV missing the payout');
+  const denied = await p.request.get(`${BASE}/admin/payouts/export`); expect(denied.status() === 403, 'researcher could download all payouts: ' + denied.status());
 });
 
 // ============ 6. Admin: users, suspension, audit ============

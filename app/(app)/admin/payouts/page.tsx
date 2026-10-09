@@ -77,7 +77,7 @@ export default async function AdminPayouts({ searchParams }: { searchParams: Pro
 
       {!!rest.length && (
         <section className="mt-8 grid gap-3">
-          <h2 className="text-lg font-semibold tracking-tight">History <span className="text-sm font-normal text-muted">(latest 100)</span></h2>
+          <div className="flex flex-wrap items-baseline justify-between gap-2"><h2 className="text-lg font-semibold tracking-tight">History <span className="text-sm font-normal text-muted">(latest 100)</span></h2><a href="/admin/payouts/export" className="text-sm font-medium text-accent">Download all payouts (CSV)</a></div>
           <ul className="grid gap-2 text-sm">
             {rest.map((p) => {
               const m = p.payout_methods as unknown as { kind: string; bank_code: string | null; account_last4: string } | null;

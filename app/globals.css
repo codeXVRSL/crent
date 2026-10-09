@@ -111,6 +111,9 @@
 
 html, /* Long words, pasted URLs and 3,000-character descriptions must wrap, never widen the page. */
 main, article, [data-card], td, pre, p, li { overflow-wrap: anywhere; }
+/* Horizontal scrollers contain their absolutely positioned children (e.g. screen-reader-only labels in tables),
+   which would otherwise widen the whole page on phones. */
+.overflow-x-auto { position: relative; }
 
 body { background: var(--bg); color: var(--ink); }
 body {

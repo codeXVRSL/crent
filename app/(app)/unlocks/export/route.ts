@@ -1,13 +1,8 @@
 import { NextResponse } from 'next/server';
+import { csvResponse } from '@/lib/csv';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
-
-function csvCell(v: unknown) {
-  const s = v == null ? '' : String(v);
-  const safe = /^[=+\-@]/.test(s) ? `'${s}` : s; // stop spreadsheet formula injection
-  return `"${safe.replace(/"/g, '""')}"`;
-}
 
 /** Downloads every idea the signed-in creator has unlocked, as CSV. */
 export async function GET() {
@@ -36,12 +31,5 @@ export async function GET() {
       s?.adaptation_notes, `${(u.gross_cents / 100).toFixed(2)} ${u.currency}`,
       t?.stage ?? 'saved', t?.board, t?.planned_on, t?.posted_on, t?.posted_url, t?.result_views, t?.usual_views, t?.result_multiple, t?.notes];
   });
-  const csv = [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n');
-  return new NextResponse('﻿' + csv, {
-    headers: {
-      'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="outlier-desk-unlocked-ideas-${new Date().toISOString().slice(0, 10)}.csv"`,
-      'Cache-Control': 'no-store',
-    },
-  });
+  return csvResponse('unlocked-ideas', header, rows);
 }

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 const APP_PREFIXES = ['/dashboard', '/briefs', '/pitches', '/unlocks', '/wallet', '/billing', '/messages',
-  '/notifications', '/settings', '/disputes', '/onboarding', '/pay', '/admin', '/ideas', '/favorites', '/swipe', '/mfa'];
+  '/notifications', '/settings', '/disputes', '/onboarding', '/pay', '/admin', '/ideas', '/favorites', '/swipe', '/mfa', '/receipt'];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });

@@ -22,7 +22,7 @@ export default async function Billing() {
       {!payments?.length ? <EmptyState title="No payments yet">Payments appear here after you fund a brief.</EmptyState> : (
         <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">
           <table className="w-full min-w-[640px] text-sm">
-            <thead><tr className="border-b border-line text-left"><th className="label p-3">Brief</th><th className="label p-3">Paid</th><th className="label p-3">Refunded</th><th className="label p-3">Status</th><th className="label p-3">Date</th></tr></thead>
+            <thead><tr className="border-b border-line text-left"><th className="label p-3">Brief</th><th className="label p-3">Paid</th><th className="label p-3">Refunded</th><th className="label p-3">Status</th><th className="label p-3">Date</th><th className="p-3"><span className="sr-only">Summary</span></th></tr></thead>
             <tbody>
               {payments.map((p) => (
                 <tr key={p.id} className="border-b border-line last:border-0">
@@ -31,6 +31,7 @@ export default async function Billing() {
                   <td className="num p-3">{p.refunded_cents ? formatMoney(p.refunded_cents, p.currency) : '—'}</td>
                   <td className="p-3"><Pill tone={tone(p.status)}>{p.status.replace('_', ' ')}</Pill></td>
                   <td className="num p-3">{fmtDate(p.paid_at ?? p.created_at)}</td>
+                  <td className="p-3 text-right">{p.paid_at && <Link href={`/receipt/${p.id}`} className="text-sm font-medium text-accent">Summary</Link>}</td>
                 </tr>
               ))}
             </tbody>

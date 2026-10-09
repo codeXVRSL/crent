@@ -75,7 +75,7 @@ export default async function Wallet({ searchParams }: { searchParams: Promise<{
       </div>
 
       <section className="mt-8 grid gap-3">
-        <h2 className="text-lg font-semibold tracking-tight">Earnings</h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-2"><h2 className="text-lg font-semibold tracking-tight">Earnings</h2><a href="/wallet/export" className="text-sm font-medium text-accent">Download earnings and payouts (CSV)</a></div>
         {(unlocks ?? []).length === 0 ? (
           <Card><p className="text-sm text-muted">Earnings show up here after a creator unlocks your pitch.</p></Card>
         ) : (
