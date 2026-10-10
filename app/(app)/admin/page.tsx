@@ -15,7 +15,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const { mfa } = await searchParams;
   const supabase = await createClient();
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
-  const [ledger, openBriefs, settledBriefs, kyc, disputes, payouts, flags, refunds] = await Promise.all([
+  const [ledger, openBriefs, settledBriefs, kyc, disputes, payouts, flags, refunds, feedbackNew, { data: trends }] = await Promise.all([
     supabase.from('ledger_entries').select('kind, amount_cents, debit_account, credit_account').gte('created_at', since),
     supabase.from('briefs').select('id', { count: 'exact', head: true }).eq('status', 'open'),
     supabase.from('briefs').select('id, unlocks_used').in('status', ['closed', 'settled']).gte('closed_at', since),
@@ -24,11 +24,11 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     supabase.from('payouts').select('id', { count: 'exact', head: true }).eq('status', 'requested'),
     supabase.from('flags').select('id', { count: 'exact', head: true }).eq('status', 'open'),
     supabase.from('refunds').select('id', { count: 'exact', head: true }).in('status', ['manual', 'failed']),
+    supabase.from('feedback').select('id', { count: 'exact', head: true }).eq('status', 'new'),
+    // Last 12 Manila weeks of money funded and ideas unlocked, counted in the database.
+    supabase.rpc('admin_weekly_trends', { p_weeks: 12 }),
   ]);
-  const feedbackNew = await supabase.from('feedback').select('id', { count: 'exact', head: true }).eq('status', 'new');
 
-  // Last 12 Manila weeks of money funded and ideas unlocked, counted in the database.
-  const { data: trends } = await supabase.rpc('admin_weekly_trends', { p_weeks: 12 });
   const weeks = (trends ?? []) as { week_start: string; funded_cents: number; unlocks: number; currency: string }[];
   const fundedSeries = weeks.map((w) => ({ week: w.week_start, value: Number(w.funded_cents) }));
   const unlockSeries = weeks.map((w) => ({ week: w.week_start, value: w.unlocks }));

@@ -7,7 +7,8 @@ import { failBack } from '@/lib/flash';
 import { emailUser } from '@/lib/notify-email';
 import { env } from '@/lib/env';
 
-const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
+// Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
+const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
 
 export async function createRetainer(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   const briefId = str(fd, 'brief_id'), creId = str(fd, 'cre_id');

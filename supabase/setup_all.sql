@@ -2293,12 +2293,18 @@ create policy "retainer_party_read" on retainers for select to authenticated
   using (auth.uid() in (creator_id, cre_id) or is_admin());
 -- Writes go through the functions below only.
 
+-- A researcher who is verified and not suspended (is_verified_cre() checks the signed-in user).
+create or replace function is_verified_cre(p_user uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from cre_profiles c join profiles p on p.id = c.user_id
+                  where c.user_id = p_user and c.kyc_status = 'approved' and p.suspended_at is null)
+$$;
+
 -- The next date with this day of the month that is strictly after `after`.
 create or replace function retainer_next_date(p_day int, p_after date)
 returns date language sql immutable as $$
-  select case when make_date(extract(year from p_after)::int, extract(month from p_after)::int, p_day) > p_after
-              then make_date(extract(year from p_after)::int, extract(month from p_after)::int, p_day)
-              else (make_date(extract(year from p_after)::int, extract(month from p_after)::int, p_day) + interval '1 month')::date end
+  select (d + case when d > p_after then interval '0' else interval '1 month' end)::date
+    from (select (date_trunc('month', p_after) + (p_day - 1) * interval '1 day')::date as d) t
 $$;
 
 create or replace function create_retainer(p_brief_id uuid, p_cre_id uuid, p_day_of_month int)
@@ -2310,8 +2316,7 @@ begin
   if not found or b.creator_id <> auth.uid() then raise exception 'BRIEF_NOT_FOUND'; end if;
   if b.status in ('draft','awaiting_payment','cancelled') then raise exception 'RETAINER_NEEDS_FUNDED_BRIEF'; end if;
   if p_day_of_month is null or p_day_of_month not between 1 and 28 then raise exception 'RETAINER_DAY_OUT_OF_RANGE'; end if;
-  if not exists (select 1 from cre_profiles c join profiles pr on pr.id = c.user_id
-                  where c.user_id = p_cre_id and c.kyc_status = 'approved' and pr.suspended_at is null) then
+  if not is_verified_cre(p_cre_id) then
     raise exception 'CRE_NOT_FOUND';
   end if;
   -- Only someone the creator already works with: saved, or unlocked an idea from.
@@ -2387,8 +2392,7 @@ begin
   for r in select * from retainers where active and next_run_on <= v_today order by next_run_on for update skip locked loop
     v_reason := null;
     if exists (select 1 from profiles where id = r.creator_id and suspended_at is not null) then v_reason := 'creator_suspended';
-    elsif not exists (select 1 from cre_profiles c join profiles pr on pr.id = c.user_id
-                       where c.user_id = r.cre_id and c.kyc_status = 'approved' and pr.suspended_at is null) then v_reason := 'researcher_unavailable';
+    elsif not is_verified_cre(r.cre_id) then v_reason := 'researcher_unavailable';
     elsif r.price_per_idea_cents not between s.min_price_per_idea_cents and s.max_price_per_idea_cents then v_reason := 'price_out_of_range';
     end if;
     if v_reason is not null then
@@ -2432,8 +2436,7 @@ begin
   select * into r from retainers where id = new.retainer_id;
   if not found then return new; end if;
   new.deadline_at := now() + make_interval(days => r.deadline_days);
-  if r.active and exists (select 1 from cre_profiles c join profiles pr on pr.id = c.user_id
-                           where c.user_id = r.cre_id and c.kyc_status = 'approved' and pr.suspended_at is null) then
+  if r.active and is_verified_cre(r.cre_id) then
     insert into brief_invites(brief_id, cre_id) values (new.id, r.cre_id) on conflict do nothing;
     perform notify(r.cre_id, 'brief_invite', 'Your monthly brief is live: ' || new.title,
                    money_text(new.price_per_idea_cents, new.currency) || ' per idea', '/briefs/' || new.id);
@@ -2445,7 +2448,7 @@ create trigger briefs_retainer_live before update of status on briefs
   execute function retainer_brief_goes_live();
 
 revoke execute on function create_retainer(uuid, uuid, int), set_retainer_active(uuid, boolean), delete_retainer(uuid), leave_retainer(uuid),
-  run_retainers(), retainer_brief_goes_live(), retainer_next_date(int, date) from public, anon, authenticated;
+  run_retainers(), retainer_brief_goes_live(), retainer_next_date(int, date), is_verified_cre(uuid) from public, anon, authenticated;
 grant execute on function create_retainer(uuid, uuid, int), set_retainer_active(uuid, boolean), delete_retainer(uuid), leave_retainer(uuid) to authenticated;
 grant execute on function run_retainers() to service_role;
 
@@ -2475,15 +2478,24 @@ begin
   if not is_admin() then raise exception 'NOT_ADMIN'; end if;
   select default_currency into v_cur from platform_settings where id;
   v_first := date_trunc('week', now() at time zone 'Asia/Manila')::date - 7 * (least(greatest(p_weeks, 1), 52) - 1);
+  -- One pass over each table, limited to the date range, then grouped by Manila week.
   return query
-    select w::date,
-           coalesce((select sum(p.amount_cents) from payments p
-                      where p.status in ('paid','partially_refunded','refunded') and p.currency = v_cur
-                        and date_trunc('week', p.paid_at at time zone 'Asia/Manila')::date = w::date), 0)::bigint,
-           (select count(*) from unlocks u
-             where u.status <> 'reversed' and date_trunc('week', u.created_at at time zone 'Asia/Manila')::date = w::date)::int,
-           v_cur
-      from generate_series(v_first, date_trunc('week', now() at time zone 'Asia/Manila')::date, interval '7 days') w
+    with weeks as (
+      select w::date as wk from generate_series(v_first, date_trunc('week', now() at time zone 'Asia/Manila')::date, interval '7 days') w
+    ), paid as (
+      select date_trunc('week', p.paid_at at time zone 'Asia/Manila')::date as wk, sum(p.amount_cents) as cents
+        from payments p
+       where p.status in ('paid','partially_refunded','refunded') and p.currency = v_cur
+         and p.paid_at >= v_first::timestamp at time zone 'Asia/Manila'
+       group by 1
+    ), unl as (
+      select date_trunc('week', u.created_at at time zone 'Asia/Manila')::date as wk, count(*) as n
+        from unlocks u
+       where u.status <> 'reversed' and u.created_at >= v_first::timestamp at time zone 'Asia/Manila'
+       group by 1
+    )
+    select weeks.wk, coalesce(paid.cents, 0)::bigint, coalesce(unl.n, 0)::int, v_cur
+      from weeks left join paid using (wk) left join unl using (wk)
      order by 1;
 end $$;
 revoke execute on function admin_weekly_trends(int) from public, anon;

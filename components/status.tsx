@@ -40,6 +40,11 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
  * viewer; parsing it as a moment would shift it a day back west of UTC and break hydration.
  * Timestamps with a time of day should use <When>, which renders in the viewer's own time zone.
  */
+/** "Oct 5" from a YYYY-MM-DD date, the same for every viewer (calendar dates are read in UTC). */
+export function shortDate(iso: string) {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
 export function fmtDate(iso: string, withTime = false) {
   if (DATE_ONLY.test(iso)) return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
   return new Date(iso).toLocaleString('en-US', withTime

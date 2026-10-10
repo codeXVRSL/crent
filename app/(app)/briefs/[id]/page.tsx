@@ -103,7 +103,7 @@ export default async function BriefPage({ params, searchParams }: {
     ]);
     const ids = (pitches ?? []).map((p) => p.id);
     const creIds = [...new Set((pitches ?? []).map((p) => p.cre_id))];
-    const [{ data: secrets }, { data: cres }, { data: myReviews }, { data: shortlist }, { data: feedback }, { data: favs }, { data: invites }] = await Promise.all([
+    const [{ data: secrets }, { data: cres }, { data: myReviews }, { data: shortlist }, { data: feedback }, { data: favs }, { data: invites }, { data: allRetainers }] = await Promise.all([
       ids.length ? supabase.from('pitch_secrets').select('*').in('pitch_id', ids) : Promise.resolve({ data: [] as (PitchSecret & { pitch_id: string })[] }),
       creIds.length ? supabase.from('public_cres').select('id, display_name, handle, unlock_rate_pct, avg_rating, review_count, unlocks_total, repeat_buyers, results_logged, avg_result_multiple').in('id', creIds) : Promise.resolve({ data: [] as CreInfo[] }),
       supabase.from('reviews').select('unlock_id, rating').eq('reviewer_id', v.id),
@@ -111,31 +111,31 @@ export default async function BriefPage({ params, searchParams }: {
       ids.length ? supabase.from('pitch_feedback').select('pitch_id, reason, note').in('pitch_id', ids) : Promise.resolve({ data: [] as Feedback[] }),
       supabase.from('favorite_cres').select('cre_id').eq('creator_id', v.id),
       supabase.from('brief_invites').select('cre_id').eq('brief_id', id),
+      isOwner ? supabase.from('retainers').select(RETAINER_COLUMNS).eq('creator_id', v.id) : Promise.resolve({ data: [] as Retainer[] }),
     ]);
     const favIds = new Set((favs ?? []).map((f) => f.cre_id));
     const shortlisted = new Set((shortlist ?? []).map((x) => x.pitch_id));
     const passed = new Map(((feedback ?? []) as Feedback[]).map((f) => [f.pitch_id, f]));
     const invitedIds = new Set((invites ?? []).map((i) => i.cre_id));
-    const favToInvite = brief.status === 'open' && isOwner && favIds.size
-      ? ((await supabase.from('public_cres').select('id, display_name, handle, accepting_work').in('id', [...favIds])).data ?? []) as { id: string; display_name: string; handle: string; accepting_work: boolean }[]
-      : [];
-    // Repeat monthly: researchers the creator saved or unlocked from on this brief.
+    // Repeat monthly: researchers the creator saved or unlocked from on this brief. A monthly copy
+    // belongs to the same retainers as the brief it was copied from.
     const canRepeat = isOwner && ['open', 'closed', 'settled'].includes(brief.status);
-    const unlockedCres = (pitches ?? []).filter((p) => (unlocks ?? []).some((u) => u.pitch_id === p.id && u.status !== 'reversed')).map((p) => p.cre_id);
-    // A monthly copy belongs to the same retainers as the brief it was copied from.
-    const sourceId = canRepeat && brief.retainer_id
-      ? (await supabase.from('retainers').select('source_brief_id').eq('id', brief.retainer_id).maybeSingle()).data?.source_brief_id ?? id
-      : id;
-    const { data: myRetainers } = canRepeat
-      ? await supabase.from('retainers').select(RETAINER_COLUMNS).eq('creator_id', v.id)
-          .or(`source_brief_id.eq.${sourceId}${brief.retainer_id ? `,id.eq.${brief.retainer_id}` : ''}`)
-      : { data: [] };
-    const repeatIds = [...new Set([...unlockedCres, ...favIds, ...(myRetainers ?? []).map((r) => r.cre_id)])];
-    const { data: repeatCres } = canRepeat && repeatIds.length
-      ? await supabase.from('public_cres').select('id, display_name, handle').in('id', repeatIds) : { data: [] };
-    const retainersHere = ((myRetainers ?? []) as Retainer[]).map((r) => ({ ...r, handle: (repeatCres ?? []).find((c) => c.id === r.cre_id)?.handle }));
-    const repeatChoices = ((repeatCres ?? []) as { id: string; display_name: string; handle: string }[])
-      .filter((c) => c.handle && (unlockedCres.includes(c.id) || favIds.has(c.id)) && !retainersHere.some((r) => r.cre_id === c.id));
+    const unlockedPitchIds = new Set((unlocks ?? []).filter((u) => u.status !== 'reversed').map((u) => u.pitch_id));
+    const unlockedCres = new Set((pitches ?? []).filter((p) => unlockedPitchIds.has(p.id)).map((p) => p.cre_id));
+    const creatorRetainers = (allRetainers ?? []) as Retainer[];
+    const sourceId = creatorRetainers.find((r) => r.id === brief.retainer_id)?.source_brief_id ?? id;
+    const myRetainers = canRepeat ? creatorRetainers.filter((r) => r.source_brief_id === sourceId || r.id === brief.retainer_id) : [];
+    const retainedIds = new Set(myRetainers.map((r) => r.cre_id));
+    // One lookup for both the invite list and the repeat-monthly card.
+    const showInvites = brief.status === 'open' && isOwner && favIds.size > 0;
+    const peopleIds = [...new Set([...(showInvites || canRepeat ? favIds : []), ...(canRepeat ? [...unlockedCres, ...retainedIds] : [])])];
+    const { data: people } = peopleIds.length
+      ? await supabase.from('public_cres').select('id, display_name, handle, accepting_work').in('id', peopleIds) : { data: [] };
+    const peopleById = new Map(((people ?? []) as { id: string; display_name: string; handle: string; accepting_work: boolean }[]).map((c) => [c.id, c]));
+    const favToInvite = showInvites ? [...favIds].map((f) => peopleById.get(f)).filter((c) => c !== undefined) : [];
+    const retainersHere = myRetainers.map((r) => ({ ...r, handle: peopleById.get(r.cre_id)?.handle }));
+    const repeatChoices = [...peopleById.values()]
+      .filter((c) => c.handle && (unlockedCres.has(c.id) || favIds.has(c.id)) && !retainedIds.has(c.id));
     const secretMap = new Map((secrets ?? []).map((s) => [s.pitch_id, s as PitchSecret]));
     const proofMap = await signProofs(supabase, (secrets ?? []) as { pitch_id: string; proof_path?: string | null }[]);
     const unlockMap = new Map((unlocks ?? []).map((u) => [u.pitch_id, u]));

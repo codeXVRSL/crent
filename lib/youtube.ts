@@ -2,7 +2,7 @@
 // Off unless YOUTUBE_API_KEY is set. Pure helpers here; lib/views-check.ts records the result.
 
 export type ViewsCheck = 'verified' | 'mismatch' | 'not_found';
-export type ViewsCheckResult = { status: ViewsCheck; actualViews: number | null; actualPostedOn: string | null };
+type ViewsCheckResult = { status: ViewsCheck; actualViews: number | null; actualPostedOn: string | null };
 
 const ID = /^[A-Za-z0-9_-]{11}$/;
 
@@ -24,9 +24,9 @@ export function youtubeVideoId(raw: string): string | null {
 }
 
 /** Views rarely go down, so a small drop is allowed (YouTube removes spam views); anything below this share of the claim is a mismatch. */
-export const VIEWS_TOLERANCE = 0.9;
+const VIEWS_TOLERANCE = 0.9;
 /** Days the post date may differ by (the researcher's time zone versus YouTube's UTC timestamp). */
-export const DATE_TOLERANCE_DAYS = 2;
+const DATE_TOLERANCE_DAYS = 2;
 
 /** Compares what the researcher claimed with what YouTube reports. */
 export function compareStats(claimed: { views: number; postedOn: string }, actual: { views: number; publishedAt: string }): ViewsCheck {

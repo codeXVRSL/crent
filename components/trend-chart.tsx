@@ -1,24 +1,29 @@
 'use client';
 import { useEffect, useId, useRef, useState } from 'react';
+import { shortDate as weekLabel } from './status';
+import { formatMoney } from '@/lib/money';
+import { compactViews } from '@/lib/outlier';
 
 export type TrendPoint = { week: string; value: number };
 
 const H = 200, PAD = { top: 16, right: 56, bottom: 28, left: 44 };
 
 /**
- * Amounts are cents in `currency`; without a currency the values are plain counts. Formatted by hand
- * because Intl's compact notation differs between Node and browsers, which breaks hydration.
+ * Amounts are cents in `currency`; without a currency the values are plain counts. Axis labels are
+ * abbreviated by hand (compactViews) because Intl's compact notation differs between Node and browsers,
+ * which breaks hydration.
  */
-const compact = (n: number, currency?: string) => {
-  const v = currency ? n / 100 : n;
-  const s = Math.abs(v) >= 1000 ? `${Number((v / 1000).toFixed(1))}K` : `${Number(v.toFixed(currency && v < 100 ? 2 : 0))}`;
-  if (!currency) return s;
-  const symbol = new Intl.NumberFormat('en-US', { style: 'currency', currency }).formatToParts(0).find((p) => p.type === 'currency')?.value ?? '';
-  return `${symbol}${s}`;
+const symbols = new Map<string, string>();
+const symbol = (currency: string) => {
+  if (!symbols.has(currency)) symbols.set(currency, formatMoney(0, currency).replace(/[\d.,\s]/g, ''));
+  return symbols.get(currency)!;
 };
-const full = (n: number, currency?: string) =>
-  currency ? new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(n / 100) : n.toLocaleString('en-US');
-const weekLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+const compact = (n: number, currency?: string) => {
+  if (!currency) return compactViews(n);
+  const v = n / 100;
+  return `${symbol(currency)}${v >= 1000 ? compactViews(Math.round(v)) : Number(v.toFixed(v < 100 ? 2 : 0))}`;
+};
+const full = (n: number, currency?: string) => (currency ? formatMoney(n, currency) : n.toLocaleString('en-US'));
 
 /** Clean y-axis maximum: 1, 2, 2.5 or 5 times a power of ten, at or above the data max. */
 function niceMax(max: number) {
@@ -54,7 +59,6 @@ export function TrendChart({ title, subtitle, points, currency }: { title: strin
   const gap = last > 0 ? iw / last : iw, LABEL_W = 48;
   const labelEvery = Math.max(1, Math.ceil(LABEL_W / gap));
   const total = points.reduce((a, p) => a + p.value, 0);
-  const active = hover ?? null;
 
   if (!points.length) return <p className="text-sm text-muted">{title}: no data yet.</p>;
 
@@ -91,19 +95,17 @@ export function TrendChart({ title, subtitle, points, currency }: { title: strin
           ))}
           <path d={area} fill="var(--chart-1)" fillOpacity={0.1} />
           <path d={line} fill="none" stroke="var(--chart-1)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-          {active != null && <line x1={x(active)} x2={x(active)} y1={PAD.top} y2={PAD.top + ih} stroke="var(--line-strong)" strokeWidth={1} />}
-          {[active ?? last].map((i) => (
-            <circle key={i} cx={x(i)} cy={y(points[i].value)} r={4} fill="var(--chart-1)" stroke="var(--surface)" strokeWidth={2} />
-          ))}
-          {active == null && (
+          {hover != null && <line x1={x(hover)} x2={x(hover)} y1={PAD.top} y2={PAD.top + ih} stroke="var(--line-strong)" strokeWidth={1} />}
+          <circle cx={x(hover ?? last)} cy={y(points[hover ?? last].value)} r={4} fill="var(--chart-1)" stroke="var(--surface)" strokeWidth={2} />
+          {hover == null && (
             <text x={x(last) + 8} y={y(points[last].value) + 4} className="fill-ink text-[12px] font-medium">{compact(points[last].value, currency)}</text>
           )}
         </svg>
-        {active != null && (
+        {hover != null && (
           <div role="status" className="pointer-events-none absolute top-1 rounded-lg border border-line-strong bg-surface px-2.5 py-1.5 text-xs shadow-md"
-            style={{ left: Math.min(Math.max(x(active) - 60, 0), w - 140) }}>
-            <span className="text-muted">Week of {weekLabel(points[active].week)}</span><br />
-            <span className="num font-semibold">{full(points[active].value, currency)}</span>
+            style={{ left: Math.min(Math.max(x(hover) - 60, 0), w - 140) }}>
+            <span className="text-muted">Week of {weekLabel(points[hover].week)}</span><br />
+            <span className="num font-semibold">{full(points[hover].value, currency)}</span>
           </div>
         )}
       </div>

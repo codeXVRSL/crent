@@ -17,10 +17,10 @@ export async function runScheduledJobs() {
   const released = await db.rpc('release_holds');
   const refunds = await processPendingRefunds().catch((e) => { console.error('[jobs refunds]', e); return -1; });
   const retainers = await db.rpc('run_retainers');
-  for (const r of (retainers.data ?? []) as { brief_id: string; creator_id: string; title: string; total_charge_cents: number; currency: string }[]) {
-    await emailUser(r.creator_id, `Your monthly brief is ready to fund: ${r.title}`,
-      `This month's copy of "${r.title}" is saved as a draft. Pay ${formatMoney(r.total_charge_cents, r.currency)} to put it live; your researcher is invited automatically.\n\nNothing is charged until you press Pay. Skip a month by deleting the draft, or pause the retainer on your briefs page.\n\nFund it: ${env.appUrl}/briefs/${r.brief_id}`);
-  }
+  // emailUser never throws, so the drafts' emails can go out together.
+  await Promise.all(((retainers.data ?? []) as { brief_id: string; creator_id: string; title: string; total_charge_cents: number; currency: string }[]).map((r) =>
+    emailUser(r.creator_id, `Your monthly brief is ready to fund: ${r.title}`,
+      `This month's copy of "${r.title}" is saved as a draft. Pay ${formatMoney(r.total_charge_cents, r.currency)} to put it live; your researcher is invited automatically.\n\nNothing is charged until you press Pay. Skip a month by deleting the draft, or pause the retainer on your briefs page.\n\nFund it: ${env.appUrl}/briefs/${r.brief_id}`)));
   await db.rpc('prune_rate_limits');
   const digests = await sendWeeklyDigest().catch((e) => { console.error('[jobs digest]', e); return null; });
   return {

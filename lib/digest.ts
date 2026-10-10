@@ -8,8 +8,6 @@ import { BRAND } from '@/lib/brand';
 
 const appUrl = () => process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
-export { manilaWeekStart };
-
 type Line = string;
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 

@@ -5,6 +5,7 @@ import { Button, Card, Field, Pill, Select } from './ui';
 import { createRetainer, deleteRetainer, leaveRetainer, setRetainerActive } from '@/app/actions/retainers';
 import { formatMoney } from '@/lib/money';
 import { manilaToday } from '@/lib/parse';
+import { shortDate as day } from './status';
 
 export type Retainer = {
   id: string; cre_id: string; creator_id: string; source_brief_id: string | null; title: string; price_per_idea_cents: number; max_unlocks: number;
@@ -13,7 +14,6 @@ export type Retainer = {
 export const RETAINER_COLUMNS = 'id, cre_id, creator_id, source_brief_id, title, price_per_idea_cents, max_unlocks, day_of_month, next_run_on, active, paused_reason, last_brief_id';
 
 const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'}`;
-const day = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 const pausedText: Record<string, string> = {
   creator: 'Paused',
   researcher_left: 'Ended: the researcher left',
@@ -32,12 +32,15 @@ export function RetainerForm({ briefId, researchers, existing }: {
   return (
     <Card className="grid gap-3 text-sm">
       <span className="label inline-flex items-center gap-1.5"><Repeat className="size-3.5" aria-hidden="true" /> Repeat every month</span>
-      {existing.map((r) => (
-        <p key={r.id} className="text-muted">
-          {r.active ? <>Repeats on the {ordinal(r.day_of_month)} with {r.handle ? `@${r.handle}` : 'your researcher'}. Next draft {day(r.next_run_on)}.</> : <>{pausedText[r.paused_reason ?? 'creator']} (with {r.handle ? `@${r.handle}` : 'your researcher'}).</>}{' '}
-          <Link href="/briefs#monthly" className="underline">Manage</Link>
-        </p>
-      ))}
+      {existing.map((r) => {
+        const who = r.handle ? `@${r.handle}` : 'your researcher';
+        return (
+          <p key={r.id} className="text-muted">
+            {r.active ? <>Repeats on the {ordinal(r.day_of_month)} with {who}. Next draft {day(r.next_run_on)}.</> : <>{pausedText[r.paused_reason ?? 'creator']} (with {who}).</>}{' '}
+            <Link href="/briefs#monthly" className="underline">Manage</Link>
+          </p>
+        );
+      })}
       {researchers.length ? (
         <ActionForm action={createRetainer} className="grid gap-3">
           <input type="hidden" name="brief_id" value={briefId} />
