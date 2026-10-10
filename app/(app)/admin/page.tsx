@@ -5,6 +5,7 @@ import { Card, Notice, PageHeader, Stat } from '@/components/ui';
 import { formatMoney } from '@/lib/money';
 import { ActionForm, SubmitButton } from '@/components/form';
 import { runJobsNow } from '@/app/actions/admin';
+import { sendDigestNow } from '@/app/actions/digest';
 
 export const metadata = { title: 'Admin' };
 
@@ -55,7 +56,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           <span className="label">Scheduled jobs</span>
           <p className="text-sm text-muted">These run automatically (daily on the free plan): close briefs past their deadline, release finished holds, send refunds. Run them now when testing.</p>
         </div>
-        <ActionForm action={runJobsNow} className="grid justify-items-start gap-2"><SubmitButton variant="secondary">Run scheduled jobs now</SubmitButton></ActionForm>
+        <div className="flex flex-wrap gap-2"><ActionForm action={runJobsNow} className="grid justify-items-start gap-2"><SubmitButton variant="secondary">Run scheduled jobs now</SubmitButton></ActionForm><ActionForm action={sendDigestNow} className="grid justify-items-start gap-2"><SubmitButton variant="secondary">Send weekly summary now</SubmitButton></ActionForm></div>
       </Card>
       <Card className="grid gap-2">
         <span className="label">Queues</span>

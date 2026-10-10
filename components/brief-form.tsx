@@ -29,7 +29,8 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial, per
   const [max, setMax] = useState(initial?.max_unlocks ?? '5');
   // Picking a template re-mounts the fields with new default values; nothing is lost silently
   // because templates only fill the text fields.
-  const [seed, setSeed] = useState<BriefSeed>(initial ?? { description: withPersona(''), avoid: withAvoid('') });
+  // Persona fills the description and avoid fields unless the prefill (an earlier brief) already has them.
+  const [seed, setSeed] = useState<BriefSeed>({ ...initial, description: initial?.description ?? withPersona(''), avoid: initial?.avoid ?? withAvoid('') });
   const [version, setVersion] = useState(0);
   const applyTemplate = (tid: string) => {
     const t = BRIEF_TEMPLATES.find((x) => x.id === tid);
@@ -47,7 +48,7 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial, per
     <ActionForm action={createBrief} className="grid gap-6 lg:grid-cols-[1fr_300px]">
       <div key={version} className="grid content-start gap-5">
         <div className="grid gap-2">
-          <span className="text-[13px] font-medium">{initial ? 'Copied from your earlier brief. Edit anything, or start from a template:' : 'Start from a template (optional)'}</span>
+          <span className="text-[13px] font-medium">{initial ? 'Prefilled for you. Edit anything, or start from a template:' : 'Start from a template (optional)'}</span>
           <div className="flex flex-wrap gap-2">
             {BRIEF_TEMPLATES.map((t) => (
               <button key={t.id} type="button" onClick={() => applyTemplate(t.id)}

@@ -3,6 +3,7 @@
 \set ON_ERROR_STOP 1
 \set QUIET 1
 \set admin '00000000-0000-0000-0000-00000000000a'
+\set c2 '00000000-0000-0000-0000-0000000000c2'
 \set c1 '00000000-0000-0000-0000-0000000000c1'
 \set r1 '00000000-0000-0000-0000-0000000000e1'
 \set r2 '00000000-0000-0000-0000-0000000000e2'
@@ -121,3 +122,42 @@ reset role;
 set role service_role; select mark_payment_paid(:'bext', 'prov_b', (select total_charge_cents from briefs where id = :'bb'), 'card'); reset role;
 select case when (select count(*) from notifications where kind = 'new_brief' and link = '/briefs/' || :'bb' and user_id in (:'r1', :'r2')) = 2
         then '✓ alert filters cleared: both researchers notified again' else 'FAIL: notifications after clearing filters: ' || (select count(*) from notifications where kind = 'new_brief' and link = '/briefs/' || :'bb' and user_id in (:'r1', :'r2')) end;
+
+-- ---------- request a variation ----------
+select set_config('my.sunl', :'sunl', false) \gset
+select set_config('request.jwt.claim.sub', :'r2', false); set role authenticated;
+do $$ begin
+  perform request_variation(current_setting('my.sunl')::uuid, 'Researchers cannot ask themselves for one.'); raise exception 'FAIL: researcher requested a variation';
+exception when others then if sqlerrm = 'UNLOCK_NOT_FOUND' then raise notice '✓ only the creator who unlocked can ask for a variation'; else raise; end if; end $$;
+reset role;
+select set_config('request.jwt.claim.sub', :'c1', false); set role authenticated;
+select request_variation(:'sunl', 'Could you give me a hook for a Taglish audience? Email me at x@y.com');
+do $$ begin
+  perform request_variation(current_setting('my.sunl')::uuid, 'And another one please, a second time.'); raise exception 'FAIL: second variation allowed';
+exception when others then if sqlerrm = 'VARIATION_ALREADY_REQUESTED' then raise notice '✓ one variation per unlock'; else raise; end if; end $$;
+reset role;
+select case when (select note from variation_requests where unlock_id = :'sunl') like '%[hidden]%' then '✓ contact details in the request are hidden' else 'FAIL: request not masked' end;
+select set_config('request.jwt.claim.sub', :'r2', false); set role authenticated;
+select answer_variation(:'sunl', 'Alt hook: "Ang sweldo ko, saan napunta?" then show the receipt pile.');
+do $$ begin
+  perform answer_variation(current_setting('my.sunl')::uuid, 'Trying to answer twice should fail here.'); raise exception 'FAIL: answered twice';
+exception when others then if sqlerrm = 'VARIATION_ALREADY_ANSWERED' then raise notice '✓ answered once'; else raise; end if; end $$;
+reset role;
+select case when exists (select 1 from notifications where user_id = :'c1' and kind = 'variation_answered') then '✓ creator notified of the answer' else 'FAIL: no notification' end;
+select set_config('request.jwt.claim.sub', :'c2', false); set role authenticated;
+select case when (select count(*) from variation_requests) = 0 then '✓ other users cannot read variation requests' else 'FAIL: variation request leaked' end;
+reset role;
+
+-- ---------- response time ----------
+select id as rt from threads where creator_id = :'c1' limit 1 \gset
+select cre_id as rtc from threads where id = :'rt' \gset
+delete from messages where thread_id = :'rt';
+insert into messages(thread_id, sender_id, body) values (:'rt', :'c1', 'Hi, a question about your pitch'), (:'rt', :'rtc', 'Sure, ask away');
+-- the insert trigger stamps now(); backdate afterwards to simulate a two-hour reply
+update messages set created_at = now() - interval '10 hours' where thread_id = :'rt' and sender_id = :'c1';
+update messages set created_at = now() - interval '8 hours' where thread_id = :'rt' and sender_id = :'rtc';
+select case when (select median_reply_hours from cre_response_stats where cre_id = :'rtc') = 2.0 then '✓ response time: 2.0 hours from first question to first reply'
+            else 'FAIL: response time ' || coalesce((select median_reply_hours::text from cre_response_stats where cre_id = :'rtc'), 'null') end;
+set role anon;
+select case when (select count(*) from cre_response_stats) >= 1 then '✓ response time is public (aggregate only)' else 'FAIL: anon cannot read response stats' end;
+reset role;

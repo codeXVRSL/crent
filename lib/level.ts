@@ -33,3 +33,16 @@ export const levelHint: Record<ResearcherLevel, string> = {
   pro: '15+ unlocks, 4.5★+, repeat buyers, and ideas that perform.',
   top: '50+ unlocks, 4.7★+, 5+ repeat buyers and a strong unlock rate.',
 };
+
+/**
+ * "Usually replies within 2 hours", from the median time between a creator's first message in a
+ * conversation and the researcher's first reply. Hidden until there are at least 3 conversations.
+ */
+export function responseLabel(stats: { median_reply_hours: number | string | null; reply_samples: number } | null | undefined): string | null {
+  if (!stats || stats.median_reply_hours == null || stats.reply_samples < 3) return null;
+  const h = Number(stats.median_reply_hours);
+  if (h < 1) return 'Usually replies within an hour';
+  if (h < 24) return `Usually replies within ${Math.ceil(h)} hours`;
+  const d = Math.ceil(h / 24);
+  return `Usually replies within ${d} day${d > 1 ? 's' : ''}`;
+}

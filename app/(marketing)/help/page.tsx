@@ -17,6 +17,7 @@ const faqFor = (s: PublicSettings): [string, string][] => [
   ['Who can see my ID photos?', 'Only you and the verification team. ID photos are stored in private storage, shown through links that expire after five minutes, and are never shown to creators or other researchers.'],
   ['Do I pay tax on my earnings?', "Researchers are independent contractors and are responsible for their own taxes in the Philippines. We don't withhold tax from payouts at this time; download your earnings and payouts from Wallet (Download earnings and payouts) for your records."],
   ['How do I delete my account?', 'Settings → Close account. It works once any held earnings are paid out, any live brief is closed and refunded, and any open dispute is resolved. Your ID photos, payout details, saved items and profile are deleted straight away; payment records stay with the platform under an anonymised profile, as the Privacy Policy describes.'],
+  ['Can I ask for changes to an idea I unlocked?', 'Yes, once per unlock and free. On Unlocked ideas, choose "Ask for a variation" and say what should change, for example a hook for a Taglish audience. The researcher is notified and sends one alternate version, which appears on the same card.'],
   ['Who owns the idea after I unlock it?', "Ideas themselves can't be owned under copyright. When you unlock, you get the right to use the researcher's written instructions for your own content. The researcher won't pitch the same source video to you again."],
 ];
 

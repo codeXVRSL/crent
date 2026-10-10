@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { EmptyState, LinkButton, PageHeader, Pill } from '@/components/ui';
+import { Card, EmptyState, LinkButton, Notice, PageHeader, Pill, Textarea } from '@/components/ui';
+import { ActionForm, SubmitButton } from '@/components/form';
+import { answerVariation } from '@/app/actions/variations';
 import { fmtDate, UnlockStatus } from '@/components/status';
 import { withdrawPitch } from '@/app/actions/pitches';
 import { formatMultiplier } from '@/lib/outlier';
@@ -15,15 +17,18 @@ const label: Record<string, { t: 'neutral' | 'good' | 'muted' | 'bad'; l: string
   withdrawn: { t: 'muted', l: 'Withdrawn' }, refunded: { t: 'bad', l: 'Refunded after dispute' },
 };
 
-export default async function Pitches() {
+export default async function Pitches({ searchParams }: { searchParams: Promise<{ answered?: string }> }) {
+  const { answered } = await searchParams;
   const v = await requireViewer(['cre']);
   const supabase = await createClient();
-  const [{ data: pitches }, { data: unlocks }, { data: results }, { data: feedback }] = await Promise.all([
+  const [{ data: pitches }, { data: unlocks }, { data: results }, { data: feedback }, { data: variations }] = await Promise.all([
     supabase.from('pitches').select('id, brief_id, status, multiplier, format_label, submitted_at, briefs(title, status)').eq('cre_id', v.id).order('submitted_at', { ascending: false }),
     supabase.from('unlocks').select('pitch_id, status, net_cents, currency, available_at').eq('cre_id', v.id),
     supabase.from('cre_idea_results').select('pitch_id, stage, result_multiple'),
     supabase.from('pitch_feedback').select('pitch_id, reason, note'),
+    supabase.from('variation_requests').select('unlock_id, note, response, requested_at, answered_at, unlocks(pitch_id, briefs(title))').eq('cre_id', v.id).order('requested_at', { ascending: false }),
   ]);
+  const openVariations = (variations ?? []).filter((x) => !x.answered_at);
   const uMap = new Map((unlocks ?? []).map((u) => [u.pitch_id, u]));
   const rMap = new Map((results ?? []).map((r) => [r.pitch_id, r]));
   const fMap = new Map((feedback ?? []).map((f) => [f.pitch_id, f]));
@@ -34,6 +39,26 @@ export default async function Pitches() {
       <PageHeader title="My pitches" description={avg != null
         ? <>Creators logged results for {logged.length} of your ideas. On average they got <strong className="num text-ink">{formatMultiplier(avg)}</strong> their usual views.</>
         : 'When a creator posts one of your ideas and logs the views, the result shows up here and on your public profile.'} />
+      {answered && <div className="mb-4"><Notice tone="good">Variation sent. The creator gets a notification and an email.</Notice></div>}
+      {openVariations.length > 0 && (
+        <section id="variations" className="mb-8 grid scroll-mt-24 gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">Variation requests <span className="num text-sm font-normal text-muted">({openVariations.length})</span></h2>
+          <p className="text-sm text-muted">Each unlock includes one free alternate version. Answering quickly earns good reviews and repeat buyers.</p>
+          {openVariations.map((x) => {
+            const title = (x.unlocks as unknown as { briefs: { title: string } | null } | null)?.briefs?.title;
+            return (
+              <Card key={x.unlock_id} className="grid gap-3">
+                <div className="grid gap-1 text-sm"><span className="label">{title ?? 'Unlocked idea'}</span><p className="whitespace-pre-wrap">&ldquo;{x.note}&rdquo;</p></div>
+                <ActionForm action={answerVariation} className="grid gap-2">
+                  <input type="hidden" name="unlock_id" value={x.unlock_id} />
+                  <Textarea name="response" id={`ans-${x.unlock_id}`} aria-label="Your variation" required minLength={10} maxLength={3000} rows={4} placeholder="The alternate hook or angle, with any changes to the filming notes." />
+                  <SubmitButton>Send variation</SubmitButton>
+                </ActionForm>
+              </Card>
+            );
+          })}
+        </section>
+      )}
       {!pitches?.length ? (
         <EmptyState title="No pitches yet" action={<LinkButton href="/briefs">Browse open briefs</LinkButton>}>Pitch on an open brief and it shows up here.</EmptyState>
       ) : (

@@ -7,6 +7,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { CloseAccount } from '@/components/close-account';
 import { PersonaForm } from '@/components/persona-form';
 import { AlertsForm } from '@/components/alerts-form';
+import { DigestForm } from '@/components/digest-form';
 
 export const metadata = { title: 'Settings' };
 
@@ -14,6 +15,7 @@ export default async function Settings() {
   const v = await requireViewer();
   const supabase = await createClient();
   const { data: cp } = v.role === 'creator' ? await supabase.from('creator_profiles').select('*').eq('user_id', v.id).single() : { data: null };
+  const { data: me } = await supabase.from('profiles').select('email_digest').eq('id', v.id).single();
   const { data: alerts } = v.role === 'cre' ? await supabase.from('cre_profiles').select('alert_min_price_cents, alert_platforms').eq('user_id', v.id).single() : { data: null };
   return (
     <>
@@ -54,6 +56,12 @@ export default async function Settings() {
             <div className="grid gap-1"><h2 className="text-lg font-semibold tracking-tight">Brief alerts</h2>
               <p className="text-sm text-muted">Choose which new briefs in your niches notify you. Invitations from creators always reach you.</p></div>
             <AlertsForm minCents={alerts?.alert_min_price_cents ?? 0} platforms={(alerts?.alert_platforms as string[] | null) ?? []} />
+          </Card>
+        )}
+        {v.role !== 'admin' && (
+          <Card id="email" className="grid scroll-mt-24 gap-3">
+            <h2 className="text-lg font-semibold tracking-tight">Weekly email</h2>
+            <DigestForm on={me?.email_digest !== false} />
           </Card>
         )}
         {v.role !== 'admin' && <CloseAccount />}

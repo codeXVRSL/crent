@@ -49,3 +49,17 @@ describe('AI script prompt', () => {
     expect(p).not.toContain('How to adapt');
   });
 });
+
+import { responseLabel } from '../lib/level';
+describe('responseLabel', () => {
+  it('stays hidden until three conversations', () => expect(responseLabel({ median_reply_hours: 2, reply_samples: 2 })).toBeNull());
+  it('under an hour', () => expect(responseLabel({ median_reply_hours: 0.4, reply_samples: 5 })).toBe('Usually replies within an hour'));
+  it('rounds hours up', () => expect(responseLabel({ median_reply_hours: '2.1', reply_samples: 3 })).toBe('Usually replies within 3 hours'));
+  it('days after 24h', () => expect(responseLabel({ median_reply_hours: 30, reply_samples: 4 })).toBe('Usually replies within 2 days'));
+});
+
+import { manilaWeekStart } from '../lib/digest-week';
+describe('manilaWeekStart', () => {
+  it('Monday 00:30 in Manila is that Monday', () => expect(manilaWeekStart(new Date('2026-10-11T16:30:00Z'))).toBe('2026-10-12'));
+  it('Sunday night in Manila is the previous Monday', () => expect(manilaWeekStart(new Date('2026-10-11T15:00:00Z'))).toBe('2026-10-05'));
+});

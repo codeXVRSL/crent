@@ -21,6 +21,7 @@ import { signProofs } from '@/lib/proof';
 import { HOOK_CATEGORIES, passReasonLabel, platformLabel } from '@/lib/constants';
 import { formatMultiplier } from '@/lib/outlier';
 import { buildScriptPrompt } from '@/lib/script-prompt';
+import { responseLabel } from '@/lib/level';
 import { When } from '@/components/when';
 import { PITCH_COLUMNS } from '@/lib/pitch-columns';
 
@@ -121,6 +122,8 @@ export default async function BriefPage({ params, searchParams }: {
     const proofMap = await signProofs(supabase, (secrets ?? []) as { pitch_id: string; proof_path?: string | null }[]);
     const unlockMap = new Map((unlocks ?? []).map((u) => [u.pitch_id, u]));
     const creMap = new Map(((cres ?? []) as CreInfo[]).map((c) => [c.id, c]));
+    const { data: speeds } = creIds.length ? await supabase.from('cre_response_stats').select('cre_id, median_reply_hours, reply_samples').in('cre_id', creIds) : { data: [] };
+    const speedMap = new Map((speeds ?? []).map((x) => [x.cre_id, responseLabel(x)]));
     const reviewed = new Map((myReviews ?? []).map((r) => [r.unlock_id, r.rating as number]));
     const order: Record<string, number> = { submitted: 0, unlocked: 1, refunded: 2, expired: 3, withdrawn: 4 };
     const within = (a: { multiplier: number | string; submitted_at: string }, b: typeof a) =>
@@ -204,7 +207,7 @@ export default async function BriefPage({ params, searchParams }: {
                       <PitchCard key={p.id} pitch={p as PitchPublic} secret={secret} proofUrl={proofMap.get(p.id)}
                         scriptPrompt={secret && isOwner ? buildScriptPrompt({ ...(p as PitchPublic), ...secret }, { brand: persona?.brand_name, audience: persona?.audience, voice: persona?.voice, avoid_topics: persona?.avoid_topics }) : undefined}
                         priceLabel={p.status === 'submitted' ? price : undefined}
-                        byline={c ? <span className="inline-flex flex-wrap items-center gap-1.5"><Link href={`/cres/${c.handle}`} className="underline">@{c.handle}</Link> <LevelBadge cre={c} /> {c.unlock_rate_pct ?? '–'}% unlock rate{c.avg_rating ? ` · ${c.avg_rating}★` : ''}{c.results_logged ? ` · ideas avg ${formatMultiplier(c.avg_result_multiple ?? 0)} for creators` : ''}{fb && p.status === 'submitted' ? ` · You passed: ${passReasonLabel(fb.reason)}` : ''}</span> : null}
+                        byline={c ? <span className="inline-flex flex-wrap items-center gap-1.5"><Link href={`/cres/${c.handle}`} className="underline">@{c.handle}</Link> <LevelBadge cre={c} /> {c.unlock_rate_pct ?? '–'}% unlock rate{c.avg_rating ? ` · ${c.avg_rating}★` : ''}{c.results_logged ? ` · ideas avg ${formatMultiplier(c.avg_result_multiple ?? 0)} for creators` : ''}{speedMap.get(c.id) ? ` · ${speedMap.get(c.id)!.replace('Usually replies', 'replies')}` : ''}{fb && p.status === 'submitted' ? ` · You passed: ${passReasonLabel(fb.reason)}` : ''}</span> : null}
                         actions={<>
                           {isOwner && p.status === 'submitted' && (
                             <form action={toggleShortlist}><input type="hidden" name="pitch_id" value={p.id} /><input type="hidden" name="brief_id" value={id} /><input type="hidden" name="on" value={starred ? '0' : '1'} />

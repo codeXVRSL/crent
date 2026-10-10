@@ -293,6 +293,26 @@ await step('locked card hides the secret; unlock reveals hook, source and proof 
   const img = p.locator('img[alt*="Screenshot of the source"]'); await img.waitFor({ timeout: 10000 });
   expect(await img.evaluate((i) => i.complete && i.naturalWidth > 0), 'proof image did not load');
 });
+await step('creator asks for a free variation; researcher answers; creator sees it (once per unlock)', async () => {
+  const c = creator.page; await c.goto(`${BASE}/unlocks`);
+  await c.getByRole('button', { name: 'Ask for a variation' }).first().click();
+  await c.getByLabel(/One free alternate version/).fill('A hook for a Taglish audience, please. Call me 09171234567');
+  await c.getByRole('button', { name: 'Send request' }).click(); await visible(c, 'Variation requested. The researcher has been notified');
+  const r = cre.page; await r.goto(`${BASE}/pitches`); await visible(r, 'Variation requests');
+  const t = await text(r); expect(t.includes('[hidden]') && !t.includes('09171234567'), 'phone number in the variation request was not hidden');
+  await r.getByLabel('Your variation').first().fill('Alt hook: "Ang sweldo ko, saan napunta?" then show the receipt pile on the table.');
+  await r.getByRole('button', { name: 'Send variation' }).first().click(); await r.waitForURL(/answered=1/); await visible(r, 'Variation sent.');
+  await c.goto(`${BASE}/unlocks`); await visible(c, 'Your variation'); await visible(c, 'Ang sweldo ko');
+  expect(await c.getByRole('button', { name: 'Ask for a variation' }).count() === 0 || (await c.locator('article').count()) > 1, 'could ask twice on the same idea');
+});
+await step('"More like this" starts a brief with the same platform, niche, price and kind of idea', async () => {
+  const c = creator.page; await c.goto(`${BASE}/unlocks`);
+  await c.getByRole('link', { name: 'More like this' }).first().click(); await c.waitForURL(/briefs\/new\?like=/);
+  await visible(c, 'Started from an idea you unlocked');
+  expect((await c.getByLabel('Title').inputValue()).startsWith('More ideas like'), 'title not prefilled');
+  expect((await c.getByLabel('Must include').inputValue()).includes('Same kind of idea as one I unlocked'), 'must-include not prefilled');
+  expect(await c.getByLabel('Price per unlocked idea (USD)').inputValue() === '6', 'price not copied from the original brief');
+});
 await step('researcher sees the unlock, earning and notification', async () => {
   const p = cre.page; await p.goto(`${BASE}/pitches`); await visible(p, '$5.40'); await visible(p, 'Unlocked');
   await p.goto(`${BASE}/notifications`); await visible(p, 'Your pitch was unlocked');
@@ -396,6 +416,17 @@ await step('researcher adds GCash, withdraws; admin approves; researcher sees pe
   const all = await a.request.get(`${BASE}/admin/payouts/export`); const csv2 = await all.text();
   expect(all.ok() && csv2.includes(`rina_${run}`.slice(0, 20)) && csv2.includes('"58.5'), 'admin payouts CSV missing the payout');
   const denied = await p.request.get(`${BASE}/admin/payouts/export`); expect(denied.status() === 403, 'researcher could download all payouts: ' + denied.status());
+});
+
+await step('weekly summary: opt-out saves; admin "send now" sends to people with something to read, once per week', async () => {
+  const c = creator.page; await c.goto(`${BASE}/settings#email`);
+  await c.getByLabel(/Send me a short summary on Mondays/).uncheck(); await c.getByRole('button', { name: 'Save email preference' }).click(); await visible(c, 'Weekly summary turned off.');
+  const [off] = await rest(`profiles?select=email_digest&id=eq.${creator.id}`); expect(off.email_digest === false, 'opt-out not saved');
+  await rest(`profiles?id=eq.${creator.id}`, { method: 'PATCH', body: JSON.stringify({ email_digest: true }) });
+  await rest('digest_runs?week_start=gte.2000-01-01', { method: 'DELETE' });
+  const a = admin.page; await a.goto(`${BASE}/admin`); await a.getByRole('button', { name: 'Send weekly summary now' }).click();
+  await visible(a, /Sent \d+ weekly summary email/);
+  await a.goto(`${BASE}/admin`); await a.getByRole('button', { name: 'Send weekly summary now' }).click(); await visible(a, "This week's summary was already sent.");
 });
 
 // ============ 6. Admin: users, suspension, audit ============

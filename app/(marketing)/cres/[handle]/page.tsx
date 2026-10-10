@@ -6,7 +6,7 @@ import { compactViews, formatMultiplier } from '@/lib/outlier';
 import { getViewer } from '@/lib/auth';
 import { FavoriteButton } from '@/components/favorite-button';
 import { LevelBadge, type PublicCre } from '@/components/track-record';
-import { levelHint, researcherLevel } from '@/lib/level';
+import { levelHint, researcherLevel, responseLabel } from '@/lib/level';
 import { BRAND } from '@/lib/brand';
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }) {
@@ -27,17 +27,20 @@ export default async function CreProfile({ params }: { params: Promise<{ handle:
   const { data: fav } = viewer?.role === 'creator'
     ? await supabase.from('favorite_cres').select('cre_id').eq('creator_id', viewer.id).eq('cre_id', c.id).maybeSingle()
     : { data: null };
-  const [{ data: portfolio }, { data: reviews }] = await Promise.all([
+  const [{ data: portfolio }, { data: reviews }, { data: speed }] = await Promise.all([
     supabase.from('portfolio_items').select('id, title, platform, source_views, channel_median_views, multiplier, result_note')
       .eq('cre_id', cre.id).order('multiplier', { ascending: false }),
     supabase.from('reviews').select('id, rating, body, created_at').eq('reviewee_id', cre.id).order('created_at', { ascending: false }).limit(10),
+    supabase.from('cre_response_stats').select('median_reply_hours, reply_samples').eq('cre_id', cre.id).maybeSingle(),
   ]);
+  const replies = responseLabel(speed);
 
   return (
     <div className="mx-auto grid max-w-4xl gap-8 px-4 py-14">
       <header className="grid gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Pill tone="good">Verified</Pill><LevelBadge cre={c} />
+          {replies && <Pill tone="accent">{replies}</Pill>}
           {!cre.accepting_work && <Pill tone="muted">Not taking new work</Pill>}
           {viewer?.role === 'creator' && <span className="ml-auto"><FavoriteButton creId={c.id} saved={!!fav} back={`/cres/${cre.handle}`} /></span>}
         </div>

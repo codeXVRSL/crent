@@ -14,7 +14,7 @@ function toHtml(subject: string, text: string): string {
 <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;background:#fff;border:1px solid #e3e7ec;border-radius:16px">
 <tr><td style="padding:28px 32px 8px;font-weight:700;font-size:17px;color:#0f1419">${esc(BRAND)}</td></tr>
 <tr><td style="padding:0 32px"><h1 style="margin:8px 0 16px;font-size:22px;line-height:1.25;color:#0f1419">${esc(subject)}</h1>${body}${button}</td></tr>
-<tr><td style="padding:16px 32px 28px;border-top:1px solid #e3e7ec;font-size:12px;color:#6b7682">You're getting this because you have an account at ${esc(BRAND)}. <a href="${esc(env.appUrl)}/settings" style="color:#0f7a68">Settings</a></td></tr>
+<tr><td style="padding:16px 32px 28px;border-top:1px solid #e3e7ec;font-size:12px;color:#6b7682">You're getting this because you have an account at ${esc(BRAND)}. <a href="${esc(env.appUrl)}/settings#email" style="color:#0f7a68">Email settings</a></td></tr>
 </table></td></tr></table></body></html>`;
 }
 

@@ -3,7 +3,7 @@ import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Button, EmptyState, Input, LinkButton, PageHeader, Pill, Select } from '@/components/ui';
 import { PitchCard, type PitchPublic, type PitchSecret } from '@/components/pitch-card';
-import { ReviewForm, DisputeToggle } from '@/components/unlock-extras';
+import { ReviewForm, DisputeToggle, VariationBox } from '@/components/unlock-extras';
 import { UnlockStatus } from '@/components/status';
 import { signProofs } from '@/lib/proof';
 import { HOOK_CATEGORIES, IDEA_STAGES, stageLabel } from '@/lib/constants';
@@ -24,14 +24,16 @@ export default async function Unlocks({ searchParams }: { searchParams: Promise<
     supabase.from('creator_profiles').select('brand_name, audience, voice, avoid_topics').eq('user_id', v.id).maybeSingle(),
   ]);
   const ids = (unlocks ?? []).map((u) => u.pitch_id);
-  const [{ data: pitches }, { data: secrets }, { data: reviews }, { data: tracking }] = ids.length
+  const [{ data: pitches }, { data: secrets }, { data: reviews }, { data: tracking }, { data: variations }] = ids.length
     ? await Promise.all([
         supabase.from('pitches').select(PITCH_COLUMNS).in('id', ids),
         supabase.from('pitch_secrets').select('*').in('pitch_id', ids),
         supabase.from('reviews').select('unlock_id, rating').eq('reviewer_id', v.id),
         supabase.from('idea_tracking').select('unlock_id, stage, result_multiple').eq('creator_id', v.id),
+        supabase.from('variation_requests').select('unlock_id, note, response').eq('creator_id', v.id),
       ])
-    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }];
+    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }];
+  const vMap = new Map((variations ?? []).map((x) => [x.unlock_id, x]));
   const pMap = new Map((pitches ?? []).map((p) => [p.id, p]));
   const sMap = new Map((secrets ?? []).map((s) => [s.pitch_id, s as PitchSecret]));
   const tMap = new Map((tracking ?? []).map((t) => [t.unlock_id, t]));
@@ -99,6 +101,8 @@ export default async function Unlocks({ searchParams }: { searchParams: Promise<
                 actions={<>
                   {u.status === 'disputed' && <UnlockStatus status="disputed" />}
                   {canDispute && <DisputeToggle unlockId={u.id} />}
+                  <VariationBox unlockId={u.id} request={vMap.get(u.id) ?? null} />
+                  <Link href={`/briefs/new?like=${u.id}`} className="inline-flex h-9 items-center rounded-[10px] px-3 text-sm font-medium text-ink-2 hover:bg-surface-2 hover:text-ink">More like this</Link>
                   {reviewed.has(u.id) ? <Pill tone="good">You rated {reviewed.get(u.id)}★</Pill> : <ReviewForm unlockId={u.id} label="Rate this researcher" />}
                 </>}
               />
