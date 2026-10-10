@@ -19,8 +19,10 @@ export type PitchPrefill = {
   source_posted_on: string | null; hook_category: string | null; notes: string | null;
 };
 
-export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays, prefill }: {
+export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays, prefill, youtubeCheck = false }: {
   briefId: string; userId: string; platform: string; minMultiplier: number; maxAgeDays: number | null; prefill?: PitchPrefill | null;
+  /** The app checks YouTube links' views and post date automatically (YOUTUBE_API_KEY is set). */
+  youtubeCheck?: boolean;
 }) {
   const [views, setViews] = useState(prefill ? String(prefill.source_views) : '');
   const [median, setMedian] = useState(prefill ? String(prefill.channel_median_views) : '');
@@ -107,7 +109,7 @@ export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays
           <p className="text-sm text-muted">Locked until the creator pays. Nobody else can see it.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Source video link" htmlFor="source_url"><Input id="source_url" name="source_url" type="url" required maxLength={500} placeholder="https://" defaultValue={prefill?.source_url} /></Field>
+          <Field label="Source video link" htmlFor="source_url" hint={youtubeCheck ? 'YouTube links are checked automatically: the creator sees whether your views and date match.' : undefined}><Input id="source_url" name="source_url" type="url" required maxLength={500} placeholder="https://" defaultValue={prefill?.source_url} /></Field>
           <Field label="Source channel link (optional)" htmlFor="source_channel_url"><Input id="source_channel_url" name="source_channel_url" type="url" maxLength={500} placeholder="https://" /></Field>
         </div>
         <Field label="Hook (exact words)" htmlFor="hook_text"><Input id="hook_text" name="hook_text" required minLength={5} maxLength={300} /></Field>

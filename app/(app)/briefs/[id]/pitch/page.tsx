@@ -24,7 +24,7 @@ export default async function PitchPage({ params, searchParams }: { params: Prom
   return (
     <>
       <PageHeader eyebrow={`Pitch · ${formatMoney(brief.price_per_idea_cents, brief.currency)} per unlock`} title={brief.title} />
-      <PitchForm briefId={brief.id} userId={v.id} platform={brief.platform} minMultiplier={Number(brief.min_multiplier)} maxAgeDays={brief.max_video_age_days} prefill={prefill as PitchPrefill | null} />
+      <PitchForm briefId={brief.id} userId={v.id} platform={brief.platform} minMultiplier={Number(brief.min_multiplier)} maxAgeDays={brief.max_video_age_days} prefill={prefill as PitchPrefill | null} youtubeCheck={Boolean(process.env.YOUTUBE_API_KEY)} />
     </>
   );
 }

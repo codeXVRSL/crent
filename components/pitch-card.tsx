@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Clock, Lock, PlayCircle, Sparkles } from 'lucide-react';
+import { AlertTriangle, Clock, Lock, PlayCircle, ShieldCheck, Sparkles } from 'lucide-react';
 import { Pill } from './ui';
 import { CopyButton } from './copy-button';
 import { compactViews, formatMultiplier, tier, tierLabel } from '@/lib/outlier';
@@ -19,6 +19,8 @@ export type PitchPublic = {
   source_posted_on: string;
   source_channel_size_band: string | null;
   submitted_at: string;
+  /** Automatic YouTube check: set only when the app has a YouTube API key. */
+  views_check?: string | null;
 };
 
 export type PitchSecret = {
@@ -107,6 +109,10 @@ export function PitchCard({
         {pitch.duration_seconds && <Pill><Clock className="size-3" aria-hidden="true" /><span className="num">{pitch.duration_seconds}s</span></Pill>}
         <Pill><span className="num">Posted {fmtDate(pitch.source_posted_on)}</span></Pill>
         {pitch.source_channel_size_band && <Pill><span className="num">{pitch.source_channel_size_band}</span> channel</Pill>}
+        {pitch.views_check === 'verified' && <Pill tone="good"><ShieldCheck className="size-3" aria-hidden="true" /> Views checked with YouTube</Pill>}
+        {(pitch.views_check === 'mismatch' || pitch.views_check === 'not_found') && (
+          <Pill tone="bad"><AlertTriangle className="size-3" aria-hidden="true" /> {pitch.views_check === 'mismatch' ? "Views don't match YouTube" : 'YouTube could not find the video'}</Pill>
+        )}
       </div>
 
       <div className="grid gap-1.5">

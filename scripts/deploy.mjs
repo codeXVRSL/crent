@@ -4,7 +4,7 @@
 //   SUPABASE_ACCESS_TOKEN=sbp_...  VERCEL_TOKEN=...  ADMIN_EMAILS=you@example.com  npm run deploy
 //
 // Optional: SUPABASE_PROJECT_REF (use an existing project instead of creating one), SUPABASE_ORG_ID,
-// SUPABASE_DB_PASSWORD, VERCEL_PROJECT (default "crent"), VERCEL_TEAM_ID, RESEND_API_KEY, EMAIL_FROM.
+// SUPABASE_DB_PASSWORD, VERCEL_PROJECT (default "crent"), VERCEL_TEAM_ID, RESEND_API_KEY, EMAIL_FROM, YOUTUBE_API_KEY.
 //
 // Safe to re-run: it reuses the project, only runs the database setup on an empty database, and keeps
 // the generated secrets in .env.production.local (git-ignored). Never lose that file: the payout
@@ -98,6 +98,7 @@ const env = {
   CRON_SECRET: secrets.CRON_SECRET,
   ADMIN_EMAILS: adminEmails,
   ...(process.env.RESEND_API_KEY ? { RESEND_API_KEY: process.env.RESEND_API_KEY } : {}),
+  ...(process.env.YOUTUBE_API_KEY ? { YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY } : {}),
   ...(process.env.EMAIL_FROM ? { EMAIL_FROM: process.env.EMAIL_FROM } : {}),
 };
 log('Setting Vercel environment variables…');

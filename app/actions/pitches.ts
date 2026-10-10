@@ -1,5 +1,6 @@
 'use server';
 import { redirect } from 'next/navigation';
+import { after } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { friendlyError, type ActionResult } from '@/lib/errors';
@@ -11,6 +12,7 @@ import { friendlyErrorWithLimits } from '@/lib/settings';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatMoney } from '@/lib/money';
 import { getSettings } from '@/lib/settings';
+import { runViewsCheck } from '@/lib/views-check';
 
 // Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
@@ -47,6 +49,8 @@ export async function submitPitch(_: ActionResult | null, fd: FormData): Promise
     const { error: pe } = await supabase.rpc('attach_pitch_proof', { p_pitch_id: pitchId, p_path: proofPath });
     if (pe) console.error('[attach proof]', pe.message);
   }
+  // With a YouTube API key, the claimed views and post date are checked once the researcher has their answer.
+  if (pitchId) after(() => runViewsCheck(pitchId));
   const swipeId = str(fd, 'swipe_id');
   if (swipeId) await supabase.from('swipe_items').update({ status: 'pitched' }).eq('id', swipeId);
 

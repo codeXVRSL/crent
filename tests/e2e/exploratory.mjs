@@ -4,6 +4,7 @@
 //   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node tests/e2e/exploratory.mjs [output-dir]
 // Needs the app on localhost:3000 and the demo accounts (npm run seed:demo). Creates fresh accounts each run.
 import { chromium } from '@playwright/test';
+import { createServer } from 'node:http';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { enrollAdmin, passMfa, totp } from './mfa.mjs';
 
@@ -548,6 +549,49 @@ await step('close account: a clean account closes, is anonymised and cannot log 
   await p.getByLabel('Email').fill(z.email); await p.getByLabel('Password').fill(PW); await p.getByRole('button', { name: 'Log in' }).click(); await visible(p, /Wrong email or password/);
   await p.context().close();
 });
+
+// ============ 9b. Automatic YouTube views check (only when the app runs with YOUTUBE_API_KEY and
+// YOUTUBE_API_BASE=http://localhost:4555, pointing at the stand-in below) ============
+const ytIds = { good: ('G' + run).padEnd(11, '_').slice(0, 11), bad: ('B' + run).padEnd(11, '_').slice(0, 11) };
+const yt = createServer((req, res) => {
+  const id = new URL(req.url, 'http://x').searchParams.get('id');
+  const items = id === ytIds.good ? [{ statistics: { viewCount: '2500000' }, snippet: { publishedAt: `${daysAgo(3)}T10:00:00Z` } }]
+    : id === ytIds.bad ? [{ statistics: { viewCount: '4000' }, snippet: { publishedAt: `${daysAgo(3)}T10:00:00Z` } }] : [];
+  res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ items }));
+}).listen(4555);
+await step('YouTube links in pitches are checked: match shows a badge, mismatch opens a flag', async () => {
+  const p = cre.page;
+  const [carla] = await rest(`profiles?select=id&display_name=eq.Carla Demo&limit=1`);
+  const [demo] = await rest(`briefs?select=id&status=eq.open&creator_id=eq.${carla?.id}&order=opened_at.desc&limit=1`);
+  expect(demo, 'no open demo brief to pitch on');
+  await p.goto(`${BASE}/briefs/${demo.id}/pitch`);
+  if (!(await text(p)).includes('YouTube links are checked automatically')) { console.log('  (skipped: app is running without YOUTUBE_API_KEY)'); return; }
+  const send = async (url, teaser, hook) => {
+    await p.goto(`${BASE}/briefs/${demo.id}/pitch`);
+    await p.getByLabel('Format').fill('Talking head'); await p.getByLabel('Angle (teaser)').fill(teaser);
+    await p.getByLabel('Source video views').fill('2.4M'); await p.getByLabel('Channel median views').fill('20k');
+    await p.getByLabel('Source posted on').fill(daysAgo(3)); await p.getByLabel('Source video link').fill(url);
+    await p.getByLabel('Hook (exact words)').fill(hook); await p.getByLabel('Why it worked').fill('Reason that is long enough to pass the minimum length check here.');
+    await p.getByLabel('Instructions').fill('HOOK: one.\nSHOT LIST: two, three, four, five, six.\nCTA: follow for more of these tips.');
+    await p.getByLabel(/accurate today/).check(); await p.getByRole('button', { name: 'Send pitch' }).click();
+    await p.waitForURL(/pitched=1/, { timeout: 20000 });
+  };
+  await send(`https://www.youtube.com/shorts/${ytIds.good}`, 'A checked angle about cheap weeknight dinners', 'Checked hook with its own words');
+  await send(`https://youtu.be/${ytIds.bad}`, 'An inflated angle about pantry staples', 'Inflated hook with other words');
+  const checks = {};
+  for (let i = 0; i < 20 && Object.keys(checks).length < 2; i++) {
+    await sleep(500);
+    for (const r of await rest(`pitches?select=id,views_check,views_check_actual&brief_id=eq.${demo.id}&cre_id=eq.${cre.id}&views_check=not.is.null`)) checks[r.views_check] = r;
+  }
+  expect(checks.verified?.views_check_actual === 2500000, 'matching pitch not verified: ' + JSON.stringify(checks));
+  expect(checks.mismatch?.views_check_actual === 4000, 'inflated pitch not marked: ' + JSON.stringify(checks));
+  const flags = await rest(`flags?select=kind,excerpt&entity_type=eq.pitch&entity_id=eq.${checks.mismatch.id}`);
+  expect(flags.length === 1 && flags[0].kind === 'fake_proof' && flags[0].excerpt.includes('YouTube shows 4k views'), 'no flag for the mismatch: ' + JSON.stringify(flags));
+  const c = await login('demo.creator@example.com', 'OutlierDemo2026!'); await c.goto(`${BASE}/briefs/${demo.id}`);
+  await visible(c, 'Views checked with YouTube'); await visible(c, "Views don't match YouTube");
+  await c.context().close();
+});
+yt.close();
 
 // ============ 10. Phone + dark mode sweep of every page ============
 await step('phone width: no horizontal overflow on any page (creator, researcher, admin)', async () => {

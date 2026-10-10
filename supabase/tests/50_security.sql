@@ -31,6 +31,23 @@ do $$ begin
   perform source_key from pitches limit 1; raise exception 'FAIL: creator can read source_key';
 exception when insufficient_privilege then raise notice '✓ source_key cannot be read by signed-in users'; end $$;
 select case when (select count(*) from pitches) > 0 then '✓ the other pitch columns are still readable' else 'FAIL: pitches unreadable' end;
+-- YouTube check: the verdict is visible, the real view count and date (which could identify the video) are not.
+select case when (select count(views_check) >= 0 from pitches) then '✓ the YouTube check result is readable' end;
+do $$ begin
+  perform views_check_actual from pitches limit 1; raise exception 'FAIL: creator can read the real YouTube view count';
+exception when insufficient_privilege then raise notice '✓ the real YouTube numbers cannot be read by signed-in users'; end $$;
+do $$ declare n int; begin
+  update pitches set views_check = 'verified'; get diagnostics n = row_count;
+  if n > 0 then raise exception 'FAIL: a creator can set the YouTube check'; end if;
+  raise notice '✓ creators cannot set the YouTube check';
+exception when insufficient_privilege then raise notice '✓ creators cannot set the YouTube check'; end $$;
+reset role;
+select set_config('request.jwt.claim.sub', :'r1', false); set role authenticated;
+do $$ declare n int; begin
+  update pitches set views_check = 'verified' where cre_id = auth.uid(); get diagnostics n = row_count;
+  if n > 0 then raise exception 'FAIL: a researcher can mark their own pitch as checked'; end if;
+  raise notice '✓ researchers cannot mark their own pitch as checked';
+exception when insufficient_privilege then raise notice '✓ researchers cannot mark their own pitch as checked'; end $$;
 reset role;
 
 -- ---------- suspended accounts ----------

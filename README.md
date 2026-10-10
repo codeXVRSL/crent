@@ -26,7 +26,8 @@ Built with Next.js 15 (App Router, TypeScript), Tailwind CSS v4 and Supabase (Po
 | Reviews after unlock; public researcher directory and profiles with stats | ✅ |
 | Messaging with automatic hiding of emails, phone numbers, links and handles (+ admin flags) | ✅ |
 | In-app notifications; transactional emails via Resend (printed to the log if no key) | ✅ |
-| Admin: overview metrics, verifications, disputes, payouts & manual refunds, flags, users/suspension, fee settings, audit log | ✅ |
+| Automatic YouTube views check on pitches (with `YOUTUBE_API_KEY`): creators see “Views checked with YouTube” or a mismatch warning; mismatches open an admin flag | ✅ (tested) |
+| Admin: overview metrics and 12-week trend charts, verifications, disputes, payouts & manual refunds, flags, users/suspension, fee settings, audit log | ✅ |
 | Append-only money ledger; escrow balances to zero per brief | ✅ (tested) |
 | Light and dark theme, mobile layout | ✅ |
 | Tester Feedback button → admin Feedback inbox; test-mode banner | ✅ |
@@ -108,7 +109,7 @@ In Supabase → SQL Editor, run these files in order:
 11. `supabase/migrations/20261010000011_variations_response_digest.sql`
 12. `supabase/seed.sql`
 
-Or run `supabase/setup_all.sql`, which is all of the above in one file (for a new, empty project). If your database already has migrations 1–7, run files 8 to 11.
+Or run `supabase/setup_all.sql`, which is all of the above in one file (for a new, empty project). If your database already has migrations 1–7, run files 8 to 12.
 
 ### 4. Configure Supabase Auth
 Supabase → Authentication → URL Configuration:
@@ -239,4 +240,5 @@ app/api/               payment webhook, scheduled job, health check
 - Register the business (DTI or SEC) and with the BIR; put the registration numbers in the site footer.
 - Check the trade name "Outlier Desk" with IPOPHL before buying a domain.
 - Set up SPF/DKIM for your email domain in Resend.
+- Optional: create a free YouTube Data API v3 key (Google Cloud console → APIs & Services → enable “YouTube Data API v3” → Credentials → API key, restricted to that API) and set it as `YOUTUBE_API_KEY` in Vercel. Each pitch uses 1 of the 10,000 free daily quota units.
 - Turn on Authentication → Multi-factor → **TOTP** in the Supabase dashboard (free tier includes it). Admins are then asked to set up an authenticator app at their first login; On a local test database only, `update platform_settings set admin_mfa_required = false;` in SQL skips it. Also lower Authentication → Rate Limits → "Sign-ins and sign-ups" and "Token verifications" to about 30 per 5 minutes per IP, because those Supabase endpoints can be called directly.
