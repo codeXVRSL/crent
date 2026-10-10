@@ -21,6 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: '/ideas', label: 'Idea board', icon: 'board' },
         { href: '/unlocks', label: 'Unlocked ideas', icon: 'unlocks' },
         { href: '/favorites', label: 'Saved researchers', icon: 'favorites' },
+        { href: '/team', label: 'Team', icon: 'users' },
         { href: '/messages', label: 'Messages', icon: 'messages' },
       ] },
       { title: 'Account', items: [

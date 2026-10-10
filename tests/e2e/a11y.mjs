@@ -28,7 +28,7 @@ const [brief] = await rest('briefs?select=id&status=eq.open&limit=1');
 const [cre] = await rest('profiles?select=handle&role=eq.cre&handle=not.is.null&limit=1');
 const roles = {
   public: { email: null, pages: ['/', '/pricing', '/for-cres', '/cres', `/cres/${cre?.handle}`, '/help', '/legal/terms', '/login', '/signup', '/forgot-password', '/this-page-does-not-exist'] },
-  creator: { email: 'demo.creator@example.com', pages: ['/dashboard', '/briefs', '/briefs/new', `/briefs/${brief?.id}`, '/ideas', '/unlocks', '/favorites', '/messages', '/billing', '/notifications', '/settings'] },
+  creator: { email: 'demo.creator@example.com', pages: ['/dashboard', '/briefs', '/briefs/new', `/briefs/${brief?.id}`, '/ideas', '/unlocks', '/favorites', '/team', '/messages', '/billing', '/notifications', '/settings'] },
   researcher: { email: 'demo.researcher@example.com', pages: ['/dashboard', '/briefs', `/briefs/${brief?.id}`, '/pitches', '/swipe', '/wallet', '/messages', '/settings', '/onboarding/cre'] },
   admin: { email: 'admin', pages: ['/admin', '/admin/kyc', '/admin/disputes', '/admin/payouts', '/admin/flags', '/admin/users', '/admin/feedback', '/admin/settings', '/mfa/setup'] },
 };

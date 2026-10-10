@@ -10,17 +10,18 @@ Everything is on the branch `claude/hopeful-edison-rfuv5k`, pushed to GitHub. Al
 | 2 | **Trend charts on the admin Overview** | Two charts: money funded per week and ideas unlocked per week, for the last 12 weeks (Manila weeks). Hover or use the arrow keys to read any week, or open "Show as table". They work in light and dark mode and on phones. |
 | 3 | **Automatic YouTube views check** | When a researcher pitches with a YouTube link, the app checks the real view count and post date with YouTube. Creators see **"Views checked with YouTube"** or a warning, and if the numbers don't match, a flag appears in Admin → Flags. It's **off until you add a free YouTube API key** (steps below). |
 | 4 | **Monthly retainers** | On a brief that has been live, a creator can choose **"Repeat every month"** with a researcher they saved or bought from. On the chosen day they get a ready-made draft to fund (nothing is charged until they press Pay), and the researcher is invited as soon as it's live. Creators can pause or stop. Researchers can see their retainers and leave one. |
-| 5 | **Code review and clean-up** | A full review of the night's work found 10 issues, all fixed. Examples: the charts could undercount once there were more than 1,000 sales, and a monthly brief paid late lost pitching time. A clean-up pass then made the pages load with fewer database calls. |
+| 5 | **Team seats (for agencies)** | A new **Team** page. A creator invites up to 5 teammates by email, for example an editor or a manager. A teammate signs in with that address, accepts, and sees the creator's idea board: the unlocked hooks, stages, notes and results, all read-only. They can't pay, unlock, message or change anything. The creator can remove them at any time, and the teammate can leave. |
+| 6 | **Code review and clean-up** | A full review of the night's work found 10 issues, all fixed. Examples: the charts could undercount once there were more than 1,000 sales, and a monthly brief paid late lost pitching time. A clean-up pass then made the pages load with fewer database calls. |
 
 ## Test results (latest commit)
 
 | Suite | Result |
 |---|---|
-| Database tests (money, security, retainers, trends) | All pass |
+| Database tests (money, security, retainers, trends, teams) | All pass |
 | Unit tests | 88 pass |
-| Full click-through test of every page and role | 45 / 45 steps pass, 0 browser errors |
+| Full click-through test of every page and role | 46 / 46 steps pass, 0 browser errors |
 | End-to-end marketplace tests | 2 / 2 pass |
-| Accessibility audit (80 page views, light and dark) | 0 problems |
+| Accessibility audit (82 page views, light and dark) | 0 problems |
 | Deploy dry run | Pass |
 
 ## What needs you
@@ -30,7 +31,7 @@ Everything is on the branch `claude/hopeful-edison-rfuv5k`, pushed to GitHub. Al
    1. In Google Cloud console, go to APIs & Services and enable **YouTube Data API v3**.
    2. Under Credentials, create an API key and restrict it to that API.
    3. Add it as `YOUTUBE_API_KEY` in Vercel. Each pitch uses 1 of the 10,000 free daily units.
-3. **Database update on any existing project.** If a database was already set up before last night, run migration files 12, 13 and 14 from `supabase/migrations/` in the Supabase SQL editor. A new project only needs `supabase/setup_all.sql`.
+3. **Database update on any existing project.** If a database was already set up before last night, run migration files 12 to 15 from `supabase/migrations/` in the Supabase SQL editor. A new project only needs `supabase/setup_all.sql`.
 4. **Business items, unchanged:**
    - Register with DTI/SEC and the BIR.
    - Have a Philippine lawyer review the legal pages and the escrow setup.

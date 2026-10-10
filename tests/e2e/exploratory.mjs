@@ -619,6 +619,29 @@ await step('YouTube links in pitches are checked: match shows a badge, mismatch 
 });
 yt.close();
 
+// ============ 9c. Team seats: a read-only teammate on the idea board ============
+await step('team: invite by email, teammate accepts and reads the board, removal ends access', async () => {
+  const p = await login(creator.email); await p.goto(`${BASE}/team`);
+  const t = await signUp(`Tess${run}`, 'creator'); const tp = t.page;
+  await tp.getByRole('button', { name: 'Continue as creator' }).click(); await tp.waitForURL(/onboarding\/creator/);
+  await tp.getByLabel('Brand or channel name').fill('Tess Edits'); await tp.getByRole('button', { name: 'Go to dashboard' }).click(); await tp.waitForURL(/dashboard/);
+  await p.getByLabel("Teammate's email").fill('not-an-email@x'); await p.getByRole('button', { name: 'Send invite' }).click(); await visible(p, /full email address/);
+  await p.getByLabel("Teammate's email").fill(t.email.toUpperCase()); await p.getByRole('button', { name: 'Send invite' }).click();
+  await visible(p, `Invite sent to ${t.email}`); await visible(p, 'not accepted yet');
+  const [inv] = await rest(`team_invites?select=token&owner_id=eq.${creator.id}&accepted_at=is.null`);
+  // Someone else signed in can't use it.
+  const other = cre.page; await other.goto(`${BASE}/team/accept?token=${inv.token}`); await other.getByRole('button', { name: 'Accept and open the board' }).click();
+  await visible(other, /sent to a different email address/);
+  await tp.goto(`${BASE}/team/accept?token=${inv.token}`); await tp.getByRole('button', { name: 'Accept and open the board' }).click();
+  await tp.waitForURL(new RegExp(`/team/${creator.id}`), { timeout: 15000 }); await visible(tp, /Cara Cooks.*’s idea board/); await visible(tp, 'read-only');
+  expect(await tp.locator('article').count() > 0, 'teammate sees no ideas');
+  expect(await tp.getByRole('button', { name: /unlock|pay|move/i }).count() === 0, 'teammate sees edit controls');
+  await p.reload(); await visible(p, `Tess${run}`);
+  await p.getByRole('button', { name: `Remove Tess${run} from your team` }).click(); await p.waitForTimeout(1000);
+  const r = await tp.goto(`${BASE}/team/${creator.id}`); expect(r.status() === 404, `removed teammate still sees the board (${r.status()})`);
+  await p.context().close(); await tp.context().close();
+});
+
 // ============ 10. Phone + dark mode sweep of every page ============
 await step('phone width: no horizontal overflow on any page (creator, researcher, admin)', async () => {
   const bad = [];
@@ -627,7 +650,7 @@ await step('phone width: no horizontal overflow on any page (creator, researcher
     for (const u of urls) { await p.goto(BASE + u); await p.waitForLoadState('networkidle').catch(() => {}); const w = await p.evaluate(() => document.documentElement.scrollWidth); if (w > 390) bad.push(`${u} ${w}px`); const t = await text(p); if (/Application error|Unhandled Runtime/i.test(t)) bad.push(`${u} error`); }
     await p.context().close();
   };
-  await sweep('demo.creator@example.com', 'OutlierDemo2026!', ['/dashboard', '/briefs', '/briefs/new', '/ideas', '/unlocks', '/favorites', '/messages', '/billing', '/notifications', '/settings']);
+  await sweep('demo.creator@example.com', 'OutlierDemo2026!', ['/dashboard', '/briefs', '/briefs/new', '/ideas', '/unlocks', '/favorites', '/team', '/messages', '/billing', '/notifications', '/settings']);
   await sweep(cre.email, PW, ['/dashboard', '/briefs', `/briefs/${briefId}`, '/pitches', '/swipe', '/wallet', '/messages', '/settings', '/onboarding/cre', `/cres/rina_${run}`.slice(0, 200), '/cres', '/', '/pricing', '/help']);
   await sweep(admin.email, PW, ['/admin', '/admin/kyc', '/admin/disputes', '/admin/payouts', '/admin/flags', '/admin/users', '/admin/feedback', '/admin/settings'], admin.secret);
   expect(bad.length === 0, 'overflow/errors: ' + bad.join(', '));

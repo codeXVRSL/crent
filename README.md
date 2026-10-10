@@ -27,6 +27,7 @@ Built with Next.js 15 (App Router, TypeScript), Tailwind CSS v4 and Supabase (Po
 | Messaging with automatic hiding of emails, phone numbers, links and handles (+ admin flags) | ✅ |
 | In-app notifications; transactional emails via Resend (printed to the log if no key) | ✅ |
 | Monthly retainers: repeat a funded brief every month with a saved researcher (a draft to fund, the researcher invited once it's live; pause or stop any time) | ✅ (tested) |
+| Team seats: share your idea board read-only with up to 5 teammates (email invite, accept with the same address, remove any time) | ✅ (tested) |
 | Automatic YouTube views check on pitches (with `YOUTUBE_API_KEY`): creators see “Views checked with YouTube” or a mismatch warning; mismatches open an admin flag | ✅ (tested) |
 | Admin: overview metrics and 12-week trend charts, verifications, disputes, payouts & manual refunds, flags, users/suspension, fee settings, audit log | ✅ |
 | Append-only money ledger; escrow balances to zero per brief | ✅ (tested) |
@@ -110,7 +111,7 @@ In Supabase → SQL Editor, run these files in order:
 11. `supabase/migrations/20261010000011_variations_response_digest.sql`
 12. `supabase/seed.sql`
 
-Or run `supabase/setup_all.sql`, which is all of the above in one file (for a new, empty project). If your database already has migrations 1–7, run files 8 to 14.
+Or run `supabase/setup_all.sql`, which is all of the above in one file (for a new, empty project). If your database already has migrations 1–7, run files 8 to 15.
 
 ### 4. Configure Supabase Auth
 Supabase → Authentication → URL Configuration:
