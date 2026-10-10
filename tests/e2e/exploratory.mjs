@@ -550,6 +550,32 @@ await step('close account: a clean account closes, is anonymised and cannot log 
   await p.context().close();
 });
 
+// ============ 9a. Retainers: repeat a brief monthly with a researcher ============
+await step('retainer: repeat monthly, job makes a draft, paying invites the researcher, pause', async () => {
+  const p = await login(creator.email); await p.goto(briefUrl);
+  await visible(p, 'Repeat every month');
+  await p.getByLabel('Researcher').selectOption(cre.id);
+  await p.getByLabel('Day of the month').selectOption('15');
+  await p.getByRole('button', { name: 'Repeat monthly' }).click();
+  await p.waitForURL(/retainer=1/, { timeout: 15000 }); await visible(p, 'now repeats every month'); await visible(p, /Repeats on the 15th with @/);
+  await p.goto(`${BASE}/briefs`); await visible(p, 'Monthly briefs');
+  const [r] = await rest(`retainers?select=id,next_run_on&creator_id=eq.${creator.id}`);
+  expect(r && r.next_run_on.endsWith('-15'), 'retainer not saved for the 15th: ' + JSON.stringify(r));
+  await rest(`retainers?id=eq.${r.id}`, { method: 'PATCH', body: JSON.stringify({ next_run_on: daysAgo(0) }) });
+  const a = admin.page; await a.goto(`${BASE}/admin`);
+  await a.getByRole('button', { name: 'Run scheduled jobs now' }).click(); await visible(a, /made 1 monthly draft/, 20000);
+  await p.goto(`${BASE}/notifications`); await p.getByText(/Your monthly brief is ready to fund/).first().click();
+  await p.waitForURL(/\/briefs\/[0-9a-f-]{36}$/, { timeout: 10000 }); const draftId = p.url().split('/').pop();
+  await p.getByRole('button', { name: /^Pay .* and go live$/ }).click(); await p.waitForURL(/\/pay\//); await p.getByRole('button', { name: 'Pay (test)' }).click();
+  await p.waitForURL(/paid=1/); await visible(p, 'Payment received');
+  const inv = await rest(`brief_invites?select=cre_id&brief_id=eq.${draftId}`);
+  expect(inv.length === 1 && inv[0].cre_id === cre.id, 'researcher not invited to the monthly brief: ' + JSON.stringify(inv));
+  const rp = cre.page; await rp.goto(`${BASE}/briefs`); await visible(rp, /monthly retainer/);
+  await p.goto(`${BASE}/briefs`); await p.getByRole('button', { name: /^Pause monthly brief/ }).click(); await visible(p, 'Paused');
+  const [after] = await rest(`retainers?select=active&id=eq.${r.id}`); expect(after.active === false, 'pause did not stick');
+  await p.context().close();
+});
+
 // ============ 9b. Automatic YouTube views check (only when the app runs with YOUTUBE_API_KEY and
 // YOUTUBE_API_BASE=http://localhost:4555, pointing at the stand-in below) ============
 const ytIds = { good: ('G' + run).padEnd(11, '_').slice(0, 11), bad: ('B' + run).padEnd(11, '_').slice(0, 11) };

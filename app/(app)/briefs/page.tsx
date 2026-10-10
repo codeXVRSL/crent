@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { Button, EmptyState, LinkButton, PageHeader, Pill, Select } from '@/components/ui';
+import { Button, EmptyState, LinkButton, Notice, PageHeader, Pill, Select } from '@/components/ui';
 import { BriefStatus, timeLeft } from '@/components/status';
 import { formatMoney } from '@/lib/money';
 import { PLATFORMS, platformLabel } from '@/lib/constants';
+import { RETAINER_COLUMNS, RetainerList, type Retainer } from '@/components/retainers';
 
 export const metadata = { title: 'Briefs' };
 
@@ -16,13 +17,18 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<F
 
   if (v.role === 'creator') {
     const { data: allBriefs } = await supabase.from('briefs')
-      .select('id, title, status, close_reason, platform, price_per_idea_cents, currency, max_unlocks, unlocks_used, deadline_at, created_at, pitches(id)')
+      .select('id, title, status, close_reason, platform, price_per_idea_cents, currency, max_unlocks, unlocks_used, deadline_at, created_at, retainer_id, pitches(id)')
       .eq('creator_id', v.id).order('created_at', { ascending: false });
     // A deleted draft is marked cancelled (never paid, nothing to refund). Nobody needs to see it again.
     const visibleBriefs = (allBriefs ?? []).filter((b) => !(b.status === 'cancelled' && b.unlocks_used === 0 && b.close_reason === 'cancelled_unpaid'));
+    const { data: retainers } = await supabase.from('retainers').select(RETAINER_COLUMNS).eq('creator_id', v.id).order('created_at');
+    const rCres = [...new Set((retainers ?? []).map((r) => r.cre_id))];
+    const { data: rPeople } = rCres.length ? await supabase.from('public_cres').select('id, handle, display_name').in('id', rCres) : { data: [] };
+    const handles = new Map((rPeople ?? []).map((c) => [c.id as string, c as { handle: string; display_name: string }]));
     return (
       <>
         <PageHeader title="My briefs"><LinkButton href="/briefs/new">Post a brief</LinkButton></PageHeader>
+        <RetainerList retainers={(retainers ?? []) as Retainer[]} handles={handles} />
         {!visibleBriefs.length ? (
           <EmptyState title="No briefs yet" action={<LinkButton href="/briefs/new">Post a brief</LinkButton>}>
             Post your first brief. Verified researchers in your niche are notified the moment it goes live.
@@ -37,7 +43,7 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<F
               <tbody>
                 {visibleBriefs.map((b) => (
                   <tr key={b.id} className="border-b border-line last:border-0">
-                    <td className="p-3"><Link href={`/briefs/${b.id}`} className="font-semibold hover:text-accent">{b.title}</Link><div className="text-xs text-muted">{platformLabel(b.platform)}</div></td>
+                    <td className="p-3"><Link href={`/briefs/${b.id}`} className="font-semibold hover:text-accent">{b.title}</Link><div className="text-xs text-muted">{platformLabel(b.platform)}{b.retainer_id ? ' · Monthly' : ''}</div></td>
                     <td className="p-3"><BriefStatus status={b.status} /></td>
                     <td className="num p-3">{(b.pitches as unknown as { id: string }[] | null)?.length ?? 0}</td>
                     <td className="num p-3">{b.unlocks_used} / {b.max_unlocks}</td>
@@ -62,6 +68,7 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<F
     supabase.from('brief_invites').select('brief_id').eq('cre_id', v.id),
   ]);
   const nicheIds = (myNiches ?? []).map((n) => n.niche_id);
+  const { data: myRetainers } = await supabase.from('retainers').select('id, creator_id, title, day_of_month').eq('cre_id', v.id).eq('active', true);
   const invitedIds = new Set((invites ?? []).map((i) => i.brief_id));
   const sortCol = f.sort === 'pay' ? 'price_per_idea_cents' : f.sort === 'closing' ? 'deadline_at' : 'opened_at';
   let q = supabase.from('briefs')
@@ -86,6 +93,11 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<F
       <PageHeader title="Open briefs" description={f.invited ? 'Briefs a creator invited you to.' : all ? 'All open briefs.' : 'Briefs in your niches, plus any you were invited to.'}>
         <LinkButton href={all ? '/briefs' : '/briefs?all=1'} variant="secondary">{all ? 'Only my niches' : 'Show all niches'}</LinkButton>
       </PageHeader>
+      {(myRetainers ?? []).length > 0 && (
+        <div className="mb-6"><Notice tone="accent">
+          You&apos;re on {myRetainers!.length === 1 ? 'a monthly retainer' : `${myRetainers!.length} monthly retainers`}: {myRetainers!.map((r) => `"${r.title}" (day ${r.day_of_month})`).join(', ')}. You&apos;re invited each month as soon as the creator funds it.
+        </Notice></div>
+      )}
       {v.kycStatus === 'approved' && (
         <form className="mb-6 flex flex-wrap items-end gap-2" aria-label="Filter briefs">
           {all && <input type="hidden" name="all" value="1" />}

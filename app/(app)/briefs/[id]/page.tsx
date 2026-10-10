@@ -13,6 +13,7 @@ import { toggleShortlist, unpassPitch } from '@/app/actions/pitches';
 import { PassToggle } from '@/components/pitch-review';
 import { FavoriteButton } from '@/components/favorite-button';
 import { InviteForm } from '@/components/invite-form';
+import { RETAINER_COLUMNS, RetainerForm, type Retainer } from '@/components/retainers';
 import { LevelBadge } from '@/components/track-record';
 import { Copy, Star } from 'lucide-react';
 import { startThread } from '@/app/actions/messages';
@@ -40,7 +41,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function BriefPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ paid?: string; payment?: string; pitched?: string; passed?: string; sort?: string; hook?: string; show?: string }>;
+  searchParams: Promise<{ paid?: string; payment?: string; pitched?: string; passed?: string; sort?: string; hook?: string; show?: string; retainer?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -118,6 +119,15 @@ export default async function BriefPage({ params, searchParams }: {
     const favToInvite = brief.status === 'open' && isOwner && favIds.size
       ? ((await supabase.from('public_cres').select('id, display_name, handle, accepting_work').in('id', [...favIds])).data ?? []) as { id: string; display_name: string; handle: string; accepting_work: boolean }[]
       : [];
+    // Repeat monthly: researchers the creator saved or unlocked from on this brief.
+    const canRepeat = isOwner && ['open', 'closed', 'settled'].includes(brief.status);
+    const unlockedCres = (pitches ?? []).filter((p) => (unlocks ?? []).some((u) => u.pitch_id === p.id && u.status !== 'reversed')).map((p) => p.cre_id);
+    const repeatIds = [...new Set([...unlockedCres, ...favIds])];
+    const [{ data: repeatCres }, { data: myRetainers }] = canRepeat ? await Promise.all([
+      repeatIds.length ? supabase.from('public_cres').select('id, display_name, handle').in('id', repeatIds) : Promise.resolve({ data: [] as { id: string; display_name: string; handle: string }[] }),
+      supabase.from('retainers').select(RETAINER_COLUMNS).eq('creator_id', v.id).eq('title', brief.title),
+    ]) : [{ data: [] }, { data: [] }];
+    const retainersHere = ((myRetainers ?? []) as Retainer[]).map((r) => ({ ...r, handle: (repeatCres ?? []).find((c) => c.id === r.cre_id)?.handle }));
     const secretMap = new Map((secrets ?? []).map((s) => [s.pitch_id, s as PitchSecret]));
     const proofMap = await signProofs(supabase, (secrets ?? []) as { pitch_id: string; proof_path?: string | null }[]);
     const unlockMap = new Map((unlocks ?? []).map((u) => [u.pitch_id, u]));
@@ -157,6 +167,7 @@ export default async function BriefPage({ params, searchParams }: {
 
         {sp.paid && brief.status !== 'open' && <div className="mb-4"><Notice>We&apos;re confirming your payment. This page updates when it&apos;s done. Refresh in a few seconds.</Notice></div>}
         {sp.paid && brief.status === 'open' && <div className="mb-4"><Notice tone="good">Payment received. Your brief is live and researchers have been notified.</Notice></div>}
+        {sp.retainer && <div className="mb-4"><Notice tone="good">Done. This brief now repeats every month. You&apos;ll get the draft to fund on the day you picked.</Notice></div>}
         {sp.payment === 'failed' && <div className="mb-4"><Notice tone="bad">Your payment didn&apos;t go through. Your brief is saved. Try again below.</Notice></div>}
         {sp.passed && <div className="mb-4"><Notice tone="good">Passed. The researcher sees your reason, which helps them pitch better next time. <Link href={`/briefs/${id}?show=passed`}>See passed pitches</Link></Notice></div>}
         {sp.payment === 'error' && <div className="mb-4"><Notice tone="bad">We couldn&apos;t start the payment. Your brief is saved as a draft. Try paying again below.</Notice></div>}
@@ -289,6 +300,10 @@ export default async function BriefPage({ params, searchParams }: {
                   ))}
                 </ul>
               </Card>
+            )}
+            {canRepeat && (
+              <RetainerForm briefId={id} existing={retainersHere}
+                researchers={((repeatCres ?? []) as { id: string; display_name: string; handle: string }[]).filter((c) => c.handle && !retainersHere.some((r) => r.cre_id === c.id))} />
             )}
             <p className="text-xs text-muted">Created {fmtDate(brief.created_at)} · Deadline <When iso={brief.deadline_at} /></p>
           </aside>

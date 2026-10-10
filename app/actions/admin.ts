@@ -137,7 +137,7 @@ export async function runJobsNow(): Promise<ActionResult> {
   const r = await runScheduledJobs();
   revalidatePath('/admin');
   if (r.errors.length) return { ok: false, message: r.errors.join('; ') };
-  return { ok: true, message: `Done. Closed ${r.closedBriefs} brief(s), released ${r.releasedHolds} hold(s), sent ${Math.max(r.refundsSent, 0)} refund(s).` };
+  return { ok: true, message: `Done. Closed ${r.closedBriefs} brief(s), released ${r.releasedHolds} hold(s), sent ${Math.max(r.refundsSent, 0)} refund(s), made ${r.retainerDrafts} monthly draft(s).` };
 }
 
 export async function setFeedbackStatus(fd: FormData) {
