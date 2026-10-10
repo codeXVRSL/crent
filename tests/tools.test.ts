@@ -63,3 +63,9 @@ describe('manilaWeekStart', () => {
   it('Monday 00:30 in Manila is that Monday', () => expect(manilaWeekStart(new Date('2026-10-11T16:30:00Z'))).toBe('2026-10-12'));
   it('Sunday night in Manila is the previous Monday', () => expect(manilaWeekStart(new Date('2026-10-11T15:00:00Z'))).toBe('2026-10-05'));
 });
+
+import { csvCell } from '../lib/csv';
+describe('csvCell', () => {
+  it('guards formulas', () => { expect(csvCell('=HYPERLINK("x")')).toBe(`"'=HYPERLINK(""x"")"`); expect(csvCell('\tcmd')).toBe(`"'\tcmd"`); });
+  it('keeps negative numbers numeric', () => expect(csvCell('-12.50')).toBe('"-12.50"'));
+});

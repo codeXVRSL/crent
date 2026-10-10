@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { friendlyError, type ActionResult } from '@/lib/errors';
 import { emailUser } from '@/lib/notify-email';
 import { env } from '@/lib/env';
+import { quoteUserText } from '@/lib/email';
 
 export async function openDispute(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   const details = String(fd.get('details') ?? '').replace(/\r\n/g, '\n').trim();
@@ -17,7 +18,7 @@ export async function openDispute(_: ActionResult | null, fd: FormData): Promise
   const { data: u } = await supabase.from('unlocks').select('cre_id').eq('id', String(fd.get('unlock_id'))).single();
   if (u) {
     await emailUser(u.cre_id, 'A creator reported a problem with your idea',
-      `A creator opened a dispute on one of your unlocked ideas. Their words:\n\n"${details.slice(0, 500)}"\n\nReply within 48 hours with your side and any proof (for example a screenshot of the views). After that, our team decides, with or without your reply. Your earning stays on hold until then.\n\nReply here: ${env.appUrl}/disputes/${data}`);
+      `A creator opened a dispute on one of your unlocked ideas. Their words:\n\n"${quoteUserText(details)}"\n\nReply within 48 hours with your side and any proof (for example a screenshot of the views). After that, our team decides, with or without your reply. Your earning stays on hold until then.\n\nReply here: ${env.appUrl}/disputes/${data}`);
   }
   redirect(`/disputes/${data}`);
 }

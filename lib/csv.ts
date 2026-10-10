@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 
-/** One CSV cell, quoted. Values starting with = + - @ get a leading ' so spreadsheets don't run them as formulas. */
+/** One CSV cell, quoted. Values starting with = + - @, tab or CR get a leading ' so spreadsheets don't run them as formulas. */
 export function csvCell(v: unknown) {
   const s = v == null ? '' : String(v);
-  const safe = /^[=+\-@]/.test(s) ? `'${s}` : s;
+  // Plain numbers (including negatives like -12.50) stay numbers so spreadsheet sums work.
+  const safe = /^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s) ? `'${s}` : s;
   return `"${safe.replace(/"/g, '""')}"`;
 }
 

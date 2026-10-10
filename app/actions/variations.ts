@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { friendlyError, type ActionResult } from '@/lib/errors';
 import { emailUser } from '@/lib/notify-email';
 import { env } from '@/lib/env';
+import { quoteUserText } from '@/lib/email';
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
 
@@ -20,7 +21,7 @@ export async function requestVariation(_: ActionResult | null, fd: FormData): Pr
   const { data: v } = await createAdminClient().from('variation_requests').select('cre_id, note').eq('unlock_id', unlockId).single();
   if (v) {
     await emailUser(v.cre_id, 'A creator asked for a variation on your idea',
-      `A creator who unlocked your idea asked for one alternate version (free, part of the unlock):\n\n"${v.note}"\n\nAnswer it from My pitches: ${env.appUrl}/pitches#variations`);
+      `A creator who unlocked your idea asked for one alternate version (free, part of the unlock):\n\n"${quoteUserText(v.note, 1000)}"\n\nAnswer it from My pitches: ${env.appUrl}/pitches#variations`);
   }
   revalidatePath('/unlocks');
   return { ok: true, message: 'Asked. The researcher gets a notification and an email.' };

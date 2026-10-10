@@ -4,9 +4,25 @@ import { BRAND } from './brand';
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
 
-/** A small branded HTML version of a plain-text email: paragraphs, and any URL becomes a button. */
+const TRAILING = /[.,;:!?)\]}"'”’]+$/;
+const sameOrigin = (u: string) => { try { return new URL(u).origin === new URL(env.appUrl).origin; } catch { return false; } };
+
+/**
+ * Text other people wrote (dispute details, variation notes) is quoted in some emails. Links in it are
+ * replaced so a platform email can never carry someone else's link, whether as the button or as a
+ * clickable link in the body. Covers http(s)://, www. and bare domains; keeps trailing punctuation.
+ */
+export function quoteUserText(s: string, max = 500): string {
+  const link = /\b(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|io|co|me|ph|ly|gg|link|bio|app|xyz|to|info|site|online|shop|store|page|dev)\b(?:\/\S*)?/gi;
+  return s.slice(0, max).replace(link, (m) => `[link removed]${m.match(TRAILING)?.[0] ?? ''}`);
+}
+
+/** A small branded HTML version of a plain-text email: paragraphs, and a button for this site's own link. */
 function toHtml(subject: string, text: string): string {
-  const url = text.match(/https?:\/\/\S+/)?.[0];
+  // Only a link whose origin is exactly this site can become the button (not a look-alike such as
+  // app.example.evil.com or app.example@evil.com). The last such link is the email's own call to action.
+  const own = (text.match(/https?:\/\/\S+/g) ?? []).map((u) => u.replace(TRAILING, '')).filter(sameOrigin);
+  const url = own[own.length - 1];
   const body = text.split(/\n{2,}/).map((para) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#3a4450">${esc(para).replace(/\n/g, '<br>')}</p>`).join('');
   const button = url ? `<a href="${esc(url)}" style="display:inline-block;margin:6px 0 18px;padding:12px 20px;border-radius:10px;background:#0f7a68;color:#fff;font-weight:600;text-decoration:none;font-size:15px">Open ${esc(BRAND)}</a>` : '';
   return `<!doctype html><html><body style="margin:0;background:#f5f7f9;font-family:Inter,Helvetica,Arial,sans-serif">
