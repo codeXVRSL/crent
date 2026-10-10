@@ -45,13 +45,14 @@ const adminEmail = `a11y-admin-${Date.now()}@example.com`;
 }
 const { passMfa } = await import('./mfa.mjs');
 
-const results = [];
+const results = []; let audited = 0;
 for (const scheme of ['light', 'dark']) {
   for (const [role, cfg] of Object.entries(roles)) {
     const p = await session(scheme, cfg.email === 'admin' ? adminEmail : cfg.email);
     if (p.url().includes('/mfa')) await passMfa(p, adminSecret);
     for (const path of cfg.pages) {
       await p.goto(BASE + path, { waitUntil: 'networkidle' }).catch(() => {});
+      audited++;
       const r = await new AxeBuilder({ page: p }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
       for (const v of r.violations) results.push({ scheme, role, path, id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.slice(0, 3).map((n) => n.target.join(' ') + ' :: ' + (n.failureSummary ?? '').split('\n').slice(1, 2).join('')) });
     }
@@ -63,4 +64,4 @@ writeFileSync(process.argv[2] ?? 'a11y-report.json', JSON.stringify(results, nul
 const byRule = {};
 for (const r of results) (byRule[`${r.impact} ${r.id}: ${r.help}`] ??= []).push(`${r.scheme} ${r.role} ${r.path}`);
 for (const [k, v] of Object.entries(byRule)) console.log(`${k}\n   ${v.length} pages, e.g. ${v.slice(0, 4).join(' | ')}`);
-console.log(`\n${results.length} violations across ${new Set(results.map((r) => r.path + r.scheme)).size} page views.`);
+console.log(`\n${results.length} violations on ${new Set(results.map((r) => r.path + r.scheme)).size} of ${audited} page views audited.`);

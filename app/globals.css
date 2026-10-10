@@ -15,6 +15,7 @@
   --line: rgba(15, 23, 32, 0.09);
   --line-strong: rgba(15, 23, 32, 0.16);
   --accent: #08705F;
+  --chart-1: #00907A;  /* data color, validated for charts on the light surface */
   --accent-hover: #075E50;
   --accent-ink: #FFFFFF;
   --accent-soft: rgba(11, 122, 107, 0.10);
@@ -43,6 +44,7 @@
     --line: rgba(237, 241, 244, 0.08);
     --line-strong: rgba(237, 241, 244, 0.16);
     --accent: #3CD3BA;
+    --chart-1: #1FA892;
     --accent-hover: #5EE0CA;
     --accent-ink: #04201B;
     --accent-soft: rgba(60, 211, 186, 0.12);
@@ -67,6 +69,7 @@
   --line: rgba(237, 241, 244, 0.08);
   --line-strong: rgba(237, 241, 244, 0.16);
   --accent: #3CD3BA;
+  --chart-1: #1FA892;
   --accent-hover: #5EE0CA;
   --accent-ink: #04201B;
   --accent-soft: rgba(60, 211, 186, 0.12);
