@@ -2,20 +2,21 @@ import Link from 'next/link';
 import { Repeat } from 'lucide-react';
 import { ActionForm, SubmitButton } from './form';
 import { Button, Card, Field, Pill, Select } from './ui';
-import { createRetainer, deleteRetainer, setRetainerActive } from '@/app/actions/retainers';
+import { createRetainer, deleteRetainer, leaveRetainer, setRetainerActive } from '@/app/actions/retainers';
 import { formatMoney } from '@/lib/money';
 import { manilaToday } from '@/lib/parse';
 
 export type Retainer = {
-  id: string; cre_id: string; creator_id: string; title: string; price_per_idea_cents: number; max_unlocks: number;
+  id: string; cre_id: string; creator_id: string; source_brief_id: string | null; title: string; price_per_idea_cents: number; max_unlocks: number;
   day_of_month: number; next_run_on: string; active: boolean; paused_reason: string | null; last_brief_id: string | null;
 };
-export const RETAINER_COLUMNS = 'id, cre_id, creator_id, title, price_per_idea_cents, max_unlocks, day_of_month, next_run_on, active, paused_reason, last_brief_id';
+export const RETAINER_COLUMNS = 'id, cre_id, creator_id, source_brief_id, title, price_per_idea_cents, max_unlocks, day_of_month, next_run_on, active, paused_reason, last_brief_id';
 
 const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'}`;
 const day = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 const pausedText: Record<string, string> = {
   creator: 'Paused',
+  researcher_left: 'Ended: the researcher left',
   researcher_unavailable: 'Paused: researcher unavailable',
   price_out_of_range: 'Paused: price outside current limits',
   creator_suspended: 'Paused',
@@ -82,10 +83,10 @@ export function RetainerList({ retainers, handles }: { retainers: Retainer[]; ha
               </p>
               {r.last_brief_id && <Link href={`/briefs/${r.last_brief_id}`} className="text-xs text-accent underline">Latest brief</Link>}
               <div className="flex flex-wrap gap-2">
-                <form action={setRetainerActive}>
+                {r.paused_reason !== 'researcher_left' && <form action={setRetainerActive}>
                   <input type="hidden" name="id" value={r.id} /><input type="hidden" name="active" value={r.active ? '0' : '1'} />
                   <Button type="submit" size="sm" variant="secondary" aria-label={`${r.active ? 'Pause' : 'Resume'} monthly brief ${r.title}`}>{r.active ? 'Pause' : 'Resume'}</Button>
-                </form>
+                </form>}
                 <form action={deleteRetainer}>
                   <input type="hidden" name="id" value={r.id} />
                   <Button type="submit" size="sm" variant="ghost" aria-label={`Stop monthly brief ${r.title}`}>Stop repeating</Button>
@@ -96,5 +97,25 @@ export function RetainerList({ retainers, handles }: { retainers: Retainer[]; ha
         })}
       </div>
     </section>
+  );
+}
+
+/** For researchers: the retainers they're on, each with a way to step away. */
+export function MyRetainers({ retainers }: { retainers: Pick<Retainer, 'id' | 'title' | 'day_of_month'>[] }) {
+  if (!retainers.length) return null;
+  return (
+    <Card className="mb-6 grid gap-2 text-sm">
+      <span className="label inline-flex items-center gap-1.5"><Repeat className="size-3.5" aria-hidden="true" /> Your monthly retainers</span>
+      <p className="text-muted">You&apos;re invited to these each month as soon as the creator funds them.</p>
+      <ul className="grid gap-2">
+        {retainers.map((r) => (
+          <li key={r.id} className="flex flex-wrap items-center justify-between gap-2">
+            <span>{r.title} <span className="text-muted">· on the {ordinal(r.day_of_month)}</span></span>
+            <form action={leaveRetainer}><input type="hidden" name="id" value={r.id} />
+              <Button type="submit" size="sm" variant="ghost" aria-label={`Leave monthly brief ${r.title}`}>Leave</Button></form>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }

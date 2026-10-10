@@ -122,12 +122,20 @@ export default async function BriefPage({ params, searchParams }: {
     // Repeat monthly: researchers the creator saved or unlocked from on this brief.
     const canRepeat = isOwner && ['open', 'closed', 'settled'].includes(brief.status);
     const unlockedCres = (pitches ?? []).filter((p) => (unlocks ?? []).some((u) => u.pitch_id === p.id && u.status !== 'reversed')).map((p) => p.cre_id);
-    const repeatIds = [...new Set([...unlockedCres, ...favIds])];
-    const [{ data: repeatCres }, { data: myRetainers }] = canRepeat ? await Promise.all([
-      repeatIds.length ? supabase.from('public_cres').select('id, display_name, handle').in('id', repeatIds) : Promise.resolve({ data: [] as { id: string; display_name: string; handle: string }[] }),
-      supabase.from('retainers').select(RETAINER_COLUMNS).eq('creator_id', v.id).eq('title', brief.title),
-    ]) : [{ data: [] }, { data: [] }];
+    // A monthly copy belongs to the same retainers as the brief it was copied from.
+    const sourceId = canRepeat && brief.retainer_id
+      ? (await supabase.from('retainers').select('source_brief_id').eq('id', brief.retainer_id).maybeSingle()).data?.source_brief_id ?? id
+      : id;
+    const { data: myRetainers } = canRepeat
+      ? await supabase.from('retainers').select(RETAINER_COLUMNS).eq('creator_id', v.id)
+          .or(`source_brief_id.eq.${sourceId}${brief.retainer_id ? `,id.eq.${brief.retainer_id}` : ''}`)
+      : { data: [] };
+    const repeatIds = [...new Set([...unlockedCres, ...favIds, ...(myRetainers ?? []).map((r) => r.cre_id)])];
+    const { data: repeatCres } = canRepeat && repeatIds.length
+      ? await supabase.from('public_cres').select('id, display_name, handle').in('id', repeatIds) : { data: [] };
     const retainersHere = ((myRetainers ?? []) as Retainer[]).map((r) => ({ ...r, handle: (repeatCres ?? []).find((c) => c.id === r.cre_id)?.handle }));
+    const repeatChoices = ((repeatCres ?? []) as { id: string; display_name: string; handle: string }[])
+      .filter((c) => c.handle && (unlockedCres.includes(c.id) || favIds.has(c.id)) && !retainersHere.some((r) => r.cre_id === c.id));
     const secretMap = new Map((secrets ?? []).map((s) => [s.pitch_id, s as PitchSecret]));
     const proofMap = await signProofs(supabase, (secrets ?? []) as { pitch_id: string; proof_path?: string | null }[]);
     const unlockMap = new Map((unlocks ?? []).map((u) => [u.pitch_id, u]));
@@ -303,7 +311,7 @@ export default async function BriefPage({ params, searchParams }: {
             )}
             {canRepeat && (
               <RetainerForm briefId={id} existing={retainersHere}
-                researchers={((repeatCres ?? []) as { id: string; display_name: string; handle: string }[]).filter((c) => c.handle && !retainersHere.some((r) => r.cre_id === c.id))} />
+                researchers={repeatChoices} />
             )}
             <p className="text-xs text-muted">Created {fmtDate(brief.created_at)} · Deadline <When iso={brief.deadline_at} /></p>
           </aside>

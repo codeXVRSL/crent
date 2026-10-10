@@ -110,7 +110,7 @@ In Supabase → SQL Editor, run these files in order:
 11. `supabase/migrations/20261010000011_variations_response_digest.sql`
 12. `supabase/seed.sql`
 
-Or run `supabase/setup_all.sql`, which is all of the above in one file (for a new, empty project). If your database already has migrations 1–7, run files 8 to 13.
+Or run `supabase/setup_all.sql`, which is all of the above in one file (for a new, empty project). If your database already has migrations 1–7, run files 8 to 14.
 
 ### 4. Configure Supabase Auth
 Supabase → Authentication → URL Configuration:

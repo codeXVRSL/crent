@@ -30,6 +30,13 @@ export async function setRetainerActive(fd: FormData) {
   revalidatePath('/briefs');
 }
 
+export async function leaveRetainer(fd: FormData) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('leave_retainer', { p_id: str(fd, 'id') });
+  if (error) return failBack(error, '/briefs');
+  revalidatePath('/briefs');
+}
+
 export async function deleteRetainer(fd: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.rpc('delete_retainer', { p_id: str(fd, 'id') });

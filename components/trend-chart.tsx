@@ -5,13 +5,19 @@ export type TrendPoint = { week: string; value: number };
 
 const H = 200, PAD = { top: 16, right: 56, bottom: 28, left: 44 };
 
-const compact = (n: number, money: boolean) => {
-  const v = money ? n / 100 : n;
-  const s = Math.abs(v) >= 1000 ? `${Number((v / 1000).toFixed(1))}K` : `${Number(v.toFixed(money && v < 100 ? 2 : 0))}`;
-  return money ? `$${s}` : s;
+/**
+ * Amounts are cents in `currency`; without a currency the values are plain counts. Formatted by hand
+ * because Intl's compact notation differs between Node and browsers, which breaks hydration.
+ */
+const compact = (n: number, currency?: string) => {
+  const v = currency ? n / 100 : n;
+  const s = Math.abs(v) >= 1000 ? `${Number((v / 1000).toFixed(1))}K` : `${Number(v.toFixed(currency && v < 100 ? 2 : 0))}`;
+  if (!currency) return s;
+  const symbol = new Intl.NumberFormat('en-US', { style: 'currency', currency }).formatToParts(0).find((p) => p.type === 'currency')?.value ?? '';
+  return `${symbol}${s}`;
 };
-const full = (n: number, money: boolean) =>
-  money ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n / 100) : n.toLocaleString('en-US');
+const full = (n: number, currency?: string) =>
+  currency ? new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(n / 100) : n.toLocaleString('en-US');
 const weekLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 
 /** Clean y-axis maximum: 1, 2, 2.5 or 5 times a power of ten, at or above the data max. */
@@ -26,14 +32,14 @@ function niceMax(max: number) {
  * hairline grid, a crosshair + tooltip on hover (and arrow keys), and a table view. Color is the
  * validated --chart-1 token; text stays in text tokens.
  */
-export function TrendChart({ title, subtitle, points, money = false }: { title: string; subtitle: string; points: TrendPoint[]; money?: boolean }) {
+export function TrendChart({ title, subtitle, points, currency }: { title: string; subtitle: string; points: TrendPoint[]; currency?: string }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(560);
   const [hover, setHover] = useState<number | null>(null);
   const id = useId();
   useEffect(() => {
     const el = wrap.current; if (!el) return;
-    const ro = new ResizeObserver(([e]) => setW(Math.max(280, Math.round(e.contentRect.width))));
+    const ro = new ResizeObserver(([e]) => setW(Math.max(200, Math.round(e.contentRect.width))));
     ro.observe(el); return () => ro.disconnect();
   }, []);
 
@@ -44,8 +50,13 @@ export function TrendChart({ title, subtitle, points, money = false }: { title: 
   const line = points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
   const area = `${line} L${x(points.length - 1).toFixed(1)},${y(0)} L${x(0).toFixed(1)},${y(0)} Z`;
   const last = points.length - 1;
+  // Week labels about 48px wide: label every Nth week so they never touch, always keeping the last one.
+  const gap = last > 0 ? iw / last : iw, LABEL_W = 48;
+  const labelEvery = Math.max(1, Math.ceil(LABEL_W / gap));
   const total = points.reduce((a, p) => a + p.value, 0);
   const active = hover ?? null;
+
+  if (!points.length) return <p className="text-sm text-muted">{title}: no data yet.</p>;
 
   const pick = (clientX: number) => {
     const r = wrap.current?.querySelector('svg')?.getBoundingClientRect(); if (!r) return;
@@ -57,10 +68,10 @@ export function TrendChart({ title, subtitle, points, money = false }: { title: 
     <figure className="grid gap-2" aria-labelledby={`${id}-t`}>
       <figcaption className="grid gap-0.5">
         <span id={`${id}-t`} className="text-sm font-semibold">{title}</span>
-        <span className="text-xs text-muted">{subtitle} · {full(total, money)} in total</span>
+        <span className="text-xs text-muted">{subtitle} · {full(total, currency)} in total</span>
       </figcaption>
       <div ref={wrap} className="relative">
-        <svg width={w} height={H} role="img" tabIndex={0} className="block max-w-full rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+        <svg width="100%" height={H} viewBox={`0 0 ${w} ${H}`} preserveAspectRatio="none" role="img" tabIndex={0} className="block rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
           aria-label={`${title}. Use the left and right arrow keys to read each week.`}
           onPointerMove={(e) => pick(e.clientX)} onPointerLeave={() => setHover(null)}
           onKeyDown={(e) => {
@@ -72,10 +83,10 @@ export function TrendChart({ title, subtitle, points, money = false }: { title: 
           {[0, 0.5, 1].map((f) => (
             <g key={f}>
               <line x1={PAD.left} x2={w - PAD.right} y1={y(max * f)} y2={y(max * f)} stroke="var(--line-strong)" strokeWidth={1} />
-              <text x={PAD.left - 8} y={y(max * f) + 4} textAnchor="end" className="fill-muted text-[11px]">{compact(max * f, money)}</text>
+              <text x={PAD.left - 8} y={y(max * f) + 4} textAnchor="end" className="fill-muted text-[11px]">{compact(max * f, currency)}</text>
             </g>
           ))}
-          {points.map((p, i) => (i % 3 === 0 || i === last) && (
+          {points.map((p, i) => (i === last || (i % labelEvery === 0 && (last - i) * gap >= LABEL_W)) && (
             <text key={p.week} x={x(i)} y={H - 8} textAnchor={i === last ? 'end' : 'middle'} className="fill-muted text-[11px]">{weekLabel(p.week)}</text>
           ))}
           <path d={area} fill="var(--chart-1)" fillOpacity={0.1} />
@@ -85,22 +96,22 @@ export function TrendChart({ title, subtitle, points, money = false }: { title: 
             <circle key={i} cx={x(i)} cy={y(points[i].value)} r={4} fill="var(--chart-1)" stroke="var(--surface)" strokeWidth={2} />
           ))}
           {active == null && (
-            <text x={x(last) + 8} y={y(points[last].value) + 4} className="fill-ink text-[12px] font-medium">{compact(points[last].value, money)}</text>
+            <text x={x(last) + 8} y={y(points[last].value) + 4} className="fill-ink text-[12px] font-medium">{compact(points[last].value, currency)}</text>
           )}
         </svg>
         {active != null && (
           <div role="status" className="pointer-events-none absolute top-1 rounded-lg border border-line-strong bg-surface px-2.5 py-1.5 text-xs shadow-md"
             style={{ left: Math.min(Math.max(x(active) - 60, 0), w - 140) }}>
             <span className="text-muted">Week of {weekLabel(points[active].week)}</span><br />
-            <span className="num font-semibold">{full(points[active].value, money)}</span>
+            <span className="num font-semibold">{full(points[active].value, currency)}</span>
           </div>
         )}
       </div>
       <details className="text-xs">
         <summary className="cursor-pointer text-muted hover:text-ink">Show as table</summary>
         <table className="mt-2 w-full max-w-sm text-left">
-          <thead><tr><th className="label py-1">Week of</th><th className="label py-1 text-right">{money ? 'Amount' : 'Count'}</th></tr></thead>
-          <tbody>{points.map((p) => <tr key={p.week} className="border-t border-line"><td className="py-1">{weekLabel(p.week)}</td><td className="num py-1 text-right">{full(p.value, money)}</td></tr>)}</tbody>
+          <thead><tr><th className="label py-1">Week of</th><th className="label py-1 text-right">{currency ? 'Amount' : 'Count'}</th></tr></thead>
+          <tbody>{points.map((p) => <tr key={p.week} className="border-t border-line"><td className="py-1">{weekLabel(p.week)}</td><td className="num py-1 text-right">{full(p.value, currency)}</td></tr>)}</tbody>
         </table>
       </details>
     </figure>

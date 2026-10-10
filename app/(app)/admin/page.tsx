@@ -7,7 +7,6 @@ import { ActionForm, SubmitButton } from '@/components/form';
 import { runJobsNow } from '@/app/actions/admin';
 import { sendDigestNow } from '@/app/actions/digest';
 import { TrendChart } from '@/components/trend-chart';
-import { manilaWeekStart } from '@/lib/digest-week';
 
 export const metadata = { title: 'Admin' };
 
@@ -28,20 +27,12 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   ]);
   const feedbackNew = await supabase.from('feedback').select('id', { count: 'exact', head: true }).eq('status', 'new');
 
-  // Last 12 weeks (Manila weeks, Monday start) of money funded and ideas unlocked, for the trend charts.
-  const weeks = Array.from({ length: 12 }, (_, i) => manilaWeekStart(new Date(Date.now() - (11 - i) * 7 * 86_400_000)));
-  const since12 = `${weeks[0]}T00:00:00+08:00`;
-  const [{ data: paidRows }, { data: unlockRows }] = await Promise.all([
-    supabase.from('payments').select('amount_cents, paid_at').in('status', ['paid', 'partially_refunded', 'refunded']).gte('paid_at', since12),
-    supabase.from('unlocks').select('created_at').neq('status', 'reversed').gte('created_at', since12),
-  ]);
-  const bucket = (rows: { at: string | null; v: number }[]) => {
-    const sums = new Map(weeks.map((w) => [w, 0]));
-    for (const r of rows) { if (!r.at) continue; const w = manilaWeekStart(new Date(r.at)); if (sums.has(w)) sums.set(w, sums.get(w)! + r.v); }
-    return weeks.map((w) => ({ week: w, value: sums.get(w)! }));
-  };
-  const fundedSeries = bucket((paidRows ?? []).map((r) => ({ at: r.paid_at, v: r.amount_cents })));
-  const unlockSeries = bucket((unlockRows ?? []).map((r) => ({ at: r.created_at, v: 1 })));
+  // Last 12 Manila weeks of money funded and ideas unlocked, counted in the database.
+  const { data: trends } = await supabase.rpc('admin_weekly_trends', { p_weeks: 12 });
+  const weeks = (trends ?? []) as { week_start: string; funded_cents: number; unlocks: number; currency: string }[];
+  const fundedSeries = weeks.map((w) => ({ week: w.week_start, value: Number(w.funded_cents) }));
+  const unlockSeries = weeks.map((w) => ({ week: w.week_start, value: w.unlocks }));
+  const trendCurrency = weeks[0]?.currency ?? 'USD';
   const rows = ledger.data ?? [];
   const gmv = rows.filter((r) => r.kind === 'brief_funding').reduce((s, r) => s + r.amount_cents, 0);
   const revenue = rows.filter((r) => r.credit_account === 'platform:revenue').reduce((s, r) => s + r.amount_cents, 0)
@@ -69,7 +60,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         <Stat label="Fill rate" value={fill != null ? `${fill}%` : '–'} sub="Closed briefs with ≥1 unlock. Target 60%." />
       </div>
       <Card className="mb-6 grid gap-8 md:grid-cols-2">
-        <TrendChart title="Money funded per week" subtitle="Brief payments, last 12 weeks (Manila weeks)" points={fundedSeries} money />
+        <TrendChart title="Money funded per week" subtitle="Brief payments before refunds, last 12 weeks (Manila weeks)" points={fundedSeries} currency={trendCurrency} />
         <TrendChart title="Ideas unlocked per week" subtitle="Unlocks, excluding reversed ones, last 12 weeks" points={unlockSeries} />
       </Card>
       <Card className="mb-6 grid gap-3">

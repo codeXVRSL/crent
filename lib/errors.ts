@@ -56,6 +56,8 @@ const MESSAGES: Record<string, string> = {
   TOO_MANY_RETAINERS: 'You can have up to 10 monthly briefs running. Pause or delete one first.',
   RETAINER_EXISTS: 'This brief already repeats monthly with that researcher.',
   RETAINER_NOT_FOUND: "We couldn't find that monthly brief.",
+  RETAINER_NEEDS_RELATIONSHIP: 'Save this researcher or unlock one of their ideas first. Retainers are for people you already work with.',
+  RETAINER_RESEARCHER_LEFT: 'The researcher left this monthly brief, so it can’t restart with them. Repeat the brief with someone else.',
   VARIATION_ALREADY_REQUESTED: "You've already asked for a variation on this idea. It's one per unlock.",
   VARIATION_ALREADY_ANSWERED: 'This variation was already answered.',
   VARIATION_NOT_FOUND: "We couldn't find that variation request.",
