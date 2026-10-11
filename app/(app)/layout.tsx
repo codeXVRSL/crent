@@ -35,6 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: '/briefs', label: 'Open briefs', icon: 'inbox' },
         { href: '/pitches', label: 'My pitches', icon: 'pitches' },
         { href: '/swipe', label: 'Swipe file', icon: 'swipe' },
+        { href: '/team', label: 'Shared boards', icon: 'users' },
         { href: '/messages', label: 'Messages', icon: 'messages' },
       ] },
       { title: 'Account', items: [

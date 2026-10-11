@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { requireViewer } from '@/lib/auth';
+import { TeamInviteNotices } from '@/components/team-invites';
 import { createClient } from '@/lib/supabase/server';
 import { EmptyState, LinkButton, PageHeader, Stat, Card } from '@/components/ui';
 import {BriefStatus, timeLeft} from '@/components/status';
@@ -47,6 +48,7 @@ export default async function Dashboard() {
         <PageHeader eyebrow="Dashboard" title={`Hi ${v.displayName}`} description="Here’s what’s happening with your briefs.">
           <LinkButton href="/briefs/new"><Plus className="size-4" aria-hidden="true" /> Post a brief</LinkButton>
         </PageHeader>
+        <TeamInviteNotices />
         <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
           <Stat label="Pitches waiting" value={recent?.length ?? 0} icon={<Inbox className="size-4" />} emphasis={(recent?.length ?? 0) > 0} sub="Ready to review" />
           <Stat label="Live briefs" value={open.length} icon={<FileText className="size-4" />} />
@@ -138,6 +140,7 @@ export default async function Dashboard() {
       <PageHeader eyebrow="Dashboard" title={`Hi ${v.displayName}`} description="Your earnings and the briefs that match your niches.">
         {v.kycStatus === 'approved' && <LinkButton href="/briefs">Browse briefs</LinkButton>}
       </PageHeader>
+      <TeamInviteNotices />
       {stepsLeft > 0 && (
         <Card className="mb-8 grid gap-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">

@@ -6,8 +6,11 @@
 \set t1 '00000000-0000-0000-0000-0000000000f1'
 \set t2 '00000000-0000-0000-0000-0000000000f2'
 
+\set t3 '00000000-0000-0000-0000-0000000000f3'
 insert into auth.users(id, email) values (:'t1','Teammate1@Example.com'), (:'t2','t2@example.com');
-update profiles set role = 'creator' where id in (:'t1', :'t2');
+insert into auth.users(id, email, email_confirmed_at) values (:'t3','t3@example.com', null);
+update profiles set role = 'creator' where id in (:'t1', :'t2', :'t3');
+update profiles set display_name = '' where id = :'t1';
 
 -- An unlocked idea on c6's board (reuses a researcher from earlier tests).
 select p.id as pid from pitches p join briefs b on b.id = p.brief_id where p.status = 'submitted' and b.status = 'open' limit 1 \gset
@@ -38,8 +41,21 @@ exception when others then if sqlerrm <> 'TEAM_MEMBER_NOT_FOUND' then raise; end
 \echo '✓ people outside the team cannot read the board'
 reset role;
 
+-- An account that never confirmed the invited address can't accept.
+select set_config('request.jwt.claim.sub', :'owner', false); set role authenticated;
+select invite_teammate('t3@example.com') as tok3 \gset
+reset role;
+select set_config('my.tok3', :'tok3', false) \gset
+select set_config('request.jwt.claim.sub', :'t3', false); set role authenticated;
+do $$ begin perform accept_team_invite(current_setting('my.tok3')::uuid); raise exception 'FAIL: unconfirmed email accepted';
+exception when others then if sqlerrm <> 'TEAM_INVITE_OTHER_EMAIL' then raise; end if; end $$;
+select case when (select count(*) from my_pending_team_invites()) = 0 then '✓ unconfirmed addresses neither accept nor see invites' else 'FAIL: unconfirmed sees invite' end;
+reset role;
+
 select set_config('request.jwt.claim.sub', :'t1', false); set role authenticated;
+select case when (select count(*) from my_pending_team_invites() where token = :'tok'::uuid) = 1 then '✓ the invited person sees the invite waiting for them' else 'FAIL: pending invite not listed' end;
 select accept_team_invite(:'tok') = :'owner'::uuid as joined \gset
+select case when (select count(*) from my_pending_team_invites()) = 0 then '✓ an accepted invite is no longer offered' else 'FAIL: still offered' end;
 select case when :'joined' = 't' and (select count(*) from team_idea_board(:'owner')) >= 1
              and (select count(*) from team_idea_board(:'owner') where hook_text is not null) >= 1
   then '✓ a teammate who accepted sees the board with the unlocked hooks' else 'FAIL: teammate board' end;
@@ -56,15 +72,30 @@ do $$ begin perform save_idea_tracking((select unlock_id from team_idea_board(cu
 exception when others then if sqlerrm like 'FAIL%' then raise; end if; end $$;
 \echo '✓ teammates cannot change the board'
 reset role;
-select case when exists (select 1 from notifications where user_id = :'owner' and kind = 'team_joined') then '✓ the owner is told a teammate joined' else 'FAIL: no notice' end;
+select case when exists (select 1 from notifications where user_id = :'owner' and kind = 'team_joined' and body like 'teammate1@example.com can now%') then '✓ the owner is told a teammate joined (email when they have no name yet)' else 'FAIL: no notice' end;
+-- A suspended owner's board is closed to teammates.
+update profiles set suspended_at = now(), suspended_reason = 'test' where id = :'owner';
+select set_config('request.jwt.claim.sub', :'t1', false); set role authenticated;
+do $$ begin perform * from team_idea_board(current_setting('my.owner')::uuid); raise exception 'FAIL: suspended owner board readable';
+exception when others then if sqlerrm <> 'TEAM_MEMBER_NOT_FOUND' then raise; end if; end $$;
+\echo '✓ a suspended owner''s board is closed to teammates'
+reset role;
+update profiles set suspended_at = null, suspended_reason = null where id = :'owner';
 
 -- Owner view, seat limit, remove.
 select set_config('request.jwt.claim.sub', :'owner', false); set role authenticated;
-select case when (select count(*) from my_team() where kind = 'member' and email = 'Teammate1@Example.com') = 1 then '✓ the owner sees their teammate' else 'FAIL: my_team' end;
-select invite_teammate('a' || g || '@example.com') from generate_series(1, 4) g;
+select case when (select count(*) from my_team() where kind = 'member' and email = 'Teammate1@Example.com' and name = 'Teammate1@Example.com') = 1 then '✓ the owner sees their teammate' else 'FAIL: my_team' end;
+select invite_teammate('a' || g || '@example.com') from generate_series(1, 3) g;
 do $$ begin perform invite_teammate('one-too-many@example.com'); raise exception 'FAIL: sixth seat';
 exception when others then if sqlerrm <> 'TEAM_FULL' then raise; end if; end $$;
 \echo '✓ up to 5 seats, counting invites still waiting'
+select invite_teammate('a1@example.com') is not null as resent \gset
+\echo '✓ resending to someone already invited works even when full'
+reset role;
+update team_invites set created_at = now() - interval '15 days' where lower(email) = 'a1@example.com';
+select set_config('request.jwt.claim.sub', :'owner', false); set role authenticated;
+select invite_teammate('fresh@example.com') is not null as ok \gset
+\echo '✓ an expired invite frees its seat'
 select remove_teammate(:'t1');
 reset role;
 select set_config('request.jwt.claim.sub', :'t1', false); set role authenticated;

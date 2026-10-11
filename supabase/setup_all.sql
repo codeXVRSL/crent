@@ -2538,8 +2538,11 @@ begin
   if my_role() is distinct from 'creator' then raise exception 'NOT_CREATOR'; end if;
   if v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' or char_length(v_email) > 320 then raise exception 'TEAM_EMAIL_INVALID'; end if;
   if v_email = (select lower(email) from auth.users where id = auth.uid()) then raise exception 'TEAM_SELF_INVITE'; end if;
-  if (select count(*) from team_members where owner_id = auth.uid())
-     + (select count(*) from team_invites where owner_id = auth.uid() and accepted_at is null) >= 5 then
+  -- Expired invites free their seat; resending to someone already invited doesn't take another one.
+  delete from team_invites where owner_id = auth.uid() and accepted_at is null and created_at < now() - interval '14 days';
+  if not exists (select 1 from team_invites where owner_id = auth.uid() and accepted_at is null and lower(email) = v_email)
+     and (select count(*) from team_members where owner_id = auth.uid())
+       + (select count(*) from team_invites where owner_id = auth.uid() and accepted_at is null) >= 5 then
     raise exception 'TEAM_FULL';
   end if;
   if exists (select 1 from team_members m join auth.users u on u.id = m.member_id
@@ -2557,12 +2560,15 @@ begin
   if auth.uid() is null then raise exception 'NOT_ALLOWED'; end if;
   select * into i from team_invites where token = p_token for update;
   if not found or i.accepted_at is not null or i.created_at < now() - interval '14 days' then raise exception 'TEAM_INVITE_INVALID'; end if;
-  if lower(i.email) <> (select lower(email) from auth.users where id = auth.uid()) then raise exception 'TEAM_INVITE_OTHER_EMAIL'; end if;
+  -- The address must be the account's own, confirmed email: an invite is proof of nothing else.
+  if not exists (select 1 from auth.users where id = auth.uid() and lower(email) = lower(i.email) and email_confirmed_at is not null) then
+    raise exception 'TEAM_INVITE_OTHER_EMAIL';
+  end if;
   if i.owner_id = auth.uid() then raise exception 'TEAM_SELF_INVITE'; end if;
   insert into team_members(owner_id, member_id) values (i.owner_id, auth.uid()) on conflict do nothing;
   update team_invites set accepted_at = now() where id = i.id;
   perform notify(i.owner_id, 'team_joined', 'A teammate joined your idea board',
-                 (select display_name from profiles where id = auth.uid()) || ' can now see your idea board (read-only).', '/team');
+                 (select coalesce(nullif(btrim(p.display_name), ''), i.email) from profiles p where p.id = auth.uid()) || ' can now see your idea board (read-only).', '/team');
   return i.owner_id;
 end $$;
 
@@ -2591,7 +2597,7 @@ end $$;
 create or replace function my_team()
 returns table (kind text, id uuid, name text, email text, since timestamptz)
 language sql stable security definer set search_path = public as $$
-  select 'member', m.member_id, p.display_name, u.email::text, m.added_at
+  select 'member', m.member_id, coalesce(nullif(btrim(p.display_name), ''), u.email::text), u.email::text, m.added_at
     from team_members m join profiles p on p.id = m.member_id join auth.users u on u.id = m.member_id
    where m.owner_id = auth.uid()
   union all
@@ -2610,6 +2616,21 @@ language sql stable security definer set search_path = public as $$
    order by m.added_at
 $$;
 
+-- Invites waiting for the signed-in person (sent to their confirmed email), so a link lost during
+-- sign-up isn't needed: the Team page and dashboard offer them.
+create or replace function my_pending_team_invites()
+returns table (token uuid, owner_name text, brand_name text, created_at timestamptz)
+language sql stable security definer set search_path = public as $$
+  select i.token, p.display_name, cp.brand_name, i.created_at
+    from team_invites i
+    join auth.users u on u.id = auth.uid() and lower(u.email) = lower(i.email) and u.email_confirmed_at is not null
+    join profiles p on p.id = i.owner_id and p.suspended_at is null
+    left join creator_profiles cp on cp.user_id = i.owner_id
+   where i.accepted_at is null and i.created_at >= now() - interval '14 days' and i.owner_id <> auth.uid()
+     and not exists (select 1 from team_members m where m.owner_id = i.owner_id and m.member_id = auth.uid())
+   order by i.created_at
+$$;
+
 -- The owner's idea board, read-only, for a teammate (or the owner). Same rows the owner sees on /ideas.
 create or replace function team_idea_board(p_owner uuid)
 returns table (unlock_id uuid, brief_title text, hook_text text, format_label text, platform content_platform,
@@ -2618,7 +2639,8 @@ returns table (unlock_id uuid, brief_title text, hook_text text, format_label te
 language plpgsql stable security definer set search_path = public as $$
 #variable_conflict use_column
 begin
-  if p_owner <> auth.uid() and not exists (select 1 from team_members where owner_id = p_owner and member_id = auth.uid()) then
+  if p_owner <> auth.uid() and not exists (select 1 from team_members m join profiles p on p.id = m.owner_id
+                                            where m.owner_id = p_owner and m.member_id = auth.uid() and p.suspended_at is null) then
     raise exception 'TEAM_MEMBER_NOT_FOUND';
   end if;
   return query
@@ -2634,9 +2656,9 @@ begin
 end $$;
 
 revoke execute on function invite_teammate(text), accept_team_invite(uuid), remove_teammate(uuid), revoke_team_invite(uuid),
-  leave_team(uuid), my_team(), teams_i_am_on(), team_idea_board(uuid) from public, anon;
+  leave_team(uuid), my_team(), teams_i_am_on(), team_idea_board(uuid), my_pending_team_invites() from public, anon;
 grant execute on function invite_teammate(text), accept_team_invite(uuid), remove_teammate(uuid), revoke_team_invite(uuid),
-  leave_team(uuid), my_team(), teams_i_am_on(), team_idea_board(uuid) to authenticated;
+  leave_team(uuid), my_team(), teams_i_am_on(), team_idea_board(uuid), my_pending_team_invites() to authenticated;
 
 -- Suspended or closed accounts can't use or join teams.
 create trigger team_members_not_suspended before insert on team_members for each row execute function block_suspended_actor();

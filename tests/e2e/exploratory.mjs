@@ -632,6 +632,8 @@ await step('team: invite by email, teammate accepts and reads the board, removal
   // Someone else signed in can't use it.
   const other = cre.page; await other.goto(`${BASE}/team/accept?token=${inv.token}`); await other.getByRole('button', { name: 'Accept and open the board' }).click();
   await visible(other, /sent to a different email address/);
+  // The invite also waits on the teammate's dashboard, so a link lost during sign-up doesn't matter.
+  await tp.goto(`${BASE}/dashboard`); await visible(tp, 'invited you to see their idea board');
   await tp.goto(`${BASE}/team/accept?token=${inv.token}`); await tp.getByRole('button', { name: 'Accept and open the board' }).click();
   await tp.waitForURL(new RegExp(`/team/${creator.id}`), { timeout: 15000 }); await visible(tp, /Cara Cooks.*’s idea board/); await visible(tp, 'read-only');
   expect(await tp.locator('article').count() > 0, 'teammate sees no ideas');

@@ -5,6 +5,7 @@ import { Button, Card, EmptyState, Field, Input, PageHeader } from '@/components
 import { ActionForm, SubmitButton } from '@/components/form';
 import { When } from '@/components/when';
 import { inviteTeammate, leaveTeam, removeTeammate, revokeTeamInvite } from '@/app/actions/team';
+import { TeamInviteNotices } from '@/components/team-invites';
 
 export const metadata = { title: 'Team' };
 
@@ -23,7 +24,10 @@ export default async function Team() {
 
   return (
     <>
-      <PageHeader title="Team" description="Share your idea board, read-only, with an editor, manager or agency teammate. They see the ideas you unlocked and where each one stands. They can't pay, unlock, message or change anything." />
+      <PageHeader title={v.role === 'creator' ? 'Team' : 'Shared boards'} description={v.role === 'creator'
+        ? "Share your idea board, read-only, with an editor, manager or agency teammate. They see the ideas you unlocked and where each one stands. They can't pay, unlock, message or change anything."
+        : 'Idea boards creators shared with you, read-only.'} />
+      <TeamInviteNotices />
       {v.role === 'creator' && (
         <Card className="mb-6 grid gap-4">
           <span className="label">Your teammates ({members.length + invites.length} of 5)</span>
