@@ -69,3 +69,25 @@ describe('csvCell', () => {
   it('guards formulas', () => { expect(csvCell('=HYPERLINK("x")')).toBe(`"'=HYPERLINK(""x"")"`); expect(csvCell('\tcmd')).toBe(`"'\tcmd"`); });
   it('keeps negative numbers numeric', () => expect(csvCell('-12.50')).toBe('"-12.50"'));
 });
+
+import { INSTRUCTIONS_TEMPLATE, instructionWarnings } from '../lib/constants';
+describe('instructionWarnings', () => {
+  it('flags an untouched template', () => {
+    const w = instructionWarnings(INSTRUCTIONS_TEMPLATE);
+    expect(w).toContain('Add "Follow" to the CTA: it is the one ask that grows the account.');
+    expect(w).toContain('Say how long each part should be, in seconds.');
+    expect(w.some((x) => x.startsWith('Fill in the hook'))).toBe(true);
+    expect(w.some((x) => x.startsWith('Fill in the filming'))).toBe(true);
+  });
+  it('is quiet on a complete write-up', () => {
+    const text = `STYLE / FORMAT:\nSimple clip + on-screen text\n\nHOOK (first 3 seconds):\n• What you say: nothing\n• What's on screen: your hands opening the app, 3 seconds\n• On-screen headline text, upper center, exactly as written: "Nobody told me this"\n\nHOW TO FILM AND EDIT (with seconds):\n1. Film the clip for 8 seconds.\n2. Add the headline in CapCut, white Classic font.\n\nAUDIO:\nTrending calm piano, music at 60%.\n\nNOTES:\n• Vertical 9:16.\n• Keep it between 12 and 18 seconds.\n\nCTA (include the word "Follow"):\nFollow and save this for later.\n\nCAPTION + HASHTAGS:\nShort caption. #tag1 #tag2\n`;
+    expect(instructionWarnings(text)).toEqual([]);
+  });
+  it('catches a CTA without Follow and third-person writing', () => {
+    const w = instructionWarnings('HOOK:\nSay the line while the kettle boils, 3 seconds.\n\nHOW TO FILM AND EDIT:\nThe creator should film 10 seconds of the kettle, then cut.\n\nCTA:\nComment KETTLE for the recipe.\n');
+    expect(w).toEqual(['Add "Follow" to the CTA: it is the one ask that grows the account.', 'Write to the creator as "you", not about them.']);
+  });
+  it('says nothing about sections the researcher did not use', () => {
+    expect(instructionWarnings('Film 10 seconds of the kettle, then follow with the recipe card.')).toEqual([]);
+  });
+});

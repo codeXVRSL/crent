@@ -2,7 +2,8 @@ import { notFound, redirect } from 'next/navigation';
 import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { PitchForm, type PitchPrefill } from '@/components/pitch-form';
-import { PageHeader } from '@/components/ui';
+import { Card, PageHeader } from '@/components/ui';
+import { PitchChecklist } from '@/components/pitch-checklist';
 import { formatMoney } from '@/lib/money';
 
 export const metadata = { title: 'Pitch an idea' };
@@ -24,6 +25,10 @@ export default async function PitchPage({ params, searchParams }: { params: Prom
   return (
     <>
       <PageHeader eyebrow={`Pitch · ${formatMoney(brief.price_per_idea_cents, brief.currency)} per unlock`} title={brief.title} />
+      <details className="mb-6 group">
+        <summary className="cursor-pointer text-sm font-medium text-ink-2 hover:text-ink">Before you pitch: the six checks creators make</summary>
+        <Card className="mt-3"><PitchChecklist compact /></Card>
+      </details>
       <PitchForm briefId={brief.id} userId={v.id} platform={brief.platform} minMultiplier={Number(brief.min_multiplier)} maxAgeDays={brief.max_video_age_days} prefill={prefill as PitchPrefill | null} youtubeCheck={Boolean(process.env.YOUTUBE_API_KEY)} />
     </>
   );

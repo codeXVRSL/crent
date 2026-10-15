@@ -6,7 +6,7 @@ import { Notice } from './ui';
 import type { ActionResult } from '@/lib/errors';
 import { Field, Input, Select, Textarea } from './ui';
 import { submitPitch } from '@/app/actions/pitches';
-import { HOOK_CATEGORIES, INSTRUCTIONS_TEMPLATE, PLATFORMS, SIZE_BANDS } from '@/lib/constants';
+import { HOOK_CATEGORIES, INSTRUCTIONS_TEMPLATE, instructionWarnings, PLATFORMS, SIZE_BANDS } from '@/lib/constants';
 import { formatMultiplier } from '@/lib/outlier';
 import { manilaToday, parseViews } from '@/lib/parse';
 
@@ -26,6 +26,8 @@ export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays
 }) {
   const [views, setViews] = useState(prefill ? String(prefill.source_views) : '');
   const [median, setMedian] = useState(prefill ? String(prefill.channel_median_views) : '');
+  const [instructions, setInstructions] = useState(INSTRUCTIONS_TEMPLATE);
+  const warnings = instructionWarnings(instructions);
   const v = parseViews(views) ?? NaN;
   const m = parseViews(median) ?? NaN;
   const mult = v > 0 && m > 0 ? Math.round((v / m) * 10) / 10 : null;
@@ -113,13 +115,18 @@ export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays
           <Field label="Source channel link (optional)" htmlFor="source_channel_url"><Input id="source_channel_url" name="source_channel_url" type="url" maxLength={500} placeholder="https://" /></Field>
         </div>
         <Field label="Hook (exact words)" htmlFor="hook_text"><Input id="hook_text" name="hook_text" required minLength={5} maxLength={300} /></Field>
-        <Field label="Why it worked" htmlFor="why_it_worked" hint="40–2000 characters.">
+        <Field label="Why it worked" htmlFor="why_it_worked" hint="40–2000 characters. Say what carried the views: the idea, the hook, the format. If it was the creator's own looks, charisma or credentials, say how the idea still works without them.">
           <Textarea id="why_it_worked" name="why_it_worked" required minLength={40} maxLength={2000} rows={4} defaultValue={prefill?.notes ?? undefined} />
         </Field>
-        <Field label="Instructions" htmlFor="instructions" hint="80–6000 characters. Fill in the template.">
-          <Textarea id="instructions" name="instructions" required minLength={80} maxLength={6000} rows={14} defaultValue={INSTRUCTIONS_TEMPLATE} className="font-mono text-sm" />
+        <Field label="Instructions" htmlFor="instructions" hint="80–6000 characters. Write to the creator as “you”, in short plain sentences, in the order they film. Keep the headings; delete any you don't need.">
+          <Textarea id="instructions" name="instructions" required minLength={80} maxLength={6000} rows={18} value={instructions} onChange={(e) => setInstructions(e.target.value)} className="font-mono text-sm" />
         </Field>
-        <Field label="How to adapt it for this creator (optional)" htmlFor="adaptation_notes">
+        {warnings.length > 0 && (
+          <ul className="grid gap-1 text-xs text-warn" aria-live="polite" aria-label="Tips for the write-up">
+            {warnings.map((w) => <li key={w}>• {w}</li>)}
+          </ul>
+        )}
+        <Field label="How to adapt it for this creator (optional)" htmlFor="adaptation_notes" hint="If the original needs a face, a crew or gear the brief says they don't have, say how to make it with what they do have.">
           <Textarea id="adaptation_notes" name="adaptation_notes" maxLength={2000} rows={3} />
         </Field>
         <Field label="Proof screenshot (optional)" htmlFor="proof" hint="A screenshot showing the video's views and the channel page. JPG, PNG or WebP, up to 5 MB. Only shown after unlock.">
@@ -129,7 +136,7 @@ export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays
 
       <label className="flex items-start gap-2 text-sm">
         <input type="checkbox" required className="mt-1" />
-        <span>The views and median are accurate today, and the write-up is my own work.</span>
+        <span>The views and median are accurate today, the idea works without the original creator&apos;s personal appeal, and the write-up is my own work.</span>
       </label>
       {state && !state.ok && <Notice tone="bad">{state.message}</Notice>}
       <SubmitButton pendingText="Sending pitch…" className="justify-self-start">Send pitch</SubmitButton>

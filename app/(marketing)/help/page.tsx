@@ -1,4 +1,5 @@
 import { BRAND } from '@/lib/brand';
+import { PitchChecklist } from '@/components/pitch-checklist';
 import { getSettings, holdHoursText, usd, type PublicSettings } from '@/lib/settings';
 export const metadata = { title: 'Help and FAQ', description: 'How outlier scores, unlocks, refunds, disputes, verification and payouts work.' };
 
@@ -34,6 +35,11 @@ export default async function Help() {
           </details>
         ))}
       </div>
+      <section className="grid gap-3 rounded-2xl border border-line bg-surface p-5 shadow-sm">
+        <h2 className="text-lg font-semibold tracking-tight">How a pitch is judged</h2>
+        <p className="text-sm text-muted">For researchers: the six things a creator checks before unlocking, and the standard our team holds pitches to in disputes.</p>
+        <PitchChecklist compact />
+      </section>
     </div>
   );
 }

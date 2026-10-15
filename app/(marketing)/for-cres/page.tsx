@@ -1,6 +1,7 @@
 import { LinkButton } from '@/components/ui';
 import { getSettings, holdHoursText, pct, usd } from '@/lib/settings';
 import { formatMoney, unlockSplit } from '@/lib/money';
+import { PitchChecklist } from '@/components/pitch-checklist';
 export async function generateMetadata() {
   const s = await getSettings();
   return { title: 'For researchers', description: `Earn per proven idea. Creators fund briefs before you pitch, you keep ${pct(10000 - s.creFeeBps)} of every unlock, and withdraw to GCash, Maya or a Philippine bank.` };
@@ -31,6 +32,11 @@ export default async function ForCres() {
           <li>Earnings are on hold for {holdHoursText(s.holdHours)} after an unlock, in case the creator reports a problem.</li>
           <li>Withdraw once you have {usd(s.minPayoutCents)} or more, to GCash, Maya or a Philippine bank account, in pesos.</li>
         </ul>
+      </section>
+      <section className="grid gap-3">
+        <h2 className="text-lg font-semibold tracking-tight">What a good pitch looks like</h2>
+        <p className="text-muted">Creators unlock what they can film tonight. Every pitch is judged on these six things.</p>
+        <PitchChecklist />
       </section>
       <section className="grid gap-3">
         <h2 className="text-lg font-semibold tracking-tight">Rules that protect you</h2>

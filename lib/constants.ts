@@ -48,21 +48,74 @@ export const DISPUTE_REASONS = [
   { value: 'other', label: 'Something else' },
 ] as const;
 
-export const INSTRUCTIONS_TEMPLATE = `HOOK (0–3s):
+/**
+ * The write-up the creator gets after unlocking. Written to them as "you", in short plain sentences,
+ * in the order they film: format, the first 3 seconds, how to edit, audio, rules, CTA, caption.
+ */
+export const INSTRUCTIONS_TEMPLATE = `STYLE / FORMAT:
+(one line: simple clip + on-screen text, talking head, voice-over, screen recording)
 
-ON-SCREEN TEXT:
+HOOK (first 3 seconds):
+• What you say:
+• What's on screen (the first clip, with movement in the first frame):
+• On-screen headline text, upper center, exactly as written:
 
-SHOT LIST:
+HOW TO FILM AND EDIT (with seconds):
 1.
 2.
 3.
 
-KEY BEATS / SCRIPT:
+AUDIO:
+(the original sound and how to save it, or a trending sound to search for, and the music volume)
 
-CTA:
+NOTES:
+• Vertical 9:16, filling the screen.
+• Keep it between __ and __ seconds.
+
+CTA (include the word "Follow"):
 
 CAPTION + HASHTAGS:
+
+ADJUSTMENT NOTE (how to make it work with your setup):
 `;
+
+/**
+ * Soft checks on a pitch write-up, shown while the researcher types. None of them block sending;
+ * they catch the things creators complain about most: no "Follow" in the CTA, no timings,
+ * sections of the template left empty, and writing about the creator instead of to them.
+ */
+export function instructionWarnings(text: string): string[] {
+  const out: string[] = [];
+  const t = text.replace(/\r\n/g, '\n');
+  // Split the write-up into sections at the template headings (UPPER CASE words ending in a colon).
+  // Heading lines and the template's own hints in brackets never count as content.
+  const sections = new Map<string, string>();
+  let current = '';
+  const bodyLines: string[] = [];
+  for (const raw of t.split('\n')) {
+    const h = raw.match(/^([A-Z][A-Z /+]+?)(?:\s*\(.*\))?:/);
+    if (h) { current = h[1].trim(); sections.set(current, ''); continue; }
+    const line = raw.replace(/\([^)]*\)/g, '');
+    bodyLines.push(line);
+    if (current) sections.set(current, `${sections.get(current)}\n${line}`);
+  }
+  const body = bodyLines.join('\n');
+  // What's left once bullets, numbering and the template's "Label:" prompts are removed.
+  const filled = (name: string) => {
+    const text = sections.get(name);
+    return text == null ? null : text.replace(/^[\s•\-\d.)]+/gm, '').replace(/^[^:\n]{0,70}:\s*/gm, '').trim();
+  };
+  const cta = filled('CTA');
+  if (cta != null && !/follow/i.test(cta)) out.push('Add "Follow" to the CTA: it is the one ask that grows the account.');
+  if (!/\b\d+\s*(s|sec|secs|seconds?)\b/i.test(body)) out.push('Say how long each part should be, in seconds.');
+  const hook = filled('HOOK');
+  if (hook != null && hook.length < 15) out.push("Fill in the hook: what's said and what's on screen in the first 3 seconds.");
+  const filming = filled('HOW TO FILM AND EDIT');
+  if (filming != null && filming.length < 20) out.push('Fill in the filming and editing steps.');
+  if (/\b(the creator|the client|he should|she should|they should)\b/i.test(t)) out.push('Write to the creator as "you", not about them.');
+  return out;
+}
+
 
 export const IDEA_STAGES = [
   { value: 'saved', label: 'To do' },
@@ -85,7 +138,21 @@ export const PASS_REASONS = [
 export const passReasonLabel = (v: string) => PASS_REASONS.find((r) => r.value === v)?.label ?? v;
 
 /** Starting points for the brief form. Creators edit everything before posting. */
+/** A short block creators fill in so researchers can judge whether they can actually make the idea. */
+export const SETUP_BLOCK = `My setup: (phone, tripod, ring light, camera)
+Editing level: (beginner / comfortable with CapCut / advanced)
+Tone: (calm, warm, bold, playful)
+Hard no's: (dancing, skits, anything inauthentic)`;
+
 export const BRIEF_TEMPLATES = [
+  {
+    id: 'clip-text',
+    label: 'Simple clip + text',
+    title: 'Faceless clip-and-text ideas I can make in an hour',
+    description: 'I don\'t show my face. I make short videos from one clip (my own B-roll or stock footage) with a headline on screen and a trending or calm sound. I want ideas where the on-screen text carries the video and the clip just needs movement in the first frame. Tell me the exact headline and where to get the clip.',
+    must_include: 'Faceless. One clip plus on-screen text. Makeable in CapCut on a phone.',
+    avoid: 'Anything that needs a face on camera, a crew or advanced editing.',
+  },
   {
     id: 'talking-head',
     label: 'Talking-head tips',
@@ -109,6 +176,14 @@ export const BRIEF_TEMPLATES = [
     description: 'I teach practical skills. I want tutorial formats that got far more saves and views than the channel usually gets: numbered steps, before/after results, screen recordings with voice-over. Tell me the exact step structure.',
     must_include: 'A visible result at the start or end.',
     avoid: 'Tutorials longer than 90 seconds.',
+  },
+  {
+    id: 'screen-recording',
+    label: 'Screen recording',
+    title: 'Screen-recording ideas that show exactly what to tap',
+    description: 'I teach a tool or an app. My audience needs to see a hand doing it on screen, one task per video, with plain words and no jargon. I want ideas where the result is visible in the first 3 seconds and the steps are short enough to follow along.',
+    must_include: 'A screen recording with the result shown first. One tool, one task, one win per video.',
+    avoid: 'Fast-paced edits. Jargon without a plain-English explanation.',
   },
   {
     id: 'trend-remix',

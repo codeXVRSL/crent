@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ActionForm, SubmitButton } from './form';
 import { Field, Input, Select, Textarea } from './ui';
 import { createBrief } from '@/app/actions/briefs';
-import { BRIEF_TEMPLATES, PLATFORMS } from '@/lib/constants';
+import { BRIEF_TEMPLATES, PLATFORMS, SETUP_BLOCK } from '@/lib/constants';
 import { briefCharge, formatMoney, parseDollarsToCents } from '@/lib/money';
 
 export type BriefSeed = {
@@ -23,7 +23,11 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial, per
   persona?: { audience: string | null; voice: string | null; avoid_topics: string | null } | null;
 }) {
   const personaText = [persona?.audience && `My audience: ${persona.audience}`, persona?.voice && `My voice: ${persona.voice}`].filter(Boolean).join('\n');
-  const withPersona = (description: string) => (personaText && !description.includes(personaText) ? `${description}${description ? '\n\n' : ''}${personaText}` : description);
+  // Every brief ends with the setup block, so researchers can judge whether the creator can actually make the idea.
+  const withPersona = (description: string) => {
+    const base = personaText && !description.includes(personaText) ? `${description}${description ? '\n\n' : ''}${personaText}` : description;
+    return base.includes('My setup:') ? base : `${base}${base ? '\n\n' : ''}${SETUP_BLOCK}`;
+  };
   const withAvoid = (avoid: string) => (persona?.avoid_topics && !avoid.includes(persona.avoid_topics) ? [avoid, persona.avoid_topics].filter(Boolean).join('; ') : avoid);
   const [price, setPrice] = useState(initial?.price ?? '8');
   const [max, setMax] = useState(initial?.max_unlocks ?? '5');
@@ -71,7 +75,7 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial, per
             </Select>
           </Field>
         </div>
-        <Field label="What you need" htmlFor="description" hint="Describe your audience, your style and what a great idea looks like. 40–3000 characters. No contact details.">
+        <Field label="What you need" htmlFor="description" hint="Describe your audience, your style and what a great idea looks like, then fill in the setup lines: researchers only pitch what you can actually film and edit. 40–3000 characters. No contact details.">
           <Textarea id="description" name="description" required minLength={40} maxLength={3000} rows={6} defaultValue={seed.description} />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">

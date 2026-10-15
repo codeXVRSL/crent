@@ -31,7 +31,7 @@ export function buildScriptPrompt(i: Idea, creator?: { brand?: string | null; au
     '1. Five alternative hooks for the first 3 seconds, same hook type, in my own words (not a copy of the original).',
     '2. A beat-by-beat script with on-screen text for each beat.',
     '3. A shot list I can film on my phone.',
-    '4. One call to action and a caption with 3–5 hashtags.',
+    '4. One call to action that includes the word "Follow", and a caption with 6–8 hashtags.',
     'Keep what made the original work, but make it clearly my own take.',
   ];
   return lines.filter((l, idx, arr) => !(l === '' && arr[idx - 1] === '')).join('\n').replace(/\n{3,}/g, '\n\n').trim();
