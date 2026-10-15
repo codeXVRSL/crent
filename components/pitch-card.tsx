@@ -43,7 +43,7 @@ const statusPill: Record<string, { tone: 'neutral' | 'accent' | 'good' | 'muted'
 
 // "tiktok.com/@sample/video/7500…" instead of a 90-character URL that breaks mid-number on phones.
 function linkLabel(url: string) {
-  try { const u = new URL(url); const path = u.pathname.length > 28 ? `${u.pathname.slice(0, 28)}…` : u.pathname; return `${u.hostname.replace(/^www\./, '')}${path}`; } catch { return url; }
+  try { const u = new URL(url); const rest = `${u.pathname}${u.search}`; return `${u.hostname.replace(/^www\./, '')}${rest.length > 40 ? `${rest.slice(0, 40)}…` : rest}`; } catch { return url; }
 }
 
 // source_posted_on is a calendar date; format it in UTC so every viewer (and server/browser) agrees.
@@ -126,14 +126,14 @@ export function PitchCard({
       </div>
 
       {secret ? (
-        <div className="anim-reveal grid min-w-0 gap-4 break-words rounded-xl border border-accent/25 bg-accent-soft/40 p-4">
+        <div className="anim-reveal grid min-w-0 gap-4 break-words [&>*]:min-w-0 rounded-xl border border-accent/25 bg-accent-soft/40 p-4">
           <div className="grid gap-1">
             <span className="label">Hook</span>
             <p className="text-[18px] font-medium leading-snug tracking-tight">“{secret.hook_text}”</p>
           </div>
-          <div className="grid gap-1">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-1">
             <span className="label">Source video</span>
-            <a href={secret.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-1 text-sm font-medium text-accent underline underline-offset-2"><span className="truncate">{linkLabel(secret.source_url)}</span><ExternalLink className="size-3.5 shrink-0" aria-hidden="true" /></a>
+            <a href={secret.source_url} target="_blank" rel="noopener noreferrer" className="flex max-w-full items-center gap-1 text-sm font-medium text-accent underline underline-offset-2"><span className="min-w-0 truncate">{linkLabel(secret.source_url)}</span><ExternalLink className="size-3.5 shrink-0" aria-hidden="true" /></a>
             {secret.source_channel_url && <a href={secret.source_channel_url} target="_blank" rel="noopener noreferrer" className="break-all text-xs text-muted underline">{secret.source_channel_url}</a>}
           </div>
           <div className="grid gap-1"><span className="label">Why it worked</span><p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-2">{secret.why_it_worked}</p></div>

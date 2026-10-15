@@ -59,7 +59,7 @@ export default async function BriefPage({ params, searchParams }: {
     <Card className="grid gap-4">
       <div className="flex flex-wrap gap-2">
         <Pill>{platformLabel(brief.platform)}</Pill>{nicheName && <Pill>{nicheName}</Pill>}
-        <Pill>min {Number(brief.min_multiplier).toFixed(1)}×</Pill>
+        <Pill>min {formatMultiplier(brief.min_multiplier)}</Pill>
         {brief.max_video_age_days && <Pill>source ≤ {brief.max_video_age_days} days old</Pill>}
       </div>
       <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-ink">{brief.description}</p>

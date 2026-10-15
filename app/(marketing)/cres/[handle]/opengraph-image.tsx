@@ -1,3 +1,4 @@
+import { formatMultiplier } from '@/lib/outlier';
 import { ImageResponse } from 'next/og';
 import { createClient } from '@/lib/supabase/server';
 import { BRAND } from '@/lib/brand';
@@ -22,7 +23,7 @@ export default async function ProfileOG({ params }: { params: Promise<{ handle: 
     ['Level', levelLabel[researcherLevel(c as unknown as TrackRecord)]],
     ['Unlock rate', c.unlock_rate_pct != null ? `${c.unlock_rate_pct}%` : 'New'],
     ['Rating', c.avg_rating ? `${Number(c.avg_rating).toFixed(1)} / 5` : 'New'],
-    ...(best?.multiplier ? [['Best find', `${Number(best.multiplier).toFixed(1)}×`] as [string, string]] : []),
+    ...(best?.multiplier ? [['Best find', formatMultiplier(best.multiplier)] as [string, string]] : []),
   ] : [];
   return new ImageResponse(
     (

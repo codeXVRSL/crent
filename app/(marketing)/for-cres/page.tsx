@@ -1,5 +1,5 @@
 import { LinkButton } from '@/components/ui';
-import { getSettings, holdHoursText, pct, usd } from '@/lib/settings';
+import { getSettings, holdAfterUnlockText, pct, usd } from '@/lib/settings';
 import { formatMoney, unlockSplit } from '@/lib/money';
 import { PitchChecklist } from '@/components/pitch-checklist';
 export async function generateMetadata() {
@@ -29,7 +29,7 @@ export default async function ForCres() {
         <h2 className="text-lg font-semibold tracking-tight">How you get paid</h2>
         <ul className="grid gap-2 text-muted">
           <li>You keep {pct(10000 - s.creFeeBps)} of each unlock. Example: an $8 unlock pays you {formatMoney(unlockSplit(800, s.creFeeBps).net)}.</li>
-          <li>Earnings are on hold for {holdHoursText(s.holdHours)} after an unlock, in case the creator reports a problem.</li>
+          <li>Earnings become yours to withdraw {holdAfterUnlockText(s.holdHours)}{s.holdHours > 0 ? ', in case the creator reports a problem' : ''}.</li>
           <li>Withdraw once you have {usd(s.minPayoutCents)} or more, to GCash, Maya or a Philippine bank account, in pesos.</li>
         </ul>
       </section>

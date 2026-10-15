@@ -35,7 +35,7 @@ describe('AI script prompt', () => {
   it('includes the idea and asks for original hooks', () => {
     const p = buildScriptPrompt(idea, { brand: 'Money Mondays' });
     expect(p).toContain('TikTok script of about 40 seconds');
-    expect(p).toContain('12.5×');
+    expect(p).toContain('13×');
     expect(p).toContain('Myth bust');
     expect(p).toContain('"Stop using this rule"');
     expect(p).toContain('Money Mondays');
@@ -89,5 +89,24 @@ describe('instructionWarnings', () => {
   });
   it('says nothing about sections the researcher did not use', () => {
     expect(instructionWarnings('Film 10 seconds of the kettle, then follow with the recipe card.')).toEqual([]);
+  });
+});
+
+import { SETUP_BLOCK, stripUnfilledSetup } from '../lib/constants';
+describe('instructionWarnings edge cases', () => {
+  it('reads one-line sections and researcher brackets', () => {
+    const w = instructionWarnings('HOOK: Say the number while the receipts land on the table (3 seconds).\nHOW TO FILM AND EDIT: Film the receipts from above for 5 seconds, then cut to your face.\nCTA: Follow for more: it is free.\n');
+    expect(w).toEqual([]);
+  });
+  it('allows talking about the original creator', () => {
+    expect(instructionWarnings('ADJUSTMENT NOTE: The creator of the original is a doctor; you do not need that, lead with the study. Film for 10 seconds.')).toEqual([]);
+    expect(instructionWarnings('The creator should film for 10 seconds.')).toEqual(['Write to the creator as "you", not about them.']);
+  });
+});
+describe('stripUnfilledSetup', () => {
+  it('drops setup lines left as the template hints and keeps filled ones', () => {
+    const filled = 'My audience: new grads.\n\nMy setup: iPhone and a ring light\nEditing level: (beginner / comfortable with CapCut / advanced)\nTone: warm\nHard no\'s: (dancing, skits, anything inauthentic)';
+    expect(stripUnfilledSetup(filled)).toBe('My audience: new grads.\n\nMy setup: iPhone and a ring light\nTone: warm');
+    expect(stripUnfilledSetup(`Great ideas only.\n\n${SETUP_BLOCK}`)).toBe('Great ideas only.');
   });
 });

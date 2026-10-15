@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ActionForm, SubmitButton } from './form';
 import { Field, Input, Select, Textarea } from './ui';
 import { createBrief } from '@/app/actions/briefs';
-import { BRIEF_TEMPLATES, PLATFORMS, SETUP_BLOCK } from '@/lib/constants';
+import { BRIEF_TEMPLATES, PLATFORMS, SETUP_BLOCK, SETUP_MARKER } from '@/lib/constants';
 import { briefCharge, formatMoney, parseDollarsToCents } from '@/lib/money';
 
 export type BriefSeed = {
@@ -23,11 +23,10 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial, per
   persona?: { audience: string | null; voice: string | null; avoid_topics: string | null } | null;
 }) {
   const personaText = [persona?.audience && `My audience: ${persona.audience}`, persona?.voice && `My voice: ${persona.voice}`].filter(Boolean).join('\n');
-  // Every brief ends with the setup block, so researchers can judge whether the creator can actually make the idea.
-  const withPersona = (description: string) => {
-    const base = personaText && !description.includes(personaText) ? `${description}${description ? '\n\n' : ''}${personaText}` : description;
-    return base.includes('My setup:') ? base : `${base}${base ? '\n\n' : ''}${SETUP_BLOCK}`;
-  };
+  // Every brief carries the creator's saved persona and ends with the setup block, so researchers can
+  // judge whether the creator can actually make the idea.
+  const withPersona = (description: string) =>
+    [description, personaText && !description.includes(personaText) && personaText, !description.includes(SETUP_MARKER) && SETUP_BLOCK].filter(Boolean).join('\n\n');
   const withAvoid = (avoid: string) => (persona?.avoid_topics && !avoid.includes(persona.avoid_topics) ? [avoid, persona.avoid_topics].filter(Boolean).join('; ') : avoid);
   const [price, setPrice] = useState(initial?.price ?? '8');
   const [max, setMax] = useState(initial?.max_unlocks ?? '5');

@@ -11,6 +11,7 @@ import { env } from '@/lib/env';
 import { BRAND } from '@/lib/brand';
 import { failBack } from '@/lib/flash';
 import { friendlyErrorWithLimits } from '@/lib/settings';
+import { stripUnfilledSetup } from '@/lib/constants';
 
 // Browsers submit textarea line breaks as CRLF; normalise so length limits match what people see.
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').replace(/\r\n/g, '\n').trim();
@@ -50,7 +51,7 @@ export async function createBrief(_: ActionResult | null, fd: FormData): Promise
   const supabase = await createClient();
   const { data: briefId, error } = await supabase.rpc('create_brief', {
     p_title: str(fd, 'title'),
-    p_description: str(fd, 'description'),
+    p_description: stripUnfilledSetup(str(fd, 'description')),
     p_platform: str(fd, 'platform'),
     p_niche_id: Number(str(fd, 'niche_id')),
     p_must_include: str(fd, 'must_include'),

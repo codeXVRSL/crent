@@ -21,7 +21,8 @@ await p.goto(`${B}/pricing`); await shot(p, '02-pricing');
 p = await ctx(); await login(p, 'demo.creator@example.com');
 const [brief] = await rest(`briefs?select=id&title=eq.10 TikTok money ideas for young professionals`);
 await p.goto(`${B}/briefs/${brief.id}`); await shot(p, '03-brief-locked-pitches');
-for (let i = 0; i < 2; i++) {
+// Unlock two ideas so the later screens have content (skipped when a previous run already did).
+for (let i = 0; i < 2 && (await p.getByRole('button', { name: /^Unlock for/ }).count()) > 0; i++) {
   await p.getByRole('button', { name: /^Unlock for/ }).first().click(); await p.getByRole('button', { name: 'Confirm unlock' }).click();
   await p.getByText('Unlocked.').first().waitFor({ timeout: 15000 }).catch(() => {}); await p.reload(); await settle(p);
 }
@@ -29,7 +30,7 @@ await p.goto(`${B}/briefs/${brief.id}`); await settle(p);
 await p.locator('article', { has: p.getByText('Source video') }).first().scrollIntoViewIfNeeded(); await p.waitForTimeout(500);
 await p.screenshot({ path: `${OUT}/04-unlocked-idea.png` }); console.log('saved 04-unlocked-idea');
 await p.goto(`${B}/ideas`); await settle(p);
-await p.getByRole('button', { name: 'Move to Scripting' }).first().click(); await settle(p);
+if (await p.getByRole('button', { name: 'Move to Scripting' }).count()) { await p.getByRole('button', { name: 'Move to Scripting' }).first().click(); await settle(p); }
 await shot(p, '05-idea-board');
 await p.goto(`${B}/dashboard`); await shot(p, '06-creator-dashboard');
 await p.goto(`${B}/briefs/new`); await shot(p, '07-post-a-brief');

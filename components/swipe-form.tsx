@@ -4,7 +4,7 @@ import { ActionForm, SubmitButton } from './form';
 import { Field, Input, Select, Textarea } from './ui';
 import { addSwipeItem } from '@/app/actions/swipe';
 import { HOOK_CATEGORIES, PLATFORMS } from '@/lib/constants';
-import { formatMultiplier } from '@/lib/outlier';
+import { formatMultiplier, multiplier } from '@/lib/outlier';
 import { manilaToday, parseViews } from '@/lib/parse';
 
 export function SwipeForm({ niches, defaultNiche }: { niches: { id: number; name: string }[]; defaultNiche?: number }) {
@@ -12,7 +12,7 @@ export function SwipeForm({ niches, defaultNiche }: { niches: { id: number; name
   const [median, setMedian] = useState('');
   const v = parseViews(views) ?? NaN;
   const m = parseViews(median) ?? NaN;
-  const mult = v > 0 && m > 0 ? Math.round((v / m) * 10) / 10 : null;
+  const mult = v > 0 && m > 0 ? multiplier(v, m) : null;
   return (
     <ActionForm action={addSwipeItem} resetOnSuccess className="grid gap-4">
       <div className="grid gap-4">

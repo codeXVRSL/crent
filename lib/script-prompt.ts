@@ -1,3 +1,4 @@
+import { formatMultiplier } from '@/lib/outlier';
 import { hookLabel, platformLabel } from './constants';
 
 type Idea = {
@@ -14,7 +15,7 @@ export function buildScriptPrompt(i: Idea, creator?: { brand?: string | null; au
     creator?.voice ? `My voice and style: ${creator.voice}` : '',
     creator?.avoid_topics ? `Never mention: ${creator.avoid_topics}` : '',
     '',
-    `The original got ${Number(i.multiplier).toFixed(1)}× its channel's usual views.`,
+    `The original got ${formatMultiplier(i.multiplier)} its channel's usual views.`,
     `Format: ${i.format_label}`,
     `Hook type: ${hookLabel(i.hook_category)}`,
     `Original hook: "${i.hook_text}"`,

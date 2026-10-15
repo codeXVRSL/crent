@@ -6,7 +6,8 @@ import { ActionForm, SubmitButton } from '@/components/form';
 import { joinWaitlist } from '@/app/actions/waitlist';
 
 import { BRAND } from '@/lib/brand';
-import { getSettings, pct, times } from '@/lib/settings';
+import { getSettings, pct } from '@/lib/settings';
+import { formatMultiplier } from '@/lib/outlier';
 export const metadata = { title: { absolute: `${BRAND} · proven content ideas, researched by verified experts` } };
 
 function BentoTile({ className = '', icon, title, children, visual }: {
@@ -62,7 +63,7 @@ export default async function Home() {
       {/* ---------- Facts strip ---------- */}
       <section className="border-y border-line bg-surface">
         <dl className="mx-auto grid max-w-6xl grid-cols-2 divide-line px-4 sm:px-6 md:grid-cols-4 md:divide-x">
-          {[[times(s.minMultiplier), 'minimum outlier score on every pitch'], [pct(10000 - s.creFeeBps), 'of each unlock goes to the researcher'], [pct(s.creatorFeeBps), 'marketplace fee for creators'], [`${s.holdHours}h`, 'to report a problem after unlocking']].map(([n, l]) => (
+          {[[formatMultiplier(s.minMultiplier), 'minimum outlier score on every pitch'], [pct(10000 - s.creFeeBps), 'of each unlock goes to the researcher'], [pct(s.creatorFeeBps), 'marketplace fee for creators'], [`${s.holdHours}h`, 'to report a problem after unlocking']].map(([n, l]) => (
             <div key={l} className="grid gap-1 px-2 py-6 md:px-6">
               <dt className="order-2 text-[13px] text-muted">{l}</dt>
               <dd className="num text-[30px] font-medium tracking-tight">{n}</dd>

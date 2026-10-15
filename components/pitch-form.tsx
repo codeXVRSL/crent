@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Lightbulb } from 'lucide-react';
 import { useActionState } from 'react';
 import { restoreForm, SubmitButton } from './form';
@@ -8,7 +8,7 @@ import type { ActionResult } from '@/lib/errors';
 import { Field, Input, Select, Textarea } from './ui';
 import { submitPitch } from '@/app/actions/pitches';
 import { HOOK_CATEGORIES, INSTRUCTIONS_TEMPLATE, instructionWarnings, PLATFORMS, SIZE_BANDS } from '@/lib/constants';
-import { formatMultiplier } from '@/lib/outlier';
+import { formatMultiplier, multiplier } from '@/lib/outlier';
 import { manilaToday, parseViews } from '@/lib/parse';
 
 // The Supabase client (~70 KB) is only needed when a file is uploaded, so it loads on submit, not with the page.
@@ -29,10 +29,10 @@ export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays
   const [median, setMedian] = useState(prefill ? String(prefill.channel_median_views) : '');
   const [instructions, setInstructions] = useState(INSTRUCTIONS_TEMPLATE);
   // Tips appear once the researcher starts writing, never on an untouched template.
-  const warnings = instructions === INSTRUCTIONS_TEMPLATE ? [] : instructionWarnings(instructions);
+  const warnings = useMemo(() => (instructions === INSTRUCTIONS_TEMPLATE ? [] : instructionWarnings(instructions)), [instructions]);
   const v = parseViews(views) ?? NaN;
   const m = parseViews(median) ?? NaN;
-  const mult = v > 0 && m > 0 ? Math.round((v / m) * 10) / 10 : null;
+  const mult = v > 0 && m > 0 ? multiplier(v, m) : null;
   const today = manilaToday();
   const minDate = maxAgeDays ? new Date(Date.now() - maxAgeDays * 86_400_000).toISOString().slice(0, 10) : undefined;
 

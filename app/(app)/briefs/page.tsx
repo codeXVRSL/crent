@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Button, EmptyState, LinkButton, PageHeader, Pill, Select } from '@/components/ui';
 import { BriefStatus, timeLeft } from '@/components/status';
 import { formatMoney } from '@/lib/money';
+import { formatMultiplier } from '@/lib/outlier';
 import { PLATFORMS, platformLabel } from '@/lib/constants';
 import { MyRetainers, RETAINER_COLUMNS, RetainerList, type Retainer } from '@/components/retainers';
 
@@ -146,7 +147,7 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<F
                 <div className="flex flex-wrap gap-2 text-xs">
                   <Pill>{platformLabel(b.platform)}</Pill>
                   <Pill>{(b.niches as unknown as { name: string } | null)?.name}</Pill>
-                  <Pill>min {Number(b.min_multiplier).toFixed(1)}×</Pill>
+                  <Pill>min {formatMultiplier(b.min_multiplier)}</Pill>
                   <Pill>{b.max_unlocks - b.unlocks_used} unlocks left</Pill>
                 </div>
                 <div className="text-xs text-muted">

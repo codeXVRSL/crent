@@ -41,13 +41,13 @@ export const getSettings = cache(async (): Promise<PublicSettings> => {
 export const pct = (bps: number) => `${Number((bps / 100).toFixed(2))}%`;
 /** 72 → "72 hours", 0 → "no", 1 → "1 hour". Use as "a 72-hour hold" via holdShort. */
 export const holdHoursText = (h: number) => (h === 1 ? '1 hour' : `${h} hours`);
-/** "Released 72 hours after each unlock", or straight away when there is no hold. */
-export const holdReleaseText = (h: number) => (h > 0 ? `Released ${holdHoursText(h)} after each unlock` : 'Released as soon as an idea is unlocked');
+/** "72 hours after an unlock", or "as soon as an idea is unlocked" when there is no hold. */
+export const holdAfterUnlockText = (h: number) => (h > 0 ? `${holdHoursText(h)} after an unlock` : 'as soon as an idea is unlocked');
+export const holdReleaseText = (h: number) => `Released ${holdAfterUnlockText(h)}`;
 export const disputeWindowText = (h: number) => (h > 0 ? `${h}-hour dispute window` : 'No hold: earnings release at once');
 /** Whole dollars when possible: 300 → "$3", 850 → "$8.50". */
 export const usd = (cents: number) => (cents % 100 === 0 ? `$${(cents / 100).toLocaleString('en-US')}` : `$${(cents / 100).toFixed(2)}`);
 /** 3 → "3×", 2.5 → "2.5×". */
-export const times = (m: number) => `${Number(m.toFixed(1))}×`;
 
 /**
  * friendlyError, plus the live numbers for errors about admin-set limits (minimum price, withdrawal

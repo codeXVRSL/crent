@@ -23,5 +23,5 @@ export function compactViews(n: number): string {
 /** 3.4×, 9.9×, then whole numbers from 10× up (the decimal stops meaning anything). */
 export function formatMultiplier(m: number | string): string {
   const n = Number(m);
-  return `${n >= 10 ? Math.round(n) : n.toFixed(1)}×`;
+  return Number(n.toFixed(1)) >= 10 ? `${Math.round(n)}×` : `${n.toFixed(1)}×`;
 }

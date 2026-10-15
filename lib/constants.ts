@@ -84,38 +84,42 @@ ADJUSTMENT NOTE (how to make it work with your setup):
  * they catch the things creators complain about most: no "Follow" in the CTA, no timings,
  * sections of the template left empty, and writing about the creator instead of to them.
  */
+// Lines the template itself contains never count as content, however the researcher edits around them.
+const TEMPLATE_LINES = new Set(INSTRUCTIONS_TEMPLATE.split('\n').map((l) => l.trim()).filter(Boolean));
+
 export function instructionWarnings(text: string): string[] {
   const out: string[] = [];
-  const t = text.replace(/\r\n/g, '\n');
-  // Split the write-up into sections at the template headings (UPPER CASE words ending in a colon).
-  // Heading lines and the template's own hints in brackets never count as content.
-  const sections = new Map<string, string>();
+  const sections = new Map<string, string[]>();
+  const body: string[] = [];
   let current = '';
-  const bodyLines: string[] = [];
-  for (const raw of t.split('\n')) {
-    const h = raw.match(/^([A-Z][A-Z /+]+?)(?:\s*\(.*\))?:/);
-    if (h) { current = h[1].trim(); sections.set(current, ''); continue; }
-    const line = raw.replace(/\([^)]*\)/g, '');
-    bodyLines.push(line);
-    if (current) sections.set(current, `${sections.get(current)}\n${line}`);
+  for (const raw of text.replace(/\r\n/g, '\n').split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    // A heading is UPPER CASE words ending in a colon ("CTA:", "HOOK (first 3 seconds):"); text after the colon is content.
+    const h = line.match(/^([A-Z][A-Z /+]+?)(?:\s*\([^)]*\))?:\s*(.*)$/);
+    if (h) { current = h[1].trim(); if (!sections.has(current)) sections.set(current, []); }
+    if (TEMPLATE_LINES.has(line)) continue;
+    const content = h ? h[2] : line.replace(/^[•\-\d.)]+\s*/, '');
+    if (!content) continue;
+    body.push(content);
+    if (current) sections.get(current)!.push(content);
   }
-  const body = bodyLines.join('\n');
-  // What's left once bullets, numbering and the template's "Label:" prompts are removed.
-  const filled = (name: string) => {
-    const text = sections.get(name);
-    return text == null ? null : text.replace(/^[\s•\-\d.)]+/gm, '').replace(/^[^:\n]{0,70}:\s*/gm, '').trim();
-  };
+  const filled = (name: string) => (sections.has(name) ? sections.get(name)!.join(' ').trim() : null);
   const cta = filled('CTA');
   if (cta != null && !/follow/i.test(cta)) out.push('Add "Follow" to the CTA: it is the one ask that grows the account.');
-  if (!/\b\d+\s*(s|sec|secs|seconds?)\b/i.test(body)) out.push('Say how long each part should be, in seconds.');
+  if (!/\b\d+\s*(s|sec|secs|seconds?)\b/i.test(body.join('\n'))) out.push('Say how long each part should be, in seconds.');
   const hook = filled('HOOK');
   if (hook != null && hook.length < 15) out.push("Fill in the hook: what's said and what's on screen in the first 3 seconds.");
   const filming = filled('HOW TO FILM AND EDIT');
   if (filming != null && filming.length < 20) out.push('Fill in the filming and editing steps.');
-  if (/\b(the creator|the client|he should|she should|they should)\b/i.test(t)) out.push('Write to the creator as "you", not about them.');
+  if (/\b(the creator|the client)\s+(should|will|can|needs?|must|has to)\b|\b(he|she|they)\s+should\b/i.test(text)) out.push('Write to the creator as "you", not about them.');
   return out;
 }
 
+/** Drops setup lines the creator left as the template's hints, so researchers never read placeholders as answers. */
+export function stripUnfilledSetup(description: string): string {
+  return description.replace(/\r\n/g, '\n').split('\n').filter((l) => !SETUP_HINTS.has(l.trim())).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
 
 export const IDEA_STAGES = [
   { value: 'saved', label: 'To do' },
@@ -137,13 +141,16 @@ export const PASS_REASONS = [
 ] as const;
 export const passReasonLabel = (v: string) => PASS_REASONS.find((r) => r.value === v)?.label ?? v;
 
-/** Starting points for the brief form. Creators edit everything before posting. */
 /** A short block creators fill in so researchers can judge whether they can actually make the idea. */
 export const SETUP_BLOCK = `My setup: (phone, tripod, ring light, camera)
 Editing level: (beginner / comfortable with CapCut / advanced)
 Tone: (calm, warm, bold, playful)
 Hard no's: (dancing, skits, anything inauthentic)`;
+/** The first setup line, used to tell whether a description already has the block. */
+export const SETUP_MARKER = 'My setup:';
+const SETUP_HINTS = new Set(SETUP_BLOCK.split('\n').map((l) => l.trim()));
 
+/** Starting points for the brief form. Creators edit everything before posting. */
 export const BRIEF_TEMPLATES = [
   {
     id: 'clip-text',

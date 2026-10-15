@@ -15,7 +15,7 @@ export const PITCH_CHECKS: { title: string; body: string }[] = [
 
 export function PitchChecklist({ compact = false }: { compact?: boolean }) {
   return (
-    <ul className={`grid gap-${compact ? '2' : '3'}`}>
+    <ul className={compact ? 'grid gap-2' : 'grid gap-3'}>
       {PITCH_CHECKS.map((c) => (
         <li key={c.title} className="flex gap-2.5">
           <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
