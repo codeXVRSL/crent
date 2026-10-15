@@ -111,7 +111,7 @@ test('brief → pitch → locked → unlock → close/refund → payout → chat
   await cre.page.getByLabel('Angle (teaser)').fill('A month of tracking spending with one surprising category');
   await cre.page.getByLabel('Source video views').fill('1300000');
   await cre.page.getByLabel('Channel median views').fill('92000');
-  await expect(cre.page.getByText('14.1×')).toBeVisible();
+  await expect(cre.page.getByText('14×')).toBeVisible();
   await cre.page.getByLabel('Source posted on').fill(new Date(Date.now() - 20 * 86400000).toISOString().slice(0, 10));
   await cre.page.getByLabel('Source video link').fill(SOURCE);
   await cre.page.getByLabel('Hook (exact words)').fill(HOOK);
@@ -138,7 +138,7 @@ test('brief → pitch → locked → unlock → close/refund → payout → chat
 
   // ---------- Creator sees a LOCKED card: secrets must not be in the HTML ----------
   await creator.page.goto(briefUrl);
-  await expect(creator.page.getByText('14.1×')).toBeVisible();
+  await expect(creator.page.getByText('14×')).toBeVisible();
   const lockedHtml = await creator.page.content();
   expect(lockedHtml).not.toContain(HOOK);
   expect(lockedHtml).not.toContain(SOURCE);
@@ -147,7 +147,7 @@ test('brief → pitch → locked → unlock → close/refund → payout → chat
   await creator.page.getByRole('button', { name: 'Unlock for $12.00' }).click();
   await creator.page.getByRole('button', { name: 'Confirm unlock' }).click();
   await expect(creator.page.getByText(HOOK)).toBeVisible({ timeout: 15_000 });
-  await expect(creator.page.getByText(SOURCE)).toBeVisible();
+  await expect(creator.page.locator(`a[href="${SOURCE}"]`)).toBeVisible();
 
   // ---------- Chat masks contact details ----------
   await creator.page.getByRole('button', { name: 'Message' }).first().click();

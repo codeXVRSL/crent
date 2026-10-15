@@ -21,10 +21,10 @@ export function ThemeToggle() {
     try { if (m === 'system') localStorage.removeItem('od-theme'); else localStorage.setItem('od-theme', m); } catch {}
   }
   return (
-    <div role="radiogroup" aria-label="Theme" className="inline-flex rounded-2xl border border-line bg-surface shadow-sm-2 p-0.5">
+    <div role="radiogroup" aria-label="Theme" className="inline-flex w-fit rounded-2xl border border-line bg-surface shadow-sm-2 p-0.5">
       {OPTIONS.map(({ mode: m, label, Icon }) => (
         <button key={m} type="button" role="radio" aria-checked={mode === m} aria-label={label} title={label} onClick={() => apply(m)}
-          className={`grid size-7 place-items-center rounded-md transition-colors duration-150 ${mode === m ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>
+          className={`grid size-7 place-items-center rounded-md transition-colors duration-150 ${mode === m ? 'bg-accent-soft text-accent' : 'text-muted hover:text-ink'}`}>
           <Icon className="size-3.5" />
         </button>
       ))}

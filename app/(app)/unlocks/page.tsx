@@ -102,7 +102,7 @@ export default async function Unlocks({ searchParams }: { searchParams: Promise<
                   {u.status === 'disputed' && <UnlockStatus status="disputed" />}
                   {canDispute && <DisputeToggle unlockId={u.id} />}
                   <VariationBox unlockId={u.id} request={vMap.get(u.id) ?? null} />
-                  <Link href={`/briefs/new?like=${u.id}`} className="inline-flex h-9 items-center rounded-[10px] px-3 text-sm font-medium text-ink-2 hover:bg-surface-2 hover:text-ink">More like this</Link>
+                  <LinkButton href={`/briefs/new?like=${u.id}`} variant="ghost">More like this</LinkButton>
                   {reviewed.has(u.id) ? <Pill tone="good">You rated {reviewed.get(u.id)}★</Pill> : <ReviewForm unlockId={u.id} label="Rate this researcher" />}
                 </>}
               />

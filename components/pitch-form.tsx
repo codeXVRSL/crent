@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { Lightbulb } from 'lucide-react';
 import { useActionState } from 'react';
 import { restoreForm, SubmitButton } from './form';
 import { Notice } from './ui';
@@ -27,7 +28,8 @@ export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays
   const [views, setViews] = useState(prefill ? String(prefill.source_views) : '');
   const [median, setMedian] = useState(prefill ? String(prefill.channel_median_views) : '');
   const [instructions, setInstructions] = useState(INSTRUCTIONS_TEMPLATE);
-  const warnings = instructionWarnings(instructions);
+  // Tips appear once the researcher starts writing, never on an untouched template.
+  const warnings = instructions === INSTRUCTIONS_TEMPLATE ? [] : instructionWarnings(instructions);
   const v = parseViews(views) ?? NaN;
   const m = parseViews(median) ?? NaN;
   const mult = v > 0 && m > 0 ? Math.round((v / m) * 10) / 10 : null;
@@ -122,8 +124,8 @@ export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays
           <Textarea id="instructions" name="instructions" required minLength={80} maxLength={6000} rows={18} value={instructions} onChange={(e) => setInstructions(e.target.value)} className="font-mono text-sm" />
         </Field>
         {warnings.length > 0 && (
-          <ul className="grid gap-1 text-xs text-warn" aria-live="polite" aria-label="Tips for the write-up">
-            {warnings.map((w) => <li key={w}>• {w}</li>)}
+          <ul className="grid gap-1 rounded-xl border border-line bg-surface-2 p-3 text-xs text-ink-2" aria-live="polite" aria-label="Tips for the write-up">
+            {warnings.map((w) => <li key={w} className="flex gap-2"><Lightbulb className="mt-0.5 size-3.5 shrink-0 text-warn" aria-hidden="true" />{w}</li>)}
           </ul>
         )}
         <Field label="How to adapt it for this creator (optional)" htmlFor="adaptation_notes" hint="If the original needs a face, a crew or gear the brief says they don't have, say how to make it with what they do have.">
@@ -134,12 +136,12 @@ export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays
         </Field>
       </section>
 
-      <label className="flex items-start gap-2 text-sm">
+      <label className="flex items-start gap-2 rounded-xl border border-line bg-surface p-3 text-sm shadow-sm">
         <input type="checkbox" required className="mt-1" />
         <span>The views and median are accurate today, the idea works without the original creator&apos;s personal appeal, and the write-up is my own work.</span>
       </label>
       {state && !state.ok && <Notice tone="bad">{state.message}</Notice>}
-      <SubmitButton pendingText="Sending pitch…" className="justify-self-start">Send pitch</SubmitButton>
+      <SubmitButton pendingText="Sending pitch…" size="lg" className="w-full sm:w-auto sm:justify-self-start">Send pitch</SubmitButton>
     </form>
   );
 }

@@ -56,7 +56,7 @@ export default async function CreProfile({ params }: { params: Promise<{ handle:
         <Stat label="Pitches sent" value={cre.pitches_sent ?? 0} />
         <Stat label="Unlocked" value={cre.pitches_unlocked ?? 0} />
         <Stat label="Unlock rate" value={cre.unlock_rate_pct != null ? `${cre.unlock_rate_pct}%` : '–'} />
-        <Stat label="Rating" value={cre.avg_rating ? `${cre.avg_rating}★` : '–'} sub={`${cre.review_count} reviews`} />
+        <Stat label="Rating" value={cre.avg_rating ? `${cre.avg_rating}★` : '–'} sub={`${cre.review_count} ${cre.review_count === 1 ? 'review' : 'reviews'}`} />
       </section>
 
       <section className="grid gap-3">
@@ -75,6 +75,7 @@ export default async function CreProfile({ params }: { params: Promise<{ handle:
 
       <section className="grid gap-3">
         <h2 className="text-lg font-semibold tracking-tight">Portfolio finds</h2>
+        {!(portfolio ?? []).length ? <p className="text-sm text-muted">No portfolio finds yet.</p> : (
         <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">
           <table className="w-full min-w-[560px] text-sm">
             <thead><tr className="border-b border-line text-left">
@@ -91,7 +92,7 @@ export default async function CreProfile({ params }: { params: Promise<{ handle:
               ))}
             </tbody>
           </table>
-        </div>
+        </div>)}
       </section>
 
       <section className="grid gap-3">

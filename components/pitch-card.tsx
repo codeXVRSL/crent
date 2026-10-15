@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AlertTriangle, Clock, Lock, PlayCircle, ShieldCheck, Sparkles } from 'lucide-react';
+import { AlertTriangle, Clock, ExternalLink, Lock, PlayCircle, ShieldCheck, Sparkles } from 'lucide-react';
 import { Pill } from './ui';
 import { CopyButton } from './copy-button';
 import { compactViews, formatMultiplier, tier, tierLabel } from '@/lib/outlier';
@@ -40,6 +40,11 @@ const statusPill: Record<string, { tone: 'neutral' | 'accent' | 'good' | 'muted'
   withdrawn: { tone: 'muted', label: 'Withdrawn' },
   refunded: { tone: 'bad', label: 'Refunded after dispute' },
 };
+
+// "tiktok.com/@sample/video/7500…" instead of a 90-character URL that breaks mid-number on phones.
+function linkLabel(url: string) {
+  try { const u = new URL(url); const path = u.pathname.length > 28 ? `${u.pathname.slice(0, 28)}…` : u.pathname; return `${u.hostname.replace(/^www\./, '')}${path}`; } catch { return url; }
+}
 
 // source_posted_on is a calendar date; format it in UTC so every viewer (and server/browser) agrees.
 function fmtDate(d: string) {
@@ -128,7 +133,7 @@ export function PitchCard({
           </div>
           <div className="grid gap-1">
             <span className="label">Source video</span>
-            <a href={secret.source_url} target="_blank" rel="noopener noreferrer" className="break-all text-sm font-medium text-accent underline underline-offset-2">{secret.source_url}</a>
+            <a href={secret.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-1 text-sm font-medium text-accent underline underline-offset-2"><span className="truncate">{linkLabel(secret.source_url)}</span><ExternalLink className="size-3.5 shrink-0" aria-hidden="true" /></a>
             {secret.source_channel_url && <a href={secret.source_channel_url} target="_blank" rel="noopener noreferrer" className="break-all text-xs text-muted underline">{secret.source_channel_url}</a>}
           </div>
           <div className="grid gap-1"><span className="label">Why it worked</span><p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-2">{secret.why_it_worked}</p></div>

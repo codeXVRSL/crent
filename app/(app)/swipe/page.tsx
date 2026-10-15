@@ -86,14 +86,14 @@ export default async function Swipe({ searchParams }: { searchParams: Promise<{ 
           {list.map((i) => {
             const matches = ((briefs ?? []) as OpenBrief[]).filter((b) => fits(i, b));
             return (
-              <li key={i.id} className="grid gap-3 rounded-2xl border border-line bg-surface p-4 shadow-sm sm:grid-cols-[88px_1fr]">
+              <li key={i.id} className="grid min-w-0 gap-3 rounded-2xl border border-line bg-surface p-4 shadow-sm [&>*]:min-w-0 sm:grid-cols-[88px_1fr]">
                 <div>
                   <div className={`num text-[26px] font-medium leading-none tracking-tight ${Number(i.multiplier) >= 3 ? 'text-accent' : 'text-muted'}`}>{formatMultiplier(i.multiplier)}</div>
                   <div className="num mt-1 text-[11px] text-muted">{compactViews(i.source_views)} / {compactViews(i.channel_median_views)}</div>
                 </div>
                 <div className="grid min-w-0 gap-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <a href={i.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 items-center gap-1.5 font-semibold hover:text-accent">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                    <a href={i.source_url} target="_blank" rel="noopener noreferrer" className="flex min-w-0 items-center gap-1.5 font-semibold hover:text-accent">
                       <span className="truncate">{i.title}</span><ExternalLink className="size-3.5 shrink-0 text-muted" aria-hidden="true" />
                     </a>
                     <span className="text-xs text-muted">Saved {fmtDate(i.created_at)}</span>
@@ -111,8 +111,8 @@ export default async function Swipe({ searchParams }: { searchParams: Promise<{ 
                         <span className="text-[12px] font-medium text-accent">Fits {matches.length} open brief{matches.length > 1 ? 's' : ''}</span>
                         <ul className="grid gap-1 text-sm">
                           {matches.slice(0, 3).map((b) => (
-                            <li key={b.id} className="flex flex-wrap items-center justify-between gap-2">
-                              <Link href={`/briefs/${b.id}`} className="min-w-0 truncate hover:text-accent">{b.title} <span className="num text-muted">· {formatMoney(b.price_per_idea_cents, b.currency)}/idea</span></Link>
+                            <li key={b.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                              <Link href={`/briefs/${b.id}`} className="truncate hover:text-accent">{b.title} <span className="num text-muted">· {formatMoney(b.price_per_idea_cents, b.currency)}/idea</span></Link>
                               <Link href={`/briefs/${b.id}/pitch?swipe=${i.id}`} className="text-[13px] font-medium text-accent underline underline-offset-2">Pitch this</Link>
                             </li>
                           ))}

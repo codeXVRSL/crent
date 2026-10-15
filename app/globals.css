@@ -174,3 +174,17 @@ table tbody tr:hover { background: color-mix(in oklab, var(--surface-2) 55%, tra
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Form controls follow the brand colour, and read as controls in dark mode too. */
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+
+/* Scroll shadows on wide tables, so a phone shows there is more to the right. */
+.overflow-x-auto:has(> table) {
+  background:
+    linear-gradient(90deg, var(--surface) 30%, transparent) left / 28px 100% no-repeat local,
+    linear-gradient(270deg, var(--surface) 30%, transparent) right / 28px 100% no-repeat local,
+    linear-gradient(90deg, var(--line-strong), transparent) left / 14px 100% no-repeat scroll,
+    linear-gradient(270deg, var(--line-strong), transparent) right / 14px 100% no-repeat scroll,
+    var(--surface);
+}
+.overflow-x-auto > table th, .overflow-x-auto > table td.num { white-space: nowrap; }

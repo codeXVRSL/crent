@@ -29,7 +29,7 @@ export default async function Pricing() {
         <h1 className="text-[40px] font-semibold tracking-tight">No subscriptions. You pay per idea.</h1>
       </div>
       <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">
-        <table className="w-full min-w-[480px] text-sm">
+        <table className="w-full text-sm">
           <thead><tr className="border-b border-line text-left"><th className="label p-3">Fee</th><th className="label p-3">Rate</th><th className="label p-3">Paid by</th></tr></thead>
           <tbody>
             <tr className="border-b border-line"><td className="p-3">Marketplace fee</td><td className="num p-3">{pct(s.creatorFeeBps)}</td><td className="p-3">Creator, added when funding a brief</td></tr>

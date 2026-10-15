@@ -480,7 +480,7 @@ await step('swipe file: add, archive, delete; pitch prefill marks it pitched', a
   const p = cre.page; await p.goto(`${BASE}/swipe`);
   await p.getByLabel('Name', { exact: true }).fill('Soup hack'); await p.getByLabel('Video link').fill(`https://www.tiktok.com/@s/video/${vid}99`);
   await p.getByLabel('Views', { exact: true }).fill('400000'); await p.getByLabel('Channel median').fill('20000'); await p.getByRole('button', { name: 'Save to swipe file' }).click();
-  await visible(p, 'Saved to your swipe file.'); await p.reload(); await visible(p, '20.0×');
+  await visible(p, 'Saved to your swipe file.'); await p.reload(); await visible(p, '20×');
   await p.getByRole('button', { name: 'Archive' }).first().click(); await p.goto(`${BASE}/swipe?view=archived`); await visible(p, 'Soup hack');
   await p.getByRole('button', { name: 'Delete' }).first().click(); await sleep(1000); await p.goto(`${BASE}/swipe?view=archived`); expect(!(await text(p)).includes('Soup hack'), 'not deleted');
 });

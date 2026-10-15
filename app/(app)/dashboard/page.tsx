@@ -9,7 +9,7 @@ import { formatMoney } from '@/lib/money';
 import { formatMultiplier } from '@/lib/outlier';
 import { FileText, Inbox, LockOpen, Percent, Plus, Star, Timer, Wallet } from 'lucide-react';
 import { When } from '@/components/when';
-import { getSettings } from '@/lib/settings';
+import { disputeWindowText, getSettings } from '@/lib/settings';
 
 export const metadata = { title: 'Dashboard' };
 
@@ -150,10 +150,10 @@ export default async function Dashboard() {
           <ol className="grid gap-1">
             {steps.map((st, i) => (
               <li key={st.label}>
-                <Link href={st.href} className="flex items-start gap-3 rounded-xl p-2.5 hover:bg-surface-2">
+                <Link href={st.href} className={`flex items-start gap-3 rounded-xl p-2.5 hover:bg-surface-2 ${!st.done && !st.pending ? 'bg-accent-soft/40 ring-1 ring-inset ring-accent/20' : ''}`}>
                   <span className={`num mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${st.done ? 'bg-good-soft text-good' : st.pending ? 'bg-warn-soft text-warn' : 'border border-line-strong text-muted'}`} aria-hidden="true">{st.done ? '✓' : i + 1}</span>
                   <span className="grid gap-0.5">
-                    <span className={`font-medium ${st.done ? 'text-muted line-through' : ''}`}>{st.label}<span className="sr-only">{st.done ? ' (done)' : st.pending ? ' (in review)' : ''}</span></span>
+                    <span className={`font-medium ${st.done ? 'text-muted' : ''}`}>{st.label}<span className="sr-only">{st.done ? ' (done)' : st.pending ? ' (in review)' : ''}</span></span>
                     {!st.done && <span className="text-sm text-muted">{st.detail}</span>}
                   </span>
                 </Link>
@@ -164,7 +164,7 @@ export default async function Dashboard() {
       )}
       <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Available" value={formatMoney(bal?.available_cents ?? 0)} icon={<Wallet className="size-4" />} emphasis sub={(bal?.available_cents ?? 0) > 0 ? <Link href="/wallet" className="underline">Withdraw</Link> : 'Nothing to withdraw yet'} />
-        <Stat label="On hold" value={formatMoney(bal?.held_cents ?? 0)} icon={<Timer className="size-4" />} sub={`${(await getSettings()).holdHours}-hour dispute window`} />
+        <Stat label="On hold" value={formatMoney(bal?.held_cents ?? 0)} icon={<Timer className="size-4" />} sub={disputeWindowText((await getSettings()).holdHours)} />
         <Stat label="Unlock rate" value={stats?.unlock_rate_pct != null ? `${stats.unlock_rate_pct}%` : '–'} icon={<Percent className="size-4" />} />
         <Stat label="Rating" value={stats?.avg_rating ? `${stats.avg_rating}★` : '–'} icon={<Star className="size-4" />} sub={`${stats?.review_count ?? 0} reviews`} />
       </div>

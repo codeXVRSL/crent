@@ -96,7 +96,7 @@ test('idea board, results loop, shortlist/pass, invites, swipe file', async ({ b
   await finance.page.getByLabel('Video link').fill(`https://www.tiktok.com/@grad/video/${vid}1`);
   await finance.page.getByLabel('Views', { exact: true }).fill('900000');
   await finance.page.getByLabel('Channel median').fill('60000');
-  await expect(finance.page.getByText('15.0×').first()).toBeVisible();
+  await expect(finance.page.getByText('15×').first()).toBeVisible();
   await finance.page.getByLabel('Posted on').fill(daysAgo(10));
   await finance.page.getByLabel('Niche').selectOption({ label: 'Personal finance' });
   await finance.page.getByLabel('Notes').fill('Concrete plan with real numbers makes people save the video for later.');
@@ -140,7 +140,7 @@ test('idea board, results loop, shortlist/pass, invites, swipe file', async ({ b
   await creator.page.goto(briefUrl);
   const cards = creator.page.locator('article');
   await expect(cards).toHaveCount(2);
-  await expect(cards.first()).toContainText('15.0×'); // highest score first
+  await expect(cards.first()).toContainText('15×'); // highest score first
   await cards.first().getByRole('button', { name: 'Add to shortlist' }).click();
   await expect(creator.page.getByRole('link', { name: /Shortlist 1/ })).toBeVisible();
   const quiz = cards.filter({ hasText: 'Street quiz' });
