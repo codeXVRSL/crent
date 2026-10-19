@@ -36,7 +36,7 @@ reset role;
 select u.cre_id as ec from unlocks u where u.status <> 'reversed' group by u.cre_id order by count(*) desc limit 1 \gset
 select set_config('request.jwt.claim.sub', :'ec', false); set role authenticated;
 select case when count(*) = 12 and extract(isodow from min(week_start)) = 1
-             and (select sum(earned_cents) from my_weekly_earnings(12)) = (select coalesce(sum(net_cents), 0) from unlocks where cre_id = :'ec' and status <> 'reversed' and created_at >= now() - interval '11 weeks')
+             and (select sum(earned_cents) from my_weekly_earnings(12)) = (select coalesce(sum(net_cents), 0) from unlocks where cre_id = :'ec' and status <> 'reversed' and created_at >= (select min(week_start) from manila_weeks(12))::timestamp at time zone 'Asia/Manila')
   then '✓ weekly earnings: 12 Monday weeks, own unlocks only' else 'FAIL: weekly earnings ' || count(*) end from my_weekly_earnings(12);
 reset role;
 select set_config('request.jwt.claim.sub', :'r3', false); set role authenticated;

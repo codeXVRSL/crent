@@ -18,7 +18,7 @@ export function buildScriptPrompt(i: Idea, creator?: { brand?: string | null; au
     `The original got ${formatMultiplier(i.multiplier)} its channel's usual views.`,
     `Format: ${i.format_label}`,
     `Hook type: ${hookLabel(i.hook_category)}`,
-    i.idea_category ? `Kind of idea: ${categoryLabel(i.idea_category)}` : '',
+    ...(i.idea_category ? [`Kind of idea: ${categoryLabel(i.idea_category)}`] : []),
     `Original hook: "${i.hook_text}"`,
     `Angle: ${i.teaser}`,
     '',

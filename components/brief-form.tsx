@@ -90,7 +90,7 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial, per
           <Textarea id="example_urls" name="example_urls" rows={3} placeholder="https://" defaultValue={seed.example_urls?.join('\n')} />
         </Field>
         </section>
-        <details className="grid gap-4" open={seed.min_multiplier != null || seed.max_video_age_days !== undefined}>
+        <details className="grid gap-4" open>
         <summary className="cursor-pointer text-base font-semibold">Filters <span className="text-sm font-normal text-muted">(minimum score, source age)</span></summary>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Field label="Minimum outlier score" htmlFor="min_multiplier" hint={`Views ÷ channel median. ${limits.minMultiplier}× minimum.`}>

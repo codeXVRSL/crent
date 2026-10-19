@@ -159,7 +159,7 @@ export default async function BriefPage({ params, searchParams }: {
         : !(passed.has(p.id) && p.status === 'submitted'));
     const hooksPresent = [...new Set(live.map((p) => p.hook_category))];
     // The mix of idea kinds among pitches still in play, so a creator can see what the batch is missing.
-    const inPlay = live.filter((p) => p.status === 'submitted' || p.status === 'unlocked');
+    const inPlay = live.filter((p) => (p.status === 'submitted' && !(passed.has(p.id) && sp.show !== 'passed')) || p.status === 'unlocked');
     const mix = IDEA_CATEGORIES.map((c) => ({ ...c, n: inPlay.filter((p) => p.idea_category === c.value).length }));
     const qs = (patch: Record<string, string | undefined>) => {
       const q = new URLSearchParams();
@@ -193,10 +193,10 @@ export default async function BriefPage({ params, searchParams }: {
                 <div className="flex flex-wrap items-center gap-1.5" aria-label="Mix of idea kinds">
                   <span className="mr-1 text-xs text-muted">Mix</span>
                   <Link href={qs({ kind: undefined })} className={chip(!sp.kind)}>All</Link>
-                  {mix.map((c) => (
-                    <Link key={c.value} href={qs({ kind: c.n ? c.value : undefined })} className={`${chip(sp.kind === c.value)} ${c.n ? '' : 'opacity-60'}`} title={c.hint}>
-                      {c.label} <span className="num">{c.n}</span>
-                    </Link>
+                  {mix.map((c) => c.n ? (
+                    <Link key={c.value} href={qs({ kind: c.value })} className={chip(sp.kind === c.value)} title={c.hint}>{c.label} <span className="num">{c.n}</span></Link>
+                  ) : (
+                    <span key={c.value} className={`${chip(false)} opacity-60`} title={c.hint}>{c.label} <span className="num">0</span></span>
                   ))}
                   {mix.some((c) => !c.n) && <span className="text-xs text-muted">Missing: {mix.filter((c) => !c.n).map((c) => c.label.toLowerCase()).join(', ')}</span>}
                 </div>

@@ -32,11 +32,13 @@ export default async function Dashboard() {
     ]);
     // Pitches the creator already passed on aren't waiting for them.
     const waitingIds = (waiting ?? []).map((p) => p.id);
-    const { data: passed } = waitingIds.length ? await supabase.from('pitch_feedback').select('pitch_id').in('pitch_id', waitingIds) : { data: [] };
+    const creIds = [...new Set((waiting ?? []).map((p) => p.cre_id))];
+    const [{ data: passed }, { data: cres }] = await Promise.all([
+      waitingIds.length ? supabase.from('pitch_feedback').select('pitch_id').in('pitch_id', waitingIds) : Promise.resolve({ data: [] as { pitch_id: string }[] }),
+      creIds.length ? supabase.from('public_cres').select('id, handle').in('id', creIds) : Promise.resolve({ data: [] as { id: string; handle: string }[] }),
+    ]);
     const passedIds = new Set((passed ?? []).map((f) => f.pitch_id));
     const recent = (waiting ?? []).filter((p) => !passedIds.has(p.id));
-    const creIds = [...new Set(recent.map((p) => p.cre_id))];
-    const { data: cres } = creIds.length ? await supabase.from('public_cres').select('id, handle').in('id', creIds) : { data: [] };
     const handleOf = new Map((cres ?? []).map((c) => [c.id as string, c.handle as string]));
     const tracked = tracking ?? [];
     const inProduction = tracked.filter((t) => t.stage === 'scripting' || t.stage === 'filming').length;

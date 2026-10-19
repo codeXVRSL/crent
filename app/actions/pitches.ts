@@ -42,7 +42,7 @@ export async function submitPitch(_: ActionResult | null, fd: FormData): Promise
     p_why_it_worked: str(fd, 'why_it_worked'),
     p_instructions: str(fd, 'instructions'),
     p_adaptation_notes: str(fd, 'adaptation_notes'),
-    p_idea_category: str(fd, 'idea_category') || 'educational',
+    ...(str(fd, 'idea_category') ? { p_idea_category: str(fd, 'idea_category') } : {}),
   });
   if (error) return { ok: false, message: await friendlyErrorWithLimits(error) };
   const proofPath = str(fd, 'proof_path');
