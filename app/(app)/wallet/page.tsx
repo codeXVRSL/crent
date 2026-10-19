@@ -26,6 +26,7 @@ export default async function Wallet({ searchParams }: { searchParams: Promise<{
   const available = bal?.available_cents ?? 0;
   const min = settings?.min_payout_cents ?? 1000;
   const pending = (payouts ?? []).find((p) => p.status === 'requested' || p.status === 'processing');
+  const canWithdraw = !!pending || !!methods?.length;
 
   return (
     <>
@@ -39,8 +40,8 @@ export default async function Wallet({ searchParams }: { searchParams: Promise<{
         <Stat label="Paid out" value={formatMoney(bal?.paid_out_cents ?? 0)} />
       </div>
 
-      <div className={`grid gap-6 ${pending || methods?.length ? 'lg:grid-cols-2' : ''}`}>
-        {!pending && !methods?.length ? (
+      <div className={`grid gap-6 ${canWithdraw ? 'lg:grid-cols-2' : ''}`}>
+        {!canWithdraw ? (
           <Notice tone="accent">Add a payout method below. You can withdraw once you have {formatMoney(min)} available.</Notice>
         ) : (
         <Card className="grid content-start gap-4">

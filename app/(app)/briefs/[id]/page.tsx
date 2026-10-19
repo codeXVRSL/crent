@@ -116,6 +116,7 @@ export default async function BriefPage({ params, searchParams }: {
     const favIds = new Set((favs ?? []).map((f) => f.cre_id));
     const shortlisted = new Set((shortlist ?? []).map((x) => x.pitch_id));
     const passed = new Map(((feedback ?? []) as Feedback[]).map((f) => [f.pitch_id, f]));
+    const isPassed = (p: { id: string; status: string }) => p.status === 'submitted' && passed.has(p.id);
     const invitedIds = new Set((invites ?? []).map((i) => i.cre_id));
     // Repeat monthly: researchers the creator saved or unlocked from on this brief. A monthly copy
     // belongs to the same retainers as the brief it was copied from.
@@ -150,17 +151,18 @@ export default async function BriefPage({ params, searchParams }: {
         : Number(b.multiplier) - Number(a.multiplier);
     const sorted = [...(pitches ?? [])].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || within(a, b));
     const live = sorted.filter((p) => p.status !== 'withdrawn');
-    const passedCount = live.filter((p) => passed.has(p.id) && p.status === 'submitted').length;
+    const passedCount = live.filter(isPassed).length;
     const visible = live
       .filter((p) => !sp.hook || p.hook_category === sp.hook)
       .filter((p) => !sp.kind || p.idea_category === sp.kind)
-      .filter((p) => sp.show === 'passed' ? passed.has(p.id) && p.status === 'submitted'
-        : sp.show === 'shortlist' ? shortlisted.has(p.id)
-        : !(passed.has(p.id) && p.status === 'submitted'));
+      .filter((p) => sp.show === 'passed' ? isPassed(p) : sp.show === 'shortlist' ? shortlisted.has(p.id) : !isPassed(p));
     const hooksPresent = [...new Set(live.map((p) => p.hook_category))];
     // The mix of idea kinds among pitches still in play, so a creator can see what the batch is missing.
-    const inPlay = live.filter((p) => (p.status === 'submitted' && !(passed.has(p.id) && sp.show !== 'passed')) || p.status === 'unlocked');
-    const mix = IDEA_CATEGORIES.map((c) => ({ ...c, n: inPlay.filter((p) => p.idea_category === c.value).length }));
+    const inPlay = live.filter((p) => (p.status === 'submitted' && !(isPassed(p) && sp.show !== 'passed')) || p.status === 'unlocked');
+    const counts = new Map<string, number>();
+    for (const p of inPlay) counts.set(p.idea_category, (counts.get(p.idea_category) ?? 0) + 1);
+    const mix = IDEA_CATEGORIES.map((c) => ({ ...c, n: counts.get(c.value) ?? 0 }));
+    const missing = mix.filter((c) => !c.n);
     const qs = (patch: Record<string, string | undefined>) => {
       const q = new URLSearchParams();
       const merged = { sort: sp.sort, hook: sp.hook, kind: sp.kind, show: sp.show, ...patch };
@@ -198,7 +200,7 @@ export default async function BriefPage({ params, searchParams }: {
                   ) : (
                     <span key={c.value} className={`${chip(false)} opacity-60`} title={c.hint}>{c.label} <span className="num">0</span></span>
                   ))}
-                  {mix.some((c) => !c.n) && <span className="text-xs text-muted">Missing: {mix.filter((c) => !c.n).map((c) => c.label.toLowerCase()).join(', ')}</span>}
+                  {missing.length > 0 && <span className="text-xs text-muted">Missing: {missing.map((c) => c.label.toLowerCase()).join(', ')}</span>}
                 </div>
               )}
               {live.length > 1 && (

@@ -1,7 +1,6 @@
 // Product screenshots for sharing (docs/screenshots). Run on a fresh database with the demo accounts:
 //   npx supabase db reset && npm run seed:demo && SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node tests/e2e/screenshots.mjs
 import { chromium } from '@playwright/test';
-import { passMfa } from './mfa.mjs';
 import { login as signIn, makeAdmin, restClient } from './helpers.mjs';
 const B = 'http://localhost:3000', OUT = 'docs/screenshots';
 const rest = restClient();
@@ -10,7 +9,7 @@ const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
 const ctx = async (o = {}) => (await b.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, ...o })).newPage();
 const settle = async (p) => { await p.waitForLoadState('networkidle').catch(() => {}); await p.waitForTimeout(900); };
 const shot = async (p, name, full = false) => { await settle(p); await p.screenshot({ path: `${OUT}/${name}.png`, fullPage: full }); console.log('saved', name); };
-const login = (p, email) => signIn(p, B, email);
+const login = (p, email, secret = null) => signIn(p, B, email, undefined, secret);
 
 // Public
 let p = await ctx();
@@ -44,7 +43,7 @@ await p.goto(`${B}/wallet`); await shot(p, '11-researcher-wallet');
 
 // Admin (fresh admin with an authenticator)
 const admin = await makeAdmin(b, B, rest, 'Admin Preview');
-p = await ctx({ viewport: { width: 1440, height: 1180 } }); await login(p, admin.email); await p.goto(`${B}/admin`); if (p.url().includes('/mfa')) await passMfa(p, admin.secret);
+p = await ctx({ viewport: { width: 1440, height: 1180 } }); await login(p, admin.email, admin.secret);
 await p.goto(`${B}/admin`); await shot(p, '12-admin-overview', true);
 
 // Phone, dark mode

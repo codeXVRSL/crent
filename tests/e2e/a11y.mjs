@@ -4,8 +4,7 @@
 import { chromium } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { writeFileSync } from 'node:fs';
-import { passMfa } from './mfa.mjs';
-import { DEMO_PASSWORD as PW, login, makeAdmin, restClient } from './helpers.mjs';
+import { login, makeAdmin, restClient } from './helpers.mjs';
 
 const BASE = 'http://localhost:3000';
 const b = await chromium.launch({ ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}) });
@@ -15,7 +14,7 @@ await rest('rate_limits?key=like.*', { method: 'DELETE' });
 async function session(scheme, email) {
   const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: scheme });
   const p = await ctx.newPage();
-  if (email) await login(p, BASE, email, PW);
+  if (email) await login(p, BASE, email, undefined, email === admin.email ? admin.secret : null);
   return p;
 }
 const [brief] = await rest('briefs?select=id&status=eq.open&limit=1');
@@ -34,7 +33,6 @@ const results = []; let audited = 0;
 for (const scheme of ['light', 'dark']) {
   for (const [role, cfg] of Object.entries(roles)) {
     const p = await session(scheme, cfg.email === 'admin' ? admin.email : cfg.email);
-    if (p.url().includes('/mfa')) await passMfa(p, admin.secret);
     for (const path of cfg.pages) {
       await p.goto(BASE + path, { waitUntil: 'networkidle' }).catch(() => {});
       audited++;

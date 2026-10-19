@@ -7,10 +7,9 @@ import { chromium } from '@playwright/test';
 import { createServer } from 'node:http';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { enrollAdmin, passMfa, totp } from './mfa.mjs';
+import { restClient, signUp as createAccount } from './helpers.mjs';
 
 const BASE = 'http://localhost:3000';
-const SB = process.env.SUPABASE_URL;
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const OUT = process.argv[2] ?? 'exploratory-results';
 mkdirSync(OUT, { recursive: true });
 const run = Date.now().toString(36);
@@ -19,10 +18,7 @@ const PW = 'Explore-Test-2026!';
 const results = [];
 let current = null;
 
-async function rest(path, init = {}) {
-  const res = await fetch(`${SB}/rest/v1/${path}`, { ...init, headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json', Prefer: 'return=representation', ...(init.headers ?? {}) } });
-  const t = await res.text(); if (!res.ok) throw new Error(`${res.status} ${path}: ${t}`); return t ? JSON.parse(t) : null;
-}
+const rest = restClient();
 async function step(name, fn) {
   current = name;
   try { await fn(); results.push({ name, ok: true }); console.log('PASS', name); }
@@ -51,14 +47,9 @@ async function visible(p, t, timeout = 10000) {
 }
 async function signUp(name, as) {
   const p = await newPage();
-  await p.goto(`${BASE}/signup?as=${as}`);
-  await p.getByLabel('Your name').fill(name);
-  await p.getByLabel('Email').fill(`${name.toLowerCase()}-${run}@example.com`);
-  await p.getByLabel('Password').fill(PW);
-  await p.getByRole('button', { name: 'Create account' }).click();
-  await p.waitForURL(/\/onboarding/, { timeout: 15000 });
-  const [u] = await rest(`profiles?select=id&display_name=eq.${name}&order=created_at.desc&limit=1`);
-  return { page: p, id: u.id, email: `${name.toLowerCase()}-${run}@example.com`, name };
+  const email = `${name.toLowerCase()}-${run}@example.com`;
+  const id = await createAccount(p, BASE, rest, { name, email, password: PW, as });
+  return { page: p, id, email, name };
 }
 async function login(email, pw = PW, opts = {}, mfaSecret = null) {
   const p = await newPage(opts);

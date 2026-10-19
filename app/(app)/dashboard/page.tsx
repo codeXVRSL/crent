@@ -87,18 +87,18 @@ export default async function Dashboard() {
             </EmptyState>
           ) : (
             <ul className="grid gap-2">
-              {recent.map((p) => (
+              {recent.map((p) => { const handle = handleOf.get(p.cre_id); return (
                 <li key={p.id}><Link href={`/briefs/${p.brief_id}`} className="grid gap-1.5 rounded-2xl border border-line bg-surface p-4 shadow-sm lift sm:grid-cols-[1fr_auto] sm:items-center">
                   <span className="grid gap-1">
                     <span className="flex flex-wrap items-center gap-2 text-sm">
                       <span className="num text-lg font-semibold text-accent">{formatMultiplier(p.multiplier)}</span>
                       <span className="font-medium">{p.teaser}</span>
                     </span>
-                    <span className="text-xs text-muted">{p.idea_category ? `${categoryLabel(p.idea_category)} · ` : ''}{p.format_label}{handleOf.get(p.cre_id) ? ` · @${handleOf.get(p.cre_id)}` : ''} · {(p.briefs as unknown as { title: string }).title} · <When iso={p.submitted_at} /></span>
+                    <span className="text-xs text-muted">{p.idea_category ? `${categoryLabel(p.idea_category)} · ` : ''}{p.format_label}{handle ? ` · @${handle}` : ''} · {(p.briefs as unknown as { title: string }).title} · <When iso={p.submitted_at} /></span>
                   </span>
                   <span className="text-sm font-medium text-accent">Review →</span>
                 </Link></li>
-              ))}
+              ); })}
             </ul>
           )}
         </section>
@@ -129,6 +129,8 @@ export default async function Dashboard() {
     supabase.from('payout_methods').select('id', { count: 'exact', head: true }).eq('user_id', v.id),
     supabase.rpc('my_weekly_earnings', { p_weeks: 12 }),
   ]);
+  const weekRows = (weeks ?? []) as { week_start: string; earned_cents: number; currency: string }[];
+  const earnings = weekRows.map((w) => ({ week: w.week_start, value: Number(w.earned_cents) }));
   const verified = v.kycStatus === 'approved';
   const steps: { label: string; detail: string; href: string; done: boolean; pending?: boolean }[] = [
     { label: 'Set up your public profile', detail: 'Handle, headline and the niches you research.', href: '/onboarding/cre#profile', done: !!v.handle && (nicheRows?.length ?? 0) > 0 },
@@ -137,7 +139,9 @@ export default async function Dashboard() {
     { label: 'Add GCash, Maya or a bank account', detail: 'Where your earnings are sent.', href: '/wallet', done: (methodCount ?? 0) > 0 },
     { label: 'Pitch your first idea', detail: verified ? 'Open briefs are waiting.' : 'Unlocks after verification.', href: '/briefs', done: (pitches?.length ?? 0) > 0 },
   ];
-  const stepsLeft = steps.filter((st) => !st.done).length;
+  const numbered = steps.map((st, i) => ({ ...st, n: i + 1 }));
+  const todo = numbered.filter((st) => !st.done), done = numbered.filter((st) => st.done);
+  const stepsLeft = todo.length;
   const inviteIds = (inviteRows ?? []).map((i) => i.brief_id);
   const { data: invited } = v.kycStatus === 'approved' && inviteIds.length
     ? await supabase.from('briefs').select('id, title, price_per_idea_cents, currency, deadline_at')
@@ -159,13 +163,13 @@ export default async function Dashboard() {
         <Card className="mb-8 grid gap-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-lg font-semibold tracking-tight">Get started</h2>
-            <span className="num text-sm text-muted">{steps.length - stepsLeft} of {steps.length} done</span>
+            <span className="num text-sm text-muted">{done.length} of {steps.length} done</span>
           </div>
           <ol className="grid gap-1">
-            {steps.filter((st) => !st.done).map((st) => (
+            {todo.map((st) => (
               <li key={st.label}>
                 <Link href={st.href} className={`flex items-start gap-3 rounded-xl p-2.5 hover:bg-surface-2 ${!st.pending ? 'bg-accent-soft/40 ring-1 ring-inset ring-accent/20' : ''}`}>
-                  <span className={`num mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${st.pending ? 'bg-warn-soft text-warn' : 'border border-line-strong text-muted'}`} aria-hidden="true">{steps.indexOf(st) + 1}</span>
+                  <span className={`num mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${st.pending ? 'bg-warn-soft text-warn' : 'border border-line-strong text-muted'}`} aria-hidden="true">{st.n}</span>
                   <span className="grid gap-0.5">
                     <span className="font-medium">{st.label}<span className="sr-only">{st.pending ? ' (in review)' : ''}</span></span>
                     <span className="text-sm text-muted">{st.detail}</span>
@@ -174,10 +178,10 @@ export default async function Dashboard() {
               </li>
             ))}
           </ol>
-          {steps.some((st) => st.done) && (
+          {done.length > 0 && (
             <details className="text-sm">
-              <summary className="cursor-pointer text-muted hover:text-ink">{steps.length - stepsLeft} step{steps.length - stepsLeft === 1 ? '' : 's'} done</summary>
-              <ol className="mt-2 grid gap-1 text-muted">{steps.filter((st) => st.done).map((st) => <li key={st.label} className="flex items-center gap-2"><span className="grid size-5 place-items-center rounded-full bg-good-soft text-[11px] text-good" aria-hidden="true">✓</span>{st.label}</li>)}</ol>
+              <summary className="cursor-pointer text-muted hover:text-ink">{done.length} step{done.length === 1 ? '' : 's'} done</summary>
+              <ol className="mt-2 grid gap-1 text-muted">{done.map((st) => <li key={st.label} className="flex items-center gap-2"><span className="grid size-5 place-items-center rounded-full bg-good-soft text-[11px] text-good" aria-hidden="true">✓</span>{st.label}</li>)}</ol>
             </details>
           )}
         </Card>
@@ -188,11 +192,9 @@ export default async function Dashboard() {
         <Stat label="Unlock rate" value={stats?.unlock_rate_pct != null ? `${stats.unlock_rate_pct}%` : '–'} icon={<Percent className="size-4" />} />
         <Stat label="Rating" value={stats?.avg_rating ? `${stats.avg_rating}★` : '–'} icon={<Star className="size-4" />} sub={`${stats?.review_count ?? 0} ${stats?.review_count === 1 ? "review" : "reviews"}`} />
       </div>
-      {(weeks ?? []).some((w: { earned_cents: number }) => Number(w.earned_cents) > 0) && (
+      {earnings.some((pt) => pt.value > 0) && (
         <Card className="mb-8">
-          <TrendChart title="Earnings per week" subtitle="What creators paid you for unlocks, last 12 weeks (Manila weeks)"
-            points={(weeks as { week_start: string; earned_cents: number }[]).map((w) => ({ week: w.week_start, value: Number(w.earned_cents) }))}
-            currency={(weeks as { currency: string }[])[0]?.currency ?? 'USD'} />
+          <TrendChart title="Earnings per week" subtitle="What creators paid you for unlocks, last 12 weeks (Manila weeks)" points={earnings} currency={weekRows[0]?.currency ?? 'USD'} />
         </Card>
       )}
       {stats?.results_logged ? (

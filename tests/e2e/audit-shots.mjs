@@ -3,7 +3,6 @@
 // Needs the app on localhost:3000 and the demo accounts (npm run seed:demo).
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
-import { passMfa } from './mfa.mjs';
 import { login, makeAdmin, restClient } from './helpers.mjs';
 
 const B = 'http://localhost:3000', OUT = process.argv[2] ?? 'audit-shots';
@@ -29,8 +28,7 @@ for (const [sizeName, viewport] of Object.entries(sizes)) for (const scheme of [
   const ctx = await b.newContext({ viewport, colorScheme: scheme, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   if (email) {
-    await login(p, B, email === 'admin' ? admin.email : email);
-    if (email === 'admin') { await p.goto(`${B}/admin`); if (p.url().includes('/mfa')) await passMfa(p, admin.secret); }
+    await login(p, B, email === 'admin' ? admin.email : email, undefined, admin.secret);
   }
   for (const u of urls) {
     await p.goto(B + u, { waitUntil: 'networkidle' }).catch(() => {});

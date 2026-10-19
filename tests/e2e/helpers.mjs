@@ -1,6 +1,6 @@
 // Shared plumbing for the browser scripts (a11y audit, screenshots, UI audit): the service-role REST
 // helper, logging in, and a fresh admin with an authenticator app.
-import { enrollAdmin } from './mfa.mjs';
+import { enrollAdmin, passMfa } from './mfa.mjs';
 
 export const DEMO_PASSWORD = 'OutlierDemo2026!';
 
@@ -13,22 +13,34 @@ export function restClient(url = process.env.SUPABASE_URL, key = process.env.SUP
   };
 }
 
-/** Logs a page in and waits until the app has taken over (dashboard, admin or the two-factor step). */
-export async function login(page, base, email, password = DEMO_PASSWORD) {
+/** Logs a page in and waits until the app has taken over; with an authenticator secret it also passes the two-factor step. */
+export async function login(page, base, email, password = DEMO_PASSWORD, mfaSecret = null) {
   await page.goto(`${base}/login`);
   await page.getByLabel('Email').fill(email); await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Log in' }).click();
-  await page.waitForURL(/dashboard|admin|mfa|onboarding/, { timeout: 30000 });
+  await page.waitForURL(/dashboard|admin|mfa|onboarding|suspended/, { timeout: 30000 });
+  if (page.url().includes('/mfa')) {
+    if (!mfaSecret) throw new Error('login hit the two-factor step without a secret');
+    await passMfa(page, mfaSecret);
+  }
+}
+
+/** Creates an account through the sign-up form and returns its profile id. */
+export async function signUp(page, base, rest, { name, email, password = DEMO_PASSWORD, as = '' }) {
+  await page.goto(`${base}/signup${as ? `?as=${as}` : ''}`);
+  await page.getByLabel('Your name').fill(name); await page.getByLabel('Email').fill(email); await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await page.waitForURL(/\/onboarding/, { timeout: 15000 });
+  const [u] = await rest(`profiles?select=id&display_name=eq.${encodeURIComponent(name)}&order=created_at.desc&limit=1`);
+  return u.id;
 }
 
 /** Signs up a fresh account, makes it an admin, enrols an authenticator. Returns the email and TOTP secret. */
 export async function makeAdmin(browser, base, rest, name = 'Audit Admin', password = DEMO_PASSWORD) {
   const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}@example.com`;
   const page = await (await browser.newContext()).newPage();
-  await page.goto(`${base}/signup`); await page.getByLabel('Your name').fill(name); await page.getByLabel('Email').fill(email); await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Create account' }).click(); await page.waitForURL(/onboarding/);
-  const [u] = await rest(`profiles?select=id&display_name=eq.${encodeURIComponent(name)}&order=created_at.desc&limit=1`);
-  await rest(`profiles?id=eq.${u.id}`, { method: 'PATCH', body: JSON.stringify({ role: 'admin' }) });
+  const id = await signUp(page, base, rest, { name, email, password });
+  await rest(`profiles?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ role: 'admin' }) });
   const secret = await enrollAdmin(page, base);
   await page.context().close();
   return { email, secret };
