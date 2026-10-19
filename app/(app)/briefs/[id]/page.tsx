@@ -19,7 +19,7 @@ import { Copy, Star } from 'lucide-react';
 import { startThread } from '@/app/actions/messages';
 import { formatMoney, unlockSplit } from '@/lib/money';
 import { signProofs } from '@/lib/proof';
-import { HOOK_CATEGORIES, passReasonLabel, platformLabel } from '@/lib/constants';
+import { HOOK_CATEGORIES, passReasonLabel, platformLabel, IDEA_CATEGORIES } from '@/lib/constants';
 import { formatMultiplier } from '@/lib/outlier';
 import { buildScriptPrompt } from '@/lib/script-prompt';
 import { responseLabel } from '@/lib/level';
@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function BriefPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ paid?: string; payment?: string; pitched?: string; passed?: string; sort?: string; hook?: string; show?: string; retainer?: string }>;
+  searchParams: Promise<{ paid?: string; payment?: string; pitched?: string; passed?: string; sort?: string; hook?: string; kind?: string; show?: string; retainer?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -153,13 +153,17 @@ export default async function BriefPage({ params, searchParams }: {
     const passedCount = live.filter((p) => passed.has(p.id) && p.status === 'submitted').length;
     const visible = live
       .filter((p) => !sp.hook || p.hook_category === sp.hook)
+      .filter((p) => !sp.kind || p.idea_category === sp.kind)
       .filter((p) => sp.show === 'passed' ? passed.has(p.id) && p.status === 'submitted'
         : sp.show === 'shortlist' ? shortlisted.has(p.id)
         : !(passed.has(p.id) && p.status === 'submitted'));
     const hooksPresent = [...new Set(live.map((p) => p.hook_category))];
+    // The mix of idea kinds among pitches still in play, so a creator can see what the batch is missing.
+    const inPlay = live.filter((p) => p.status === 'submitted' || p.status === 'unlocked');
+    const mix = IDEA_CATEGORIES.map((c) => ({ ...c, n: inPlay.filter((p) => p.idea_category === c.value).length }));
     const qs = (patch: Record<string, string | undefined>) => {
       const q = new URLSearchParams();
-      const merged = { sort: sp.sort, hook: sp.hook, show: sp.show, ...patch };
+      const merged = { sort: sp.sort, hook: sp.hook, kind: sp.kind, show: sp.show, ...patch };
       Object.entries(merged).forEach(([k, val]) => { if (val) q.set(k, val); });
       const str = q.toString();
       return `/briefs/${id}${str ? `?${str}` : ''}`;
@@ -185,6 +189,18 @@ export default async function BriefPage({ params, searchParams }: {
             {details}
             <section className="grid gap-4">
               <h2 className="text-lg font-semibold tracking-tight">Pitches <span className="num text-muted">({live.length})</span></h2>
+              {inPlay.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5" aria-label="Mix of idea kinds">
+                  <span className="mr-1 text-xs text-muted">Mix</span>
+                  <Link href={qs({ kind: undefined })} className={chip(!sp.kind)}>All</Link>
+                  {mix.map((c) => (
+                    <Link key={c.value} href={qs({ kind: c.n ? c.value : undefined })} className={`${chip(sp.kind === c.value)} ${c.n ? '' : 'opacity-60'}`} title={c.hint}>
+                      {c.label} <span className="num">{c.n}</span>
+                    </Link>
+                  ))}
+                  {mix.some((c) => !c.n) && <span className="text-xs text-muted">Missing: {mix.filter((c) => !c.n).map((c) => c.label.toLowerCase()).join(', ')}</span>}
+                </div>
+              )}
               {live.length > 1 && (
                 <div className="grid gap-2 text-sm">
                   <div className="flex flex-wrap items-center gap-1.5">

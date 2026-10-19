@@ -1,8 +1,8 @@
 import { formatMultiplier } from '@/lib/outlier';
-import { hookLabel, platformLabel } from './constants';
+import { categoryLabel, hookLabel, platformLabel } from './constants';
 
 type Idea = {
-  platform: string; format_label: string; hook_category: string; duration_seconds: number | null; teaser: string;
+  platform: string; format_label: string; hook_category: string; idea_category?: string | null; duration_seconds: number | null; teaser: string;
   multiplier: number | string; hook_text: string; why_it_worked: string; instructions: string; adaptation_notes: string | null;
 };
 
@@ -18,6 +18,7 @@ export function buildScriptPrompt(i: Idea, creator?: { brand?: string | null; au
     `The original got ${formatMultiplier(i.multiplier)} its channel's usual views.`,
     `Format: ${i.format_label}`,
     `Hook type: ${hookLabel(i.hook_category)}`,
+    i.idea_category ? `Kind of idea: ${categoryLabel(i.idea_category)}` : '',
     `Original hook: "${i.hook_text}"`,
     `Angle: ${i.teaser}`,
     '',

@@ -1,16 +1,15 @@
 // Product screenshots for sharing (docs/screenshots). Run on a fresh database with the demo accounts:
 //   npx supabase db reset && npm run seed:demo && SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node tests/e2e/screenshots.mjs
 import { chromium } from '@playwright/test';
-import { enrollAdmin } from './mfa.mjs';
-const B = 'http://localhost:3000', OUT = 'docs/screenshots', PW = 'OutlierDemo2026!';
-const SB = process.env.SUPABASE_URL, K = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const rest = (path, init = {}) => fetch(`${SB}/rest/v1/${path}`, { ...init, headers: { apikey: K, Authorization: `Bearer ${K}`, 'Content-Type': 'application/json', Prefer: 'return=representation' } }).then((r) => r.json());
+import { login as signIn, makeAdmin, restClient } from './helpers.mjs';
+const B = 'http://localhost:3000', OUT = 'docs/screenshots';
+const rest = restClient();
 await rest('rate_limits?key=like.*', { method: 'DELETE' });
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 const ctx = async (o = {}) => (await b.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, ...o })).newPage();
 const settle = async (p) => { await p.waitForLoadState('networkidle').catch(() => {}); await p.waitForTimeout(900); };
 const shot = async (p, name, full = false) => { await settle(p); await p.screenshot({ path: `${OUT}/${name}.png`, fullPage: full }); console.log('saved', name); };
-const login = async (p, email) => { await p.goto(`${B}/login`); await p.getByLabel('Email').fill(email); await p.getByLabel('Password').fill(PW); await p.getByRole('button', { name: 'Log in' }).click(); await p.waitForURL(/dashboard|admin|mfa/); };
+const login = (p, email) => signIn(p, B, email);
 
 // Public
 let p = await ctx();
@@ -43,12 +42,8 @@ await p.goto(`${B}/briefs`); await shot(p, '10-researcher-open-briefs');
 await p.goto(`${B}/wallet`); await shot(p, '11-researcher-wallet');
 
 // Admin (fresh admin with an authenticator)
-p = await ctx(); const run = Date.now().toString(36);
-await p.goto(`${B}/signup`); await p.getByLabel('Your name').fill('Admin Preview'); await p.getByLabel('Email').fill(`admin-${run}@example.com`); await p.getByLabel('Password').fill(PW);
-await p.getByRole('button', { name: 'Create account' }).click(); await p.waitForURL(/onboarding/);
-const [u] = await rest(`profiles?select=id&display_name=eq.Admin Preview&order=created_at.desc&limit=1`);
-await rest(`profiles?id=eq.${u.id}`, { method: 'PATCH', body: JSON.stringify({ role: 'admin' }) });
-await enrollAdmin(p, B);
+const admin = await makeAdmin(b, B, rest, 'Admin Preview');
+p = await ctx({ viewport: { width: 1440, height: 1180 } }); await login(p, admin.email); await p.goto(`${B}/admin`); if (p.url().includes('/mfa')) { const { passMfa } = await import('./mfa.mjs'); await passMfa(p, admin.secret); }
 await p.goto(`${B}/admin`); await shot(p, '12-admin-overview', true);
 
 // Phone, dark mode

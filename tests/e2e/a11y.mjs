@@ -4,24 +4,18 @@
 import { chromium } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { writeFileSync } from 'node:fs';
-import { enrollAdmin } from './mfa.mjs';
+import { passMfa } from './mfa.mjs';
+import { DEMO_PASSWORD as PW, login, makeAdmin, restClient } from './helpers.mjs';
 
-const BASE = 'http://localhost:3000', PW = 'OutlierDemo2026!';
-const SB = process.env.SUPABASE_URL, SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const BASE = 'http://localhost:3000';
 const b = await chromium.launch({ ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}) });
-const rest = async (path, init = {}) => {
-  const r = await fetch(`${SB}/rest/v1/${path}`, { ...init, headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json', Prefer: 'return=representation', ...(init.headers ?? {}) } });
-  const t = await r.text(); if (!r.ok) throw new Error(`${r.status} ${path} ${t}`); return t ? JSON.parse(t) : null;
-};
+const rest = restClient();
 await rest('rate_limits?key=like.*', { method: 'DELETE' });
 
 async function session(scheme, email) {
   const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: scheme });
   const p = await ctx.newPage();
-  if (email) {
-    await p.goto(`${BASE}/login`); await p.getByLabel('Email').fill(email); await p.getByLabel('Password').fill(PW);
-    await p.getByRole('button', { name: 'Log in' }).click(); await p.waitForURL(/dashboard|admin|mfa/);
-  }
+  if (email) await login(p, BASE, email, PW);
   return p;
 }
 const [brief] = await rest('briefs?select=id&status=eq.open&limit=1');
@@ -34,22 +28,13 @@ const roles = {
 };
 
 // A fresh admin with an authenticator (the demo admin is left alone).
-const adminEmail = `a11y-admin-${Date.now()}@example.com`;
-{
-  const p = await session('light', null);
-  await p.goto(`${BASE}/signup`); await p.getByLabel('Your name').fill('A11y Admin'); await p.getByLabel('Email').fill(adminEmail); await p.getByLabel('Password').fill(PW);
-  await p.getByRole('button', { name: 'Create account' }).click(); await p.waitForURL(/onboarding/);
-  const [u] = await rest(`profiles?select=id&display_name=eq.A11y Admin&order=created_at.desc&limit=1`);
-  await rest(`profiles?id=eq.${u.id}`, { method: 'PATCH', body: JSON.stringify({ role: 'admin' }) });
-  var adminSecret = await enrollAdmin(p, BASE); await p.context().close();
-}
-const { passMfa } = await import('./mfa.mjs');
+const admin = await makeAdmin(b, BASE, rest, 'A11y Admin');
 
 const results = []; let audited = 0;
 for (const scheme of ['light', 'dark']) {
   for (const [role, cfg] of Object.entries(roles)) {
-    const p = await session(scheme, cfg.email === 'admin' ? adminEmail : cfg.email);
-    if (p.url().includes('/mfa')) await passMfa(p, adminSecret);
+    const p = await session(scheme, cfg.email === 'admin' ? admin.email : cfg.email);
+    if (p.url().includes('/mfa')) await passMfa(p, admin.secret);
     for (const path of cfg.pages) {
       await p.goto(BASE + path, { waitUntil: 'networkidle' }).catch(() => {});
       audited++;

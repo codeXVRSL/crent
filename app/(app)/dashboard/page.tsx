@@ -7,6 +7,8 @@ import { EmptyState, LinkButton, PageHeader, Stat, Card } from '@/components/ui'
 import {BriefStatus, timeLeft} from '@/components/status';
 import { formatMoney } from '@/lib/money';
 import { formatMultiplier } from '@/lib/outlier';
+import { categoryLabel } from '@/lib/constants';
+import { TrendChart } from '@/components/trend-chart';
 import { FileText, Inbox, LockOpen, Percent, Plus, Star, Timer, Wallet } from 'lucide-react';
 import { When } from '@/components/when';
 import { disputeWindowText, getSettings } from '@/lib/settings';
@@ -23,7 +25,7 @@ export default async function Dashboard() {
     const [{ data: briefs }, { count: unlocksMonth }, { data: waiting }, { data: tracking }, { count: unlockedTotal }] = await Promise.all([
       supabase.from('briefs').select('id, title, status, max_unlocks, unlocks_used, price_per_idea_cents, currency, deadline_at').eq('creator_id', v.id).order('created_at', { ascending: false }),
       supabase.from('unlocks').select('id', { count: 'exact', head: true }).eq('creator_id', v.id).gte('created_at', monthStart.toISOString()),
-      supabase.from('pitches').select('id, brief_id, multiplier, format_label, submitted_at, briefs!inner(title, creator_id)')
+      supabase.from('pitches').select('id, brief_id, cre_id, multiplier, format_label, teaser, idea_category, submitted_at, briefs!inner(title, creator_id)')
         .eq('status', 'submitted').eq('briefs.creator_id', v.id).order('submitted_at', { ascending: false }).limit(8),
       supabase.from('idea_tracking').select('unlock_id, stage, planned_on, result_multiple').eq('creator_id', v.id),
       supabase.from('unlocks').select('id', { count: 'exact', head: true }).eq('creator_id', v.id).neq('status', 'reversed'),
@@ -33,6 +35,9 @@ export default async function Dashboard() {
     const { data: passed } = waitingIds.length ? await supabase.from('pitch_feedback').select('pitch_id').in('pitch_id', waitingIds) : { data: [] };
     const passedIds = new Set((passed ?? []).map((f) => f.pitch_id));
     const recent = (waiting ?? []).filter((p) => !passedIds.has(p.id));
+    const creIds = [...new Set(recent.map((p) => p.cre_id))];
+    const { data: cres } = creIds.length ? await supabase.from('public_cres').select('id, handle').in('id', creIds) : { data: [] };
+    const handleOf = new Map((cres ?? []).map((c) => [c.id as string, c.handle as string]));
     const tracked = tracking ?? [];
     const inProduction = tracked.filter((t) => t.stage === 'scripting' || t.stage === 'filming').length;
     const notStarted = (unlockedTotal ?? 0) - tracked.filter((t) => t.stage !== 'saved').length;
@@ -81,9 +86,15 @@ export default async function Dashboard() {
           ) : (
             <ul className="grid gap-2">
               {recent.map((p) => (
-                <li key={p.id}><Link href={`/briefs/${p.brief_id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-surface shadow-sm p-4 lift">
-                  <span><span className="num font-semibold text-accent">{formatMultiplier(p.multiplier)}</span> · {p.format_label}</span>
-                  <span className="text-sm text-muted">{(p.briefs as unknown as { title: string }).title} · <When iso={p.submitted_at} /></span>
+                <li key={p.id}><Link href={`/briefs/${p.brief_id}`} className="grid gap-1.5 rounded-2xl border border-line bg-surface p-4 shadow-sm lift sm:grid-cols-[1fr_auto] sm:items-center">
+                  <span className="grid gap-1">
+                    <span className="flex flex-wrap items-center gap-2 text-sm">
+                      <span className="num text-lg font-semibold text-accent">{formatMultiplier(p.multiplier)}</span>
+                      <span className="font-medium">{p.teaser}</span>
+                    </span>
+                    <span className="text-xs text-muted">{p.idea_category ? `${categoryLabel(p.idea_category)} · ` : ''}{p.format_label}{handleOf.get(p.cre_id) ? ` · @${handleOf.get(p.cre_id)}` : ''} · {(p.briefs as unknown as { title: string }).title} · <When iso={p.submitted_at} /></span>
+                  </span>
+                  <span className="text-sm font-medium text-accent">Review →</span>
                 </Link></li>
               ))}
             </ul>
@@ -106,7 +117,7 @@ export default async function Dashboard() {
   }
 
   // Researcher
-  const [{ data: bal }, { data: stats }, { data: pitches }, { data: nicheRows }, { data: inviteRows }, { count: portfolioCount }, { count: methodCount }] = await Promise.all([
+  const [{ data: bal }, { data: stats }, { data: pitches }, { data: nicheRows }, { data: inviteRows }, { count: portfolioCount }, { count: methodCount }, { data: weeks }] = await Promise.all([
     supabase.from('cre_balances').select('*').eq('cre_id', v.id).maybeSingle(),
     supabase.from('public_cres').select('unlock_rate_pct, avg_rating, review_count, results_logged, avg_result_multiple, repeat_buyers').eq('id', v.id).maybeSingle(),
     supabase.from('pitches').select('id, brief_id, status, multiplier, format_label, submitted_at, briefs(title)').eq('cre_id', v.id).order('submitted_at', { ascending: false }).limit(6),
@@ -114,6 +125,7 @@ export default async function Dashboard() {
     supabase.from('brief_invites').select('brief_id').eq('cre_id', v.id).order('invited_at', { ascending: false }).limit(20),
     supabase.from('portfolio_items').select('id', { count: 'exact', head: true }).eq('cre_id', v.id),
     supabase.from('payout_methods').select('id', { count: 'exact', head: true }).eq('user_id', v.id),
+    supabase.rpc('my_weekly_earnings', { p_weeks: 12 }),
   ]);
   const verified = v.kycStatus === 'approved';
   const steps: { label: string; detail: string; href: string; done: boolean; pending?: boolean }[] = [
@@ -148,26 +160,39 @@ export default async function Dashboard() {
             <span className="num text-sm text-muted">{steps.length - stepsLeft} of {steps.length} done</span>
           </div>
           <ol className="grid gap-1">
-            {steps.map((st, i) => (
+            {steps.filter((st) => !st.done).map((st) => (
               <li key={st.label}>
-                <Link href={st.href} className={`flex items-start gap-3 rounded-xl p-2.5 hover:bg-surface-2 ${!st.done && !st.pending ? 'bg-accent-soft/40 ring-1 ring-inset ring-accent/20' : ''}`}>
-                  <span className={`num mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${st.done ? 'bg-good-soft text-good' : st.pending ? 'bg-warn-soft text-warn' : 'border border-line-strong text-muted'}`} aria-hidden="true">{st.done ? '✓' : i + 1}</span>
+                <Link href={st.href} className={`flex items-start gap-3 rounded-xl p-2.5 hover:bg-surface-2 ${!st.pending ? 'bg-accent-soft/40 ring-1 ring-inset ring-accent/20' : ''}`}>
+                  <span className={`num mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${st.pending ? 'bg-warn-soft text-warn' : 'border border-line-strong text-muted'}`} aria-hidden="true">{steps.indexOf(st) + 1}</span>
                   <span className="grid gap-0.5">
-                    <span className={`font-medium ${st.done ? 'text-muted' : ''}`}>{st.label}<span className="sr-only">{st.done ? ' (done)' : st.pending ? ' (in review)' : ''}</span></span>
-                    {!st.done && <span className="text-sm text-muted">{st.detail}</span>}
+                    <span className="font-medium">{st.label}<span className="sr-only">{st.pending ? ' (in review)' : ''}</span></span>
+                    <span className="text-sm text-muted">{st.detail}</span>
                   </span>
                 </Link>
               </li>
             ))}
           </ol>
+          {steps.some((st) => st.done) && (
+            <details className="text-sm">
+              <summary className="cursor-pointer text-muted hover:text-ink">{steps.length - stepsLeft} step{steps.length - stepsLeft === 1 ? '' : 's'} done</summary>
+              <ol className="mt-2 grid gap-1 text-muted">{steps.filter((st) => st.done).map((st) => <li key={st.label} className="flex items-center gap-2"><span className="grid size-5 place-items-center rounded-full bg-good-soft text-[11px] text-good" aria-hidden="true">✓</span>{st.label}</li>)}</ol>
+            </details>
+          )}
         </Card>
       )}
       <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Available" value={formatMoney(bal?.available_cents ?? 0)} icon={<Wallet className="size-4" />} emphasis sub={(bal?.available_cents ?? 0) > 0 ? <Link href="/wallet" className="underline">Withdraw</Link> : 'Nothing to withdraw yet'} />
         <Stat label="On hold" value={formatMoney(bal?.held_cents ?? 0)} icon={<Timer className="size-4" />} sub={disputeWindowText((await getSettings()).holdHours)} />
         <Stat label="Unlock rate" value={stats?.unlock_rate_pct != null ? `${stats.unlock_rate_pct}%` : '–'} icon={<Percent className="size-4" />} />
-        <Stat label="Rating" value={stats?.avg_rating ? `${stats.avg_rating}★` : '–'} icon={<Star className="size-4" />} sub={`${stats?.review_count ?? 0} reviews`} />
+        <Stat label="Rating" value={stats?.avg_rating ? `${stats.avg_rating}★` : '–'} icon={<Star className="size-4" />} sub={`${stats?.review_count ?? 0} ${stats?.review_count === 1 ? "review" : "reviews"}`} />
       </div>
+      {(weeks ?? []).some((w: { earned_cents: number }) => Number(w.earned_cents) > 0) && (
+        <Card className="mb-8">
+          <TrendChart title="Earnings per week" subtitle="What creators paid you for unlocks, last 12 weeks (Manila weeks)"
+            points={(weeks as { week_start: string; earned_cents: number }[]).map((w) => ({ week: w.week_start, value: Number(w.earned_cents) }))}
+            currency={(weeks as { currency: string }[])[0]?.currency ?? 'USD'} />
+        </Card>
+      )}
       {stats?.results_logged ? (
         <p className="mb-6 text-sm text-muted">Creators who posted your ideas got <strong className="num text-ink">{formatMultiplier(stats.avg_result_multiple ?? 0)}</strong> their usual views on average ({stats.results_logged} logged){stats.repeat_buyers ? ` · ${stats.repeat_buyers} repeat buyer${stats.repeat_buyers > 1 ? 's' : ''}` : ''}.</p>
       ) : null}

@@ -246,6 +246,7 @@ await step('researcher sees brief via notification, pitches with proof screensho
   const p = cre.page; await p.goto(`${BASE}/notifications`); await visible(p, `Recipe reels ${run}`);
   await p.getByText(`New brief: Recipe reels ${run}`).click(); await p.waitForURL(new RegExp(briefId));
   await p.getByRole('link', { name: 'Pitch an idea' }).click();
+  await p.getByLabel('Kind of idea').selectOption('hero_story');
   await p.getByLabel('Format').fill('Overhead cook-along');
   await p.getByLabel('Angle (teaser)').fill('A five-ingredient dinner that shows the full cost on screen');
   await p.getByLabel('Source video views').fill('0.9M'); await p.getByLabel('Channel median views').fill('60k'); // typed the way people read them
@@ -259,6 +260,10 @@ await step('researcher sees brief via notification, pitches with proof screensho
   await p.waitForURL(/pitched=1/, { timeout: 20000 });
   const secrets = await rest(`pitch_secrets?select=proof_path,pitch_id&order=pitch_id&limit=100`);
   expect(secrets.some((s) => s.proof_path), 'proof_path not stored');
+});
+await step('creator sees the kind of each idea and the mix of the batch', async () => {
+  const c = creator.page; await c.goto(briefUrl); await visible(c, 'Hero story'); await visible(c, /Missing: /);
+  await c.getByRole('link', { name: /^Hero story/ }).click(); await c.waitForURL(/kind=hero_story/); expect((await c.locator('article').count()) === 1, 'kind filter did not narrow to the hero story');
 });
 await step('pitch rules: score too low, teaser reveals hook, limit of 5 per brief', async () => {
   const p = cre.page;

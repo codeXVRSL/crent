@@ -39,7 +39,10 @@ export default async function Wallet({ searchParams }: { searchParams: Promise<{
         <Stat label="Paid out" value={formatMoney(bal?.paid_out_cents ?? 0)} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className={`grid gap-6 ${pending || methods?.length ? 'lg:grid-cols-2' : ''}`}>
+        {!pending && !methods?.length ? (
+          <Notice tone="accent">Add a payout method below. You can withdraw once you have {formatMoney(min)} available.</Notice>
+        ) : (
         <Card className="grid content-start gap-4">
           <h2 className="text-lg font-semibold tracking-tight">Withdraw</h2>
           {pending ? (
@@ -61,6 +64,7 @@ export default async function Wallet({ searchParams }: { searchParams: Promise<{
             </ActionForm>
           )}
         </Card>
+        )}
 
         <Card className="grid content-start gap-4">
           <h2 className="text-lg font-semibold tracking-tight">Payout methods</h2>

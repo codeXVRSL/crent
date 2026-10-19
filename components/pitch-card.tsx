@@ -3,7 +3,7 @@ import { AlertTriangle, Clock, ExternalLink, Lock, PlayCircle, ShieldCheck, Spar
 import { Pill } from './ui';
 import { CopyButton } from './copy-button';
 import { compactViews, formatMultiplier, tier, tierLabel } from '@/lib/outlier';
-import { hookLabel, platformLabel } from '@/lib/constants';
+import { categoryLabel, hookLabel, platformLabel } from '@/lib/constants';
 
 export type PitchPublic = {
   id: string;
@@ -19,6 +19,7 @@ export type PitchPublic = {
   source_posted_on: string;
   source_channel_size_band: string | null;
   submitted_at: string;
+  idea_category?: string | null;
   /** Automatic YouTube check: set only when the app has a YouTube API key. */
   views_check?: string | null;
 };
@@ -71,8 +72,10 @@ function ViewsBars({ views, median }: { views: number; median: number }) {
 }
 
 export function PitchCard({
-  pitch, secret, priceLabel, byline, actions, showStatus = true, proofUrl, scriptPrompt,
+  pitch, secret, priceLabel, byline, actions, showStatus = true, proofUrl, scriptPrompt, collapseInstructions = false,
 }: {
+  /** Start with the filming instructions folded (the hook library shows many ideas at once). */
+  collapseInstructions?: boolean;
   proofUrl?: string;
   /** Ready-to-paste AI prompt built from the unlocked idea. */
   scriptPrompt?: string;
@@ -109,6 +112,7 @@ export function PitchCard({
       </div>
 
       <div className="flex flex-wrap gap-1.5">
+        {pitch.idea_category && <Pill tone="accent">{categoryLabel(pitch.idea_category)}</Pill>}
         <Pill>{pitch.format_label}</Pill>
         <Pill>{hookLabel(pitch.hook_category)} hook</Pill>
         {pitch.duration_seconds && <Pill><Clock className="size-3" aria-hidden="true" /><span className="num">{pitch.duration_seconds}s</span></Pill>}
@@ -140,7 +144,10 @@ export function PitchCard({
           <div className="grid gap-1.5">
             <div className="flex flex-wrap items-center justify-between gap-2"><span className="label">Instructions</span>
               <span className="flex flex-wrap gap-1.5"><CopyButton text={secret.instructions} label="Copy instructions" />{scriptPrompt && <CopyButton text={scriptPrompt} label="Copy as AI script prompt" />}</span></div>
-            <pre className="overflow-x-auto whitespace-pre-wrap rounded-2xl border border-line bg-surface shadow-sm p-3 font-mono text-[12.5px] leading-relaxed">{secret.instructions}</pre>
+            <details open={!collapseInstructions} className="group/ins">
+              <summary className="cursor-pointer text-xs font-medium text-accent"><span className="group-open/ins:hidden">Show filming instructions</span><span className="hidden group-open/ins:inline">Hide filming instructions</span></summary>
+              <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded-2xl border border-line bg-surface shadow-sm p-3 font-mono text-[12.5px] leading-relaxed">{secret.instructions}</pre>
+            </details>
           </div>
           {secret.adaptation_notes && <div className="grid gap-1"><span className="label">How to adapt it for you</span><p className="whitespace-pre-wrap text-sm text-ink-2">{secret.adaptation_notes}</p></div>}
           {proofUrl && (

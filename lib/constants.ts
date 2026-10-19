@@ -9,6 +9,15 @@ export const PLATFORMS = [
 export type Platform = (typeof PLATFORMS)[number]['value'];
 export const platformLabel = (v: string) => PLATFORMS.find((p) => p.value === v)?.label ?? v;
 
+/** The four kinds of idea a healthy content batch spreads across. Shown before unlock. */
+export const IDEA_CATEGORIES = [
+  { value: 'hero_story', label: 'Hero story', hint: 'A personal or customer transformation, an origin story.' },
+  { value: 'educational', label: 'Educational', hint: 'How-to, tips, myth-bust, explaining one thing well.' },
+  { value: 'entertaining', label: 'Entertaining', hint: 'Funny, relatable, riding a trend.' },
+  { value: 'promotional', label: 'Promotional', hint: 'Leads to an offer, a freebie or a clear call to action.' },
+] as const;
+export const categoryLabel = (v: string) => IDEA_CATEGORIES.find((c) => c.value === v)?.label ?? v;
+
 export const HOOK_CATEGORIES = [
   { value: 'question', label: 'Question' },
   { value: 'bold_claim', label: 'Bold claim' },

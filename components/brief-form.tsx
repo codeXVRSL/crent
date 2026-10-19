@@ -59,6 +59,8 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial, per
             ))}
           </div>
         </div>
+        <section className="grid gap-4" aria-labelledby="bf-basics">
+        <h2 id="bf-basics" className="text-base font-semibold">Basics</h2>
         <Field label="Title" htmlFor="title" hint="8–100 characters.">
           <Input id="title" name="title" required minLength={8} maxLength={100} placeholder="10 TikTok ideas for a personal finance coach" defaultValue={seed.title} />
         </Field>
@@ -74,6 +76,9 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial, per
             </Select>
           </Field>
         </div>
+        </section>
+        <section className="grid gap-4" aria-labelledby="bf-need">
+        <h2 id="bf-need" className="text-base font-semibold">The brief</h2>
         <Field label="What you need" htmlFor="description" hint="Describe your audience, your style and what a great idea looks like, then fill in the setup lines: researchers only pitch what you can actually film and edit. 40–3000 characters. No contact details.">
           <Textarea id="description" name="description" required minLength={40} maxLength={3000} rows={6} defaultValue={seed.description} />
         </Field>
@@ -84,7 +89,10 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial, per
         <Field label="Videos you like (optional)" htmlFor="example_urls" hint="Up to 5 links, one per line.">
           <Textarea id="example_urls" name="example_urls" rows={3} placeholder="https://" defaultValue={seed.example_urls?.join('\n')} />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
+        </section>
+        <details className="grid gap-4" open={seed.min_multiplier != null || seed.max_video_age_days !== undefined}>
+        <summary className="cursor-pointer text-base font-semibold">Filters <span className="text-sm font-normal text-muted">(minimum score, source age)</span></summary>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Field label="Minimum outlier score" htmlFor="min_multiplier" hint={`Views ÷ channel median. ${limits.minMultiplier}× minimum.`}>
             <Input id="min_multiplier" name="min_multiplier" type="number" min={limits.minMultiplier} max={100} step={0.5} defaultValue={Math.max(seed.min_multiplier ?? limits.minMultiplier, limits.minMultiplier)} />
           </Field>
@@ -95,6 +103,7 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform, initial, per
             </Select>
           </Field>
         </div>
+        </details>
       </div>
 
       <aside className="grid content-start gap-4 rounded-2xl border border-line bg-surface shadow-sm p-5 lg:sticky lg:top-6">

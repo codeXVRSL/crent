@@ -122,9 +122,9 @@ async function main() {
 
     const cre = await as(ACCOUNTS.researcher.email);
     const pitches = [
-      { format: 'Talking head + spreadsheet', hook_cat: 'number_list', teaser: 'A first-paycheck plan that splits money into three simple buckets', views: 1300000, median: 92000, hook: 'Here is exactly what I did with my first paycheck', id: 1 },
-      { format: 'Green screen over bank app', hook_cat: 'myth_bust', teaser: 'Why the savings rule everyone repeats fails for entry-level pay', views: 820000, median: 61000, hook: 'Stop using the fifty thirty twenty rule', id: 2 },
-      { format: 'Street quiz', hook_cat: 'question', teaser: 'Asking strangers one money question with surprising answers', views: 2100000, median: 140000, hook: 'How much is in your savings account right now', id: 3 },
+      { format: 'Talking head + spreadsheet', hook_cat: 'number_list', teaser: 'A first-paycheck plan that splits money into three simple buckets', views: 1300000, median: 92000, hook: 'Here is exactly what I did with my first paycheck', id: 1, kind: 'hero_story' },
+      { format: 'Green screen over bank app', hook_cat: 'myth_bust', teaser: 'Why the savings rule everyone repeats fails for entry-level pay', views: 820000, median: 61000, hook: 'Stop using the fifty thirty twenty rule', id: 2, kind: 'educational' },
+      { format: 'Street quiz', hook_cat: 'question', teaser: 'Asking strangers one money question with surprising answers', views: 2100000, median: 140000, hook: 'How much is in your savings account right now', id: 3, kind: 'entertaining' },
     ];
     for (const p of pitches) {
       await cre.rpc('submit_pitch', {
@@ -134,7 +134,7 @@ async function main() {
         p_source_channel_url: null, p_hook_text: p.hook,
         p_why_it_worked: 'A specific promise in the first line plus visible proof on screen in the first three seconds keeps people watching to the end.',
         p_instructions: `HOOK (0–3s): "${p.hook}"\n\nSHOT LIST:\n1. Face to camera, say the hook\n2. Cut to the screen recording\n3. Show the result\n\nCTA: Follow for part two.`,
-        p_adaptation_notes: 'Use your own numbers. Keep it under 45 seconds.',
+        p_adaptation_notes: 'Use your own numbers. Keep it under 45 seconds.', p_idea_category: p.kind,
       }).then(must('pitch'));
     }
 

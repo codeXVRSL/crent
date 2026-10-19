@@ -87,7 +87,7 @@ export default async function Pitches({ searchParams }: { searchParams: Promise<
                     })()}</td>
                     <td className="num p-3">{u ? <span className="flex items-center gap-2">{formatMoney(u.net_cents, u.currency)} <UnlockStatus status={u.status} /></span> : '—'}</td>
                     <td className="num p-3">{fmtDate(p.submitted_at)}</td>
-                    <td className="p-3">{p.status === 'submitted' && (
+                    <td className="whitespace-nowrap p-3">{p.status === 'submitted' && (
                       <form action={withdrawPitch}><input type="hidden" name="pitch_id" value={p.id} /><button className="text-xs text-bad">Withdraw</button></form>
                     )}</td>
                   </tr>

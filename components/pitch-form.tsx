@@ -7,7 +7,7 @@ import { Notice } from './ui';
 import type { ActionResult } from '@/lib/errors';
 import { Field, Input, Select, Textarea } from './ui';
 import { submitPitch } from '@/app/actions/pitches';
-import { HOOK_CATEGORIES, INSTRUCTIONS_TEMPLATE, instructionWarnings, PLATFORMS, SIZE_BANDS } from '@/lib/constants';
+import { HOOK_CATEGORIES, IDEA_CATEGORIES, INSTRUCTIONS_TEMPLATE, instructionWarnings, PLATFORMS, SIZE_BANDS } from '@/lib/constants';
 import { formatMultiplier, multiplier } from '@/lib/outlier';
 import { manilaToday, parseViews } from '@/lib/parse';
 
@@ -79,6 +79,9 @@ export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays
           </Field>
           <Field label="Length (seconds)" htmlFor="duration_seconds"><Input id="duration_seconds" name="duration_seconds" type="number" min={1} max={7200} /></Field>
         </div>
+        <Field label="Kind of idea" htmlFor="idea_category" hint="Creators try to keep a mix of the four, so say which this one is.">
+          <Select id="idea_category" name="idea_category" defaultValue="educational">{IDEA_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}: {c.hint}</option>)}</Select>
+        </Field>
         <Field label="Format" htmlFor="format_label" hint="e.g. Talking head + on-screen receipts">
           <Input id="format_label" name="format_label" required minLength={3} maxLength={80} />
         </Field>

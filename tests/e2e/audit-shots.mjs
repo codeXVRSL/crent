@@ -3,15 +3,12 @@
 // Needs the app on localhost:3000 and the demo accounts (npm run seed:demo).
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
-import { enrollAdmin, passMfa } from './mfa.mjs';
+import { passMfa } from './mfa.mjs';
+import { login, makeAdmin, restClient } from './helpers.mjs';
 
-const B = 'http://localhost:3000', OUT = process.argv[2] ?? 'audit-shots', PW = 'OutlierDemo2026!';
-const SB = process.env.SUPABASE_URL, K = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const B = 'http://localhost:3000', OUT = process.argv[2] ?? 'audit-shots';
 mkdirSync(OUT, { recursive: true });
-const rest = async (path, init = {}) => {
-  const r = await fetch(`${SB}/rest/v1/${path}`, { ...init, headers: { apikey: K, Authorization: `Bearer ${K}`, 'Content-Type': 'application/json', Prefer: 'return=representation' } });
-  const t = await r.text(); if (!r.ok) throw new Error(`${r.status} ${path}: ${t}`); return t ? JSON.parse(t) : null;
-};
+const rest = restClient();
 await rest('rate_limits?key=like.*', { method: 'DELETE' });
 const b = await chromium.launch({ ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}) });
 const [carla] = await rest(`profiles?select=id&display_name=eq.Carla Demo&limit=1`);
@@ -24,16 +21,7 @@ const pages = {
   researcher: ['demo.researcher@example.com', ['/dashboard', '/briefs', `/briefs/${brief?.id}`, `/briefs/${brief?.id}/pitch`, '/pitches', '/swipe', '/wallet', '/team', '/settings', '/onboarding/cre']],
   admin: ['admin', ['/admin', '/admin/kyc', '/admin/disputes', '/admin/payouts', '/admin/flags', '/admin/users', '/admin/settings']],
 };
-const adminEmail = `audit-admin-${Date.now()}@example.com`;
-let adminSecret;
-{
-  const p = await (await b.newContext()).newPage();
-  await p.goto(`${B}/signup`); await p.getByLabel('Your name').fill('Audit Admin'); await p.getByLabel('Email').fill(adminEmail); await p.getByLabel('Password').fill(PW);
-  await p.getByRole('button', { name: 'Create account' }).click(); await p.waitForURL(/onboarding/);
-  const [u] = await rest(`profiles?select=id&display_name=eq.Audit Admin&order=created_at.desc&limit=1`);
-  await rest(`profiles?id=eq.${u.id}`, { method: 'PATCH', body: JSON.stringify({ role: 'admin' }) });
-  adminSecret = await enrollAdmin(p, B); await p.context().close();
-}
+const admin = await makeAdmin(b, B, rest);
 
 const sizes = { phone: { width: 390, height: 844 }, desktop: { width: 1440, height: 900 } };
 let n = 0;
@@ -41,9 +29,8 @@ for (const [sizeName, viewport] of Object.entries(sizes)) for (const scheme of [
   const ctx = await b.newContext({ viewport, colorScheme: scheme, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   if (email) {
-    await p.goto(`${B}/login`); await p.getByLabel('Email').fill(email === 'admin' ? adminEmail : email); await p.getByLabel('Password').fill(PW);
-    await p.getByRole('button', { name: 'Log in' }).click(); await p.waitForURL(/dashboard|admin|mfa/);
-    if (email === 'admin') { await p.goto(`${B}/admin`); if (p.url().includes('/mfa')) await passMfa(p, adminSecret); }
+    await login(p, B, email === 'admin' ? admin.email : email);
+    if (email === 'admin') { await p.goto(`${B}/admin`); if (p.url().includes('/mfa')) await passMfa(p, admin.secret); }
   }
   for (const u of urls) {
     await p.goto(B + u, { waitUntil: 'networkidle' }).catch(() => {});

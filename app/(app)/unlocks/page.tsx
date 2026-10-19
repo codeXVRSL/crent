@@ -91,7 +91,7 @@ export default async function Unlocks({ searchParams }: { searchParams: Promise<
             const t = tMap.get(u.id);
             const canDispute = u.status === 'held' && new Date(u.available_at) > new Date();
             return (
-              <PitchCard key={u.id} pitch={p as PitchPublic} secret={secret} proofUrl={proofMap.get(u.pitch_id)}
+              <PitchCard key={u.id} pitch={p as PitchPublic} secret={secret} proofUrl={proofMap.get(u.pitch_id)} collapseInstructions
                 scriptPrompt={secret ? buildScriptPrompt({ ...(p as PitchPublic), ...secret }, { brand: cp?.brand_name, audience: cp?.audience, voice: cp?.voice, avoid_topics: cp?.avoid_topics }) : undefined}
                 byline={<span className="inline-flex flex-wrap items-center gap-1.5">
                   <Link href={`/briefs/${u.brief_id}`} className="underline">{(u.briefs as unknown as { title: string } | null)?.title}</Link>
