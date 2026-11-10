@@ -89,7 +89,7 @@ export default async function Dashboard() {
   const nicheIds = (nicheRows ?? []).map((n) => n.niche_id);
   const { data: matching } = v.kycStatus === 'approved' && nicheIds.length
     ? await supabase.from('briefs').select('id, title, price_per_idea_cents, currency, max_unlocks, unlocks_used, deadline_at')
-        .eq('status', 'open').in('niche_id', nicheIds).gt('deadline_at', new Date().toISOString()).order('opened_at', { ascending: false }).limit(5)
+        .eq('status', 'open').or(`niche_id.in.(${nicheIds.join(',')}),invited_cre_id.eq.${v.id}`).gt('deadline_at', new Date().toISOString()).order('opened_at', { ascending: false }).limit(5)
     : { data: [] };
 
   return (

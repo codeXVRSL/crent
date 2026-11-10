@@ -27,4 +27,5 @@ OK=$(cat /tmp/race1.out /tmp/race2.out | grep -c UNLOCK_OK)
 USED=$(psql -X -tA -d $DB -c "select unlocks_used from briefs b join race_ids r on r.brief_id = b.id")
 if [ "$OK" = "1" ] && [ "$USED" = "1" ]; then echo "✓ race: two simultaneous unlocks for the last slot → exactly one succeeds"
 else echo "FAIL: race produced $OK successful unlocks, unlocks_used=$USED"; cat /tmp/race1.out /tmp/race2.out; exit 1; fi
+DB=$DB bash tests/45_close_unlock_race.sh || { echo "DATABASE TESTS FAILED"; exit 1; }
 echo "ALL DATABASE TESTS PASSED"

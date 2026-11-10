@@ -69,10 +69,10 @@ export function buildMasterRows(unlocks: SheetUnlock[], pitches: SheetPitch[], s
     });
 }
 
-/** Stops spreadsheet formula injection: text starting with = + - @ is shown as text. */
+/** CSV only: stops spreadsheet formula injection (text starting with = + - @, even after spaces, or a tab/newline). */
 export function safeCell(v: unknown): string {
   const s = v == null ? '' : String(v);
-  return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  return /^[\s]*[=+\-@]/.test(s) || /^[\t\r\n]/.test(s) ? `'${s}` : s;
 }
 
 export function toCsv(rows: MasterRow[]): string {

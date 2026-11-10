@@ -1,6 +1,6 @@
 import 'server-only';
 import ExcelJS from 'exceljs';
-import { MASTER_COLUMNS, STATUS_OPTIONS, safeCell, type MasterRow } from './master-sheet';
+import { MASTER_COLUMNS, STATUS_OPTIONS, type MasterRow } from './master-sheet';
 
 /** The master sheet as a styled .xlsx: frozen header, wrapped text, clickable reference links, status dropdown. */
 export async function toXlsx(rows: MasterRow[]): Promise<Buffer> {
@@ -18,7 +18,8 @@ export async function toXlsx(rows: MasterRow[]): Promise<Buffer> {
     const values: Record<string, string | number> = {};
     for (const c of MASTER_COLUMNS) {
       const v = r[c.key];
-      values[c.key] = typeof v === 'number' ? v : safeCell(v);
+      // ExcelJS stores strings as text cells (never formulas), so no apostrophe prefix is needed here.
+      values[c.key] = typeof v === 'number' ? v : String(v ?? '');
     }
     const row = ws.addRow(values);
     row.alignment = { vertical: 'top', wrapText: true };

@@ -1743,11 +1743,13 @@ revoke execute on function _unlock_pitch_core(uuid) from public, anon, authentic
 
 create or replace function unlock_pitch(p_pitch_id uuid)
 returns uuid language plpgsql security definer set search_path = public as $$
-declare p pitches; b briefs; v_unlock uuid;
+declare p pitches; b briefs; v_unlock uuid; v_brief uuid;
 begin
-  select * into p from pitches where id = p_pitch_id for update;
+  -- Lock order everywhere: brief first, then its pitches (matches _close_brief, so they can't deadlock).
+  select brief_id into v_brief from pitches where id = p_pitch_id;
   if not found then raise exception 'PITCH_NOT_FOUND'; end if;
-  select * into b from briefs where id = p.brief_id for update;
+  select * into b from briefs where id = v_brief for update;
+  select * into p from pitches where id = p_pitch_id for update;
   if b.creator_id <> auth.uid() or my_role() is distinct from 'creator' then raise exception 'NOT_BRIEF_OWNER'; end if;
   if b.status <> 'open' then raise exception 'BRIEF_NOT_OPEN'; end if;
   if p.status <> 'submitted' then raise exception 'PITCH_NOT_AVAILABLE'; end if;
@@ -1770,10 +1772,16 @@ begin
   select * into b from briefs where id = p_brief_id for update;
   if b.status <> 'open' then return 0; end if;
 
-  if p_reason in ('creator_closed', 'deadline') and b.unlocks_used = 0
+  -- Only when nothing was ever unlocked on this brief (a creator who won a dispute isn't charged again),
+  -- and only pitches from researchers who are still verified and not suspended.
+  if p_reason in ('creator_closed', 'deadline')
+     and not exists (select 1 from unlocks where brief_id = b.id)
      and coalesce((select guarantee_first_unlock from platform_settings where id), true) then
-    select * into top from pitches where brief_id = b.id and status = 'submitted'
-     order by multiplier desc, submitted_at limit 1 for update;
+    select p.* into top from pitches p
+      join profiles pr on pr.id = p.cre_id and pr.suspended_at is null
+      join cre_profiles c on c.user_id = p.cre_id and c.kyc_status = 'approved'
+     where p.brief_id = b.id and p.status = 'submitted'
+     order by p.multiplier desc, p.submitted_at limit 1 for update of p;
     if found then
       perform _unlock_pitch_core(top.id);
       perform notify(b.creator_id, 'pitch_auto_unlocked', 'We unlocked your top pitch',
@@ -1801,6 +1809,25 @@ begin
   return v_unused_budget + v_fee_refund;
 end $$;
 revoke execute on function _close_brief(uuid, text) from public, anon, authenticated;
+
+-- Scheduled close: each brief in its own sub-transaction, so one failure (e.g. a lock conflict)
+-- skips that brief until the next run instead of rolling back the whole batch.
+create or replace function close_expired_briefs()
+returns integer language plpgsql security definer set search_path = public as $$
+declare r record; n int := 0;
+begin
+  for r in select id from briefs where status = 'open' and deadline_at <= now() order by deadline_at limit 200 loop
+    begin
+      perform _close_brief(r.id, 'deadline'); n := n + 1;
+    exception when others then
+      raise warning 'close_expired_briefs: brief % skipped: %', r.id, sqlerrm;
+    end;
+  end loop;
+  -- unpaid drafts older than 7 days
+  update briefs set status = 'cancelled', close_reason = 'cancelled_unpaid', closed_at = now()
+   where status in ('draft','awaiting_payment') and created_at < now() - interval '7 days';
+  return n;
+end $$;
 
 -- ---------------------------------------------------------------
 -- Locked pitch cards for creators
@@ -1967,7 +1994,13 @@ begin
     -- Repeated attempts to move off-platform: warn the sender and alert admins (once per 30 days at 3 attempts).
     select count(*) into v_recent from flags
      where kind = 'contact_leak' and subject_user = new.sender_id and created_at > now() - interval '30 days';
-    if v_recent = 3 then
+    -- Alert once per 30 days per person: the alert itself is recorded as a flag.
+    if v_recent >= 3 and not exists (
+         select 1 from flags where kind = 'other' and entity_type = 'circumvention_alert'
+            and subject_user = new.sender_id and created_at > now() - interval '30 days') then
+      insert into flags(kind, subject_user, entity_type, entity_id, excerpt)
+      values ('other', new.sender_id, 'circumvention_alert', new.thread_id::text,
+              v_recent || ' contact-detail attempts in 30 days; user warned automatically.');
       perform notify(new.sender_id, 'policy_warning', 'Keep deals on Outlier Desk',
         'Contact details are hidden in chat. Moving work off the platform breaks the Terms and can get your account suspended. You also lose escrow, disputes and reviews.',
         '/legal/terms');

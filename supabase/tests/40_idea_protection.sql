@@ -137,6 +137,38 @@ select (select status from pitches where id = :'ph') = 'expired' as ok \gset
 update platform_settings set guarantee_first_unlock = true where id;
 \echo '✓ no auto-unlock without pitches, after a manual unlock, or when switched off'
 
+-- ---------- creator who won a dispute is not charged again; suspended researchers are skipped ----------
+select pg_temp.funded_brief('Dispute then close test') as b8 \gset
+select pg_temp.pitch(:'r1', :'b8', 'I', 700000, 70000) as pi \gset
+select pg_temp.pitch(:'r2', :'b8', 'J', 900000, 70000) as pj \gset
+select set_config('request.jwt.claim.sub', :'c1', false) \gset
+set role authenticated;
+select unlock_pitch(:'pi') as u8 \gset
+select open_dispute(:'u8', 'source_dead', 'The source video link returns a not found page.') as d8 \gset
+reset role;
+select set_config('request.jwt.claim.sub', :'admin', false) \gset
+set role authenticated;
+select resolve_dispute(:'d8', true, 'Refunding the creator.') \gset
+reset role;
+select set_config('request.jwt.claim.sub', :'c1', false) \gset
+set role authenticated;
+select close_brief(:'b8') \gset
+reset role;
+select (select status from pitches where id = :'pj') = 'expired' as ok \gset
+\if :ok \else \echo 'FAIL: after a won dispute, closing must not auto-unlock and charge another pitch' \quit \endif
+select pg_temp.funded_brief('Suspended researcher test') as b9 \gset
+select pg_temp.pitch(:'r2', :'b9', 'K', 900000, 70000) as pk \gset
+select pg_temp.pitch(:'r1', :'b9', 'L', 400000, 100000) as pl \gset
+update profiles set suspended_at = now() where id = :'r2';
+select set_config('request.jwt.claim.sub', :'c1', false) \gset
+set role authenticated;
+select close_brief(:'b9') \gset
+reset role;
+update profiles set suspended_at = null where id = :'r2';
+select (select status from pitches where id = :'pk') = 'expired' and (select status from pitches where id = :'pl') = 'unlocked' as ok \gset
+\if :ok \else \echo 'FAIL: auto-unlock must skip suspended researchers and pick the next best pitch' \quit \endif
+\echo '✓ no second charge after a won dispute; auto-unlock skips suspended researchers'
+
 -- ---------- private briefs (work with a researcher again) ----------
 delete from notifications where kind in ('new_brief', 'private_brief');
 select pg_temp.funded_brief('Private brief test', :'r1'::uuid) as bp \gset
@@ -188,5 +220,13 @@ insert into messages(thread_id, sender_id, body) values (:'th', :'r1', 'rico@gma
 reset role;
 select count(*) = 1 as ok from notifications where kind = 'circumvention_risk' and user_id = :'admin' \gset
 \if :ok \else \echo 'FAIL: admins should be alerted once, not on every attempt' \quit \endif
+-- even after the oldest attempt ages out of the 30-day window, no repeat alert
+update flags set created_at = now() - interval '31 days'
+ where id = (select id from flags where kind = 'contact_leak' and subject_user = :'r1' order by created_at limit 1);
+set role authenticated;
+insert into messages(thread_id, sender_id, body) values (:'th', :'r1', 'call 0917 555 1234');
+reset role;
+select count(*) = 1 as ok from notifications where kind = 'circumvention_risk' and user_id = :'admin' \gset
+\if :ok \else \echo 'FAIL: no repeat alert within 30 days of the first one' \quit \endif
 \echo '✓ third attempt to share contact details in 30 days warns the sender and alerts admins once'
 rollback;

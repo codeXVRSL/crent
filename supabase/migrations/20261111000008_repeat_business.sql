@@ -132,7 +132,13 @@ begin
     -- Repeated attempts to move off-platform: warn the sender and alert admins (once per 30 days at 3 attempts).
     select count(*) into v_recent from flags
      where kind = 'contact_leak' and subject_user = new.sender_id and created_at > now() - interval '30 days';
-    if v_recent = 3 then
+    -- Alert once per 30 days per person: the alert itself is recorded as a flag.
+    if v_recent >= 3 and not exists (
+         select 1 from flags where kind = 'other' and entity_type = 'circumvention_alert'
+            and subject_user = new.sender_id and created_at > now() - interval '30 days') then
+      insert into flags(kind, subject_user, entity_type, entity_id, excerpt)
+      values ('other', new.sender_id, 'circumvention_alert', new.thread_id::text,
+              v_recent || ' contact-detail attempts in 30 days; user warned automatically.');
       perform notify(new.sender_id, 'policy_warning', 'Keep deals on Outlier Desk',
         'Contact details are hidden in chat. Moving work off the platform breaks the Terms and can get your account suspended. You also lose escrow, disputes and reviews.',
         '/legal/terms');

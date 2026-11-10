@@ -30,6 +30,8 @@ describe('CRE master sheet', () => {
     expect(safeCell('=1+1')).toBe("'=1+1");
     expect(safeCell('@cmd')).toBe("'@cmd");
     expect(safeCell('Normal hook')).toBe('Normal hook');
+    expect(safeCell('  =cmd')).toBe("'  =cmd");
+    expect(safeCell('\n=cmd')).toBe("'\n=cmd");
     const csv = toCsv(buildMasterRows(unlocks, pitches, secrets));
     expect(csv.startsWith('﻿"#"')).toBe(true);
     expect(csv).toContain(`"'=HYPERLINK(""evil"")"`);

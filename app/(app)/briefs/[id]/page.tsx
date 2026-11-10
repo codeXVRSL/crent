@@ -95,6 +95,8 @@ export default async function BriefPage({ params, searchParams }: {
     const sorted = [...(pitches ?? [])].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
     const visible = sorted.filter((p) => p.status !== 'withdrawn');
     const waitingCount = visible.filter((p) => p.status === 'submitted').length;
+    const { data: ps } = await supabase.from('platform_settings').select('guarantee_first_unlock').maybeSingle();
+    const guaranteeOn = ps?.guarantee_first_unlock ?? true;
 
     return (
       <>
@@ -163,7 +165,7 @@ export default async function BriefPage({ params, searchParams }: {
               )}
               {brief.status === 'open' && (
                 <ActionForm action={closeBrief} className="grid gap-2 border-t border-line pt-3"
-                  confirmText={brief.unlocks_used === 0 && waitingCount > 0
+                  confirmText={guaranteeOn && !(unlocks ?? []).length && waitingCount > 0
                     ? `Close now. You haven't unlocked any of the ${waitingCount} waiting pitch${waitingCount === 1 ? '' : 'es'}, so the highest-scoring one will be unlocked for ${formatMoney(brief.price_per_idea_cents, brief.currency)} and the rest of the unused budget refunded.`
                     : `Close now and refund ${formatMoney(left * brief.price_per_idea_cents, brief.currency)} of unused budget. Waiting pitches won't be unlockable.`}>
                   <input type="hidden" name="brief_id" value={id} />
