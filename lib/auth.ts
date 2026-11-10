@@ -44,13 +44,13 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
 export async function requireViewer(roles?: Role[]): Promise<Viewer> {
   const v = await getViewer();
   if (!v) redirect('/login');
-  if (v.suspended) redirect('/suspended');
-  if (!v.role) redirect('/onboarding');
-  if (roles && !roles.includes(v.role)) redirect('/dashboard');
-  // Anyone who turned on two-step login must enter their code before using the app.
+  // Anyone who turned on two-step login must enter their code first (the database enforces this too).
   const supabase = await createClient();
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (aal?.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') redirect('/auth/mfa');
+  if (v.suspended) redirect('/suspended');
+  if (!v.role) redirect('/onboarding');
+  if (roles && !roles.includes(v.role)) redirect('/dashboard');
   return v;
 }
 

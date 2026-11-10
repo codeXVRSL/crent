@@ -59,6 +59,48 @@ $$;
 
 grant execute on function jwt_aal() to anon, authenticated, service_role;
 
+-- Anyone who turned on two-step login must use an aal2 session for everything, not only admins.
+create or replace function mfa_satisfied()
+returns boolean language sql stable security definer set search_path = public, auth as $$
+  select auth.uid() is null
+      or jwt_aal() = 'aal2'
+      or not exists (select 1 from auth.mfa_factors f where f.user_id = auth.uid() and f.status = 'verified')
+$$;
+grant execute on function mfa_satisfied() to anon, authenticated, service_role;
+
+-- Runs before every database API request (PostgREST pre-request hook), so it also covers direct API calls
+-- that skip the website: blocks unverified two-step sessions and caps writes per user.
+create or replace function check_request()
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then return; end if;
+  if not mfa_satisfied() then
+    raise exception 'MFA_REQUIRED' using errcode = '42501', hint = 'Enter your two-step code first.';
+  end if;
+  if coalesce(current_setting('request.method', true), 'GET') in ('POST', 'PATCH', 'PUT', 'DELETE') then
+    begin
+      if not rate_limit_hit('api-write:' || auth.uid()::text, 120, 60) then
+        raise exception 'RATE_LIMITED' using errcode = '42501';
+      end if;
+    exception when read_only_sql_transaction then null;   -- read-only requests can't count; let them through
+    end;
+  end if;
+end $$;
+grant execute on function check_request() to anon, authenticated;
+
+do $$ begin
+  if exists (select 1 from pg_roles where rolname = 'authenticator') then
+    execute 'alter role authenticator set pgrst.db_pre_request = ''public.check_request''';
+    notify pgrst, 'reload config';
+  end if;
+end $$;
+
+-- Realtime and Storage don't use the pre-request hook, so the same rule goes into their policies.
+create policy "messages_mfa" on messages as restrictive for select to authenticated
+  using ((select mfa_satisfied()));
+create policy "storage_mfa_insert" on storage.objects as restrictive for insert to authenticated
+  with check ((select public.mfa_satisfied()));
+
 -- ---------------------------------------------------------------
 -- 3. Live chat: stream new messages over Supabase Realtime (RLS still decides who receives them).
 -- ---------------------------------------------------------------
@@ -88,8 +130,19 @@ create policy "avatars_owner_update" on storage.objects for update to authentica
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "avatars_owner_delete" on storage.objects for delete to authenticated
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
-create policy "avatars_public_read" on storage.objects for select to anon, authenticated
-  using (bucket_id = 'avatars');
+-- The bucket is public, so photos load by URL without a read policy. Owners may read (list) only their own folder.
+create policy "avatars_owner_read" on storage.objects for select to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- At most 5 files per person, so the public bucket can't be used as free file hosting.
+create or replace function avatar_file_count(p_user uuid)
+returns integer language sql stable security definer set search_path = public, storage as $$
+  select count(*)::int from storage.objects where bucket_id = 'avatars' and (storage.foldername(name))[1] = p_user::text
+$$;
+revoke execute on function avatar_file_count(uuid) from public, anon;
+grant execute on function avatar_file_count(uuid) to authenticated, service_role;
+create policy "avatars_file_cap" on storage.objects as restrictive for insert to authenticated
+  with check (bucket_id <> 'avatars' or public.avatar_file_count(auth.uid()) < 5);
 
 -- Expose the photo on public views (new columns go last so existing columns keep their order).
 create or replace view public_profiles as

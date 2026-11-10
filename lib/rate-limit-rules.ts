@@ -1,6 +1,7 @@
 // Pure rate-limit rules (no server imports) so they can be unit tested.
 export const LIMITS = {
-  signIn:        { max: 10, windowSeconds: 600 },   // per IP and per email
+  signIn:        { max: 10, windowSeconds: 600 },   // per IP + email
+  signInIp:      { max: 30, windowSeconds: 600 },   // per IP
   signUp:        { max: 5,  windowSeconds: 3600 },  // per IP
   passwordReset: { max: 5,  windowSeconds: 3600 },  // per IP
   waitlist:      { max: 10, windowSeconds: 3600 },  // per IP

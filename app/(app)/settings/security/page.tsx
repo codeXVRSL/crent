@@ -24,7 +24,7 @@ export default async function Security({ searchParams }: { searchParams: Promise
             <h2 className="text-lg font-semibold tracking-tight">Two-step login</h2>
             <p className="text-sm text-muted">
               After your password, enter a code from an authenticator app on your phone.
-              {v.role === 'admin' ? ' Required for admin accounts.' : ' Recommended if you handle payouts.'}
+              {v.role === 'admin' ? ' Required for admin accounts.' : ' Recommended if you handle payouts: once it is on, nothing in your account works without the code.'}
             </p>
           </div>
           <TwoStepSetup factors={factors} />

@@ -4,16 +4,15 @@ import { createClient } from '@/lib/supabase/server';
 import { env } from '@/lib/env';
 import type { ActionResult } from '@/lib/errors';
 import { allow, clientIp, TOO_MANY } from '@/lib/rate-limit';
+import { safeNext } from '@/lib/safe-next';
 
-function safeNext(next: FormDataEntryValue | null) {
-  const n = typeof next === 'string' ? next : '';
-  return n.startsWith('/') && !n.startsWith('//') ? n : '/dashboard';
-}
 
 export async function signIn(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   const email = String(fd.get('email') ?? '').trim();
-  const [byIp, byEmail] = await Promise.all([allow('signIn', await clientIp()), allow('signIn', email || 'blank')]);
-  if (!byIp || !byEmail) return { ok: false, message: TOO_MANY };
+  // Keyed on IP, and on IP + email: a stranger elsewhere can't lock someone out by guessing at their email.
+  const ip = await clientIp();
+  const [byIp, byIpEmail] = await Promise.all([allow('signInIp', ip), allow('signIn', `${ip}|${email}`)]);
+  if (!byIp || !byIpEmail) return { ok: false, message: TOO_MANY };
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({
     email,

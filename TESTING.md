@@ -16,7 +16,7 @@ Gmail delivers `you+anything@gmail.com` to `you@gmail.com`, so you don't need ex
 
 ## 1 · Set up the admin (Save, once)
 1. Sign up with your admin email. On the "How will you use Outlier Desk?" screen, choose **Continue as admin**.
-1. Open **Admin**. You'll be sent to **Settings → Security** to turn on **two-step login**: scan the QR code with Google Authenticator, Authy or 1Password and enter the 6-digit code. From now on, logging in asks for a code. (Lost your phone? Run `update platform_settings set admin_mfa_required = false;` in the Supabase SQL editor, log in, then set it up again and switch it back to `true`.)
+1. Open **Admin**. You'll be sent to **Settings → Security** to turn on **two-step login**: scan the QR code with Google Authenticator, Authy or 1Password and enter the 6-digit code. From now on, logging in asks for a code. (Lost your phone? In the Supabase SQL editor run `delete from auth.mfa_factors where user_id = (select id from auth.users where email = 'you@example.com');`, log in, and set it up again.)
 2. Go to **Admin → Settings** and set **Hold period** to **0 hours**. Earnings then become withdrawable as soon as the jobs run, instead of after 72 hours.
 
 ## 2 · Researcher gets verified (Jamaica)

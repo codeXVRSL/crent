@@ -73,3 +73,76 @@ select avatar_path = :'c1' || '/avatar-1.webp' as ok from public_profiles where 
 \if :ok \else \echo 'FAIL: public_profiles should expose avatar_path' \quit \endif
 reset role;
 \echo '✓ profile photos: own folder only, safe file names, shown on public profiles'
+
+-- ---------- two-step login for everyone who turned it on ----------
+\set r1 '00000000-0000-0000-0000-0000000000e1'
+insert into auth.mfa_factors(user_id, status) values (:'c2', 'verified'), (:'c1', 'unverified');
+select set_config('request.jwt.claim.sub', :'c2', false) \gset
+select set_config('request.jwt.claims', '{"aal":"aal1"}', false) \gset
+set role authenticated;
+select not mfa_satisfied() as ok \gset
+\if :ok \else \echo 'FAIL: verified factor + aal1 must not satisfy two-step' \quit \endif
+do $$ begin perform check_request(); raise exception 'expected error';
+exception when others then if sqlerrm <> 'MFA_REQUIRED' then raise; end if; end $$;
+select set_config('request.jwt.claims', '{"aal":"aal2"}', false) \gset
+select mfa_satisfied() as ok \gset
+\if :ok \else \echo 'FAIL: aal2 must satisfy two-step' \quit \endif
+select check_request();
+reset role;
+-- Chat history is hidden from an aal1 session of a two-step user (this is what Realtime sees too).
+-- c1 has a chat thread; give c1 a verified factor for this check only.
+update auth.mfa_factors set status = 'verified' where user_id = :'c1';
+select set_config('request.jwt.claim.sub', :'c1', false) \gset
+select set_config('request.jwt.claims', '{"aal":"aal2"}', false) \gset
+set role authenticated;
+select count(*) as n_aal2 from messages \gset
+select set_config('request.jwt.claims', '{"aal":"aal1"}', false) \gset
+select count(*) as n_aal1 from messages \gset
+reset role;
+update auth.mfa_factors set status = 'unverified' where user_id = :'c1';
+select :n_aal2 > 0 and :n_aal1 = 0 as ok \gset
+\if :ok \else \echo 'FAIL: two-step user must read chats with a code (aal2) and not without (aal1)' \quit \endif
+-- An unverified (half-finished) setup does not lock anyone out.
+select set_config('request.jwt.claim.sub', :'c1', false) \gset
+set role authenticated;
+select mfa_satisfied() as ok \gset
+\if :ok \else \echo 'FAIL: unverified factor must not require a code' \quit \endif
+select check_request();
+reset role;
+-- Anonymous visitors pass straight through.
+select set_config('request.jwt.claim.sub', '', false) \gset
+set role anon;
+select check_request();
+reset role;
+\echo '✓ two-step users: blocked on every API request and chat until they enter a code; half-finished setups ignored'
+
+-- ---------- direct API write cap ----------
+select set_config('request.jwt.claim.sub', :'r1', false) \gset
+select set_config('request.jwt.claims', '{"aal":"aal1"}', false) \gset
+select set_config('request.method', 'GET', false) \gset
+set role authenticated;
+do $$ begin for i in 1..200 loop perform check_request(); end loop; end $$;
+select set_config('request.method', 'POST', false) \gset
+do $$ begin for i in 1..120 loop perform check_request(); end loop; end $$;
+do $$ begin perform check_request(); raise exception 'expected error';
+exception when others then if sqlerrm <> 'RATE_LIMITED' then raise; end if; end $$;
+reset role;
+select set_config('request.method', '', false) \gset
+\echo '✓ direct API writes capped at 120 a minute per user; reads not counted'
+
+-- ---------- photo storage ----------
+select set_config('request.jwt.claim.sub', :'c1', false) \gset
+set role authenticated;
+insert into storage.objects(bucket_id, name) select 'avatars', :'c1' || '/a' || g || '.png' from generate_series(1, 5) g;
+do $$ begin insert into storage.objects(bucket_id, name) values ('avatars', auth.uid()::text || '/a6.png'); raise exception 'expected error';
+exception when insufficient_privilege then null; end $$;
+do $$ begin insert into storage.objects(bucket_id, name) values ('avatars', '00000000-0000-0000-0000-0000000000c2/x.png'); raise exception 'expected error';
+exception when insufficient_privilege then null; end $$;
+select count(*) = 5 as ok from storage.objects where bucket_id = 'avatars' \gset
+\if :ok \else \echo 'FAIL: owner should list only their own 5 photos' \quit \endif
+reset role;
+set role anon;
+select count(*) = 0 as ok from storage.objects where bucket_id = 'avatars' \gset
+\if :ok \else \echo 'FAIL: anonymous visitors must not list photos' \quit \endif
+reset role;
+\echo '✓ photo storage: own folder only, max 5 files, not listable by others'

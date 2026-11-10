@@ -21,9 +21,11 @@ export function AvatarUpload({ userId, hasPhoto }: { userId: string; hasPhoto: b
     if (file.size > AVATAR_MAX_BYTES) return setMsg({ tone: 'bad', text: 'Use an image under 2 MB.' });
     setBusy(true);
     const path = `${userId}/avatar-${Date.now().toString(36)}.${ext}`;
-    const { error } = await createBrowserSupabase().storage.from('avatars').upload(path, file, { contentType: file.type, upsert: false });
+    const bucket = createBrowserSupabase().storage.from('avatars');
+    const { error } = await bucket.upload(path, file, { contentType: file.type, upsert: false });
     if (error) { setBusy(false); return setMsg({ tone: 'bad', text: 'Upload failed. Try again.' }); }
     const res = await setAvatar(path);
+    if (!res.ok) await bucket.remove([path]); // don't leave unused files behind
     setBusy(false);
     setMsg({ tone: res.ok ? 'good' : 'bad', text: res.ok ? res.message ?? 'Photo updated.' : res.message });
     if (input.current) input.current.value = '';
