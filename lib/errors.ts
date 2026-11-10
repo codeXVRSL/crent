@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 // Maps database error codes to messages people can act on.
 const MESSAGES: Record<string, string> = {
   NOT_SIGNED_IN: 'Please sign in again.',
@@ -46,6 +47,8 @@ const MESSAGES: Record<string, string> = {
   DISPUTE_NOT_AWAITING_RESPONSE: 'This dispute is no longer waiting for your reply.',
   DISPUTE_NOT_OPEN: 'This dispute is already resolved.',
   ALREADY_REVIEWED: "You've already reviewed this.",
+  MFA_REQUIRED: 'Enter your two-step login code first. Log out and back in if this keeps happening.',
+  RATE_LIMITED: 'You are doing that very fast. Wait a minute and try again.',
 };
 
 export function friendlyError(err: unknown): string {
@@ -55,6 +58,7 @@ export function friendlyError(err: unknown): string {
   if (raw.includes('duplicate key') && raw.includes('handle')) return 'That handle is taken. Try another.';
   if (raw.includes('violates check constraint')) return 'Some fields are too short or too long. Check the limits under each field.';
   console.error('[unmapped error]', raw);
+  Sentry.captureMessage(`Unmapped error: ${raw.slice(0, 300)}`, 'warning');
   return 'That didn’t work. Try again, and contact support if it keeps happening.';
 }
 

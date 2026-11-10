@@ -10,6 +10,9 @@
 \set r2    '00000000-0000-0000-0000-0000000000e2'
 \set r3    '00000000-0000-0000-0000-0000000000e3'
 
+-- Sessions in this file are two-step verified (aal2), so admin powers work. 30_hardening.sql tests aal1.
+select set_config('request.jwt.claims', '{"aal":"aal2"}', false) \gset
+
 insert into auth.users(id, email) values
   (:'admin','admin@example.com'), (:'c1','creator1@example.com'), (:'c2','creator2@example.com'),
   (:'r1','cre1@example.com'), (:'r2','cre2@example.com'), (:'r3','cre3@example.com');

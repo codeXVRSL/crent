@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { friendlyError, type ActionResult } from '@/lib/errors';
+import { allow, TOO_MANY } from '@/lib/rate-limit';
 import { emailUser } from '@/lib/notify-email';
 import { env } from '@/lib/env';
 
@@ -10,6 +11,8 @@ export async function openDispute(_: ActionResult | null, fd: FormData): Promise
   const details = String(fd.get('details') ?? '').trim();
   if (details.length < 20) return { ok: false, message: 'Explain what went wrong in at least 20 characters.' };
   const supabase = await createClient();
+  const { data: { user: rlUser } } = await supabase.auth.getUser();
+  if (rlUser && !(await allow('dispute', rlUser.id))) return { ok: false, message: TOO_MANY };
   const { data, error } = await supabase.rpc('open_dispute', {
     p_unlock_id: String(fd.get('unlock_id')), p_reason: String(fd.get('reason')), p_details: details,
   });

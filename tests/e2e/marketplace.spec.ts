@@ -1,4 +1,5 @@
 import { test, expect, type Browser, type Page } from '@playwright/test';
+import { totp } from '../totp';
 
 // Full marketplace flow through the real UI.
 // Needs: the app running (BASE_URL), Supabase running, and SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY for test setup
@@ -74,6 +75,14 @@ test('brief → pitch → locked → unlock → close/refund → payout → chat
   // ---------- Admin approves ----------
   const admin = await signUp(browser, `Ada${run}`, '');
   await rest(`profiles?id=eq.${admin.id}`, { method: 'PATCH', body: JSON.stringify({ role: 'admin' }) });
+  // Admin pages need two-step login: the app sends the admin to set it up first.
+  await admin.page.goto('/admin/kyc');
+  await admin.page.waitForURL(/\/settings\/security\?required=admin/);
+  await admin.page.getByRole('button', { name: 'Set up two-step login' }).click();
+  const secret = (await admin.page.locator('code').first().innerText()).trim();
+  await admin.page.getByLabel('6-digit code').fill(totp(secret));
+  await admin.page.getByRole('button', { name: 'Turn on' }).click();
+  await expect(admin.page.getByText('Two-step login is on')).toBeVisible();
   await admin.page.goto('/admin/kyc');
   const card = admin.page.locator('[data-card]', { hasText: `@rico_${run}`.slice(0, 25) }).filter({ has: admin.page.getByRole('button', { name: 'Approve' }) }).last();
   await expect(card).toBeVisible();

@@ -9,10 +9,12 @@
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "db:test": "bash supabase/tests/run.sh"
+    "db:test": "bash supabase/tests/run.sh",
+    "e2e:local": "bash scripts/e2e-local.sh"
   },
   "dependencies": {
     "@fontsource/instrument-serif": "^5.3.0",
+    "@sentry/nextjs": "^11.11.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "geist": "^1.7.2",

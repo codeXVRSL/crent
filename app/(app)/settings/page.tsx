@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import { CreatorProfileForm } from '@/components/creator-profile-form';
 import { Card, PageHeader } from '@/components/ui';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Avatar } from '@/components/avatar';
+import { AvatarUpload } from '@/components/avatar-upload';
 
 export const metadata = { title: 'Settings' };
 
@@ -20,6 +22,18 @@ export default async function Settings() {
           <p>{v.email}</p>
           <p className="text-muted">Account type: {v.role === 'cre' ? 'Researcher' : v.role === 'creator' ? 'Creator' : 'Admin'}</p>
           <ThemeToggle />
+        </Card>
+        <Card className="grid gap-4">
+          <h2 className="text-lg font-semibold tracking-tight">Profile photo</h2>
+          <div className="flex items-start gap-4">
+            <Avatar path={v.avatarPath} name={v.displayName || v.email} size={64} />
+            <AvatarUpload userId={v.id} hasPhoto={!!v.avatarPath} />
+          </div>
+        </Card>
+        <Card className="grid gap-2">
+          <h2 className="text-lg font-semibold tracking-tight">Security</h2>
+          <p className="text-sm text-muted">Two-step login with an authenticator app{v.role === 'admin' ? ' (required for admin pages)' : ''}.</p>
+          <Link href="/settings/security" className="text-sm font-semibold text-accent">Manage two-step login →</Link>
         </Card>
         {v.role === 'creator' && (
           <Card className="grid gap-4"><h2 className="text-lg font-semibold tracking-tight">Channel profile</h2><CreatorProfileForm displayName={v.displayName} cp={cp} /></Card>

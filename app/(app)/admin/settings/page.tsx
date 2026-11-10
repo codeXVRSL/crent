@@ -1,4 +1,4 @@
-import { requireViewer } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { ActionForm, SubmitButton } from '@/components/form';
 import { Card, Field, Input, PageHeader } from '@/components/ui';
@@ -7,7 +7,7 @@ import { updateSettings } from '@/app/actions/admin';
 export const metadata = { title: 'Platform settings' };
 
 export default async function AdminSettings() {
-  await requireViewer(['admin']);
+  await requireAdmin();
   const supabase = await createClient();
   const { data: s } = await supabase.from('platform_settings').select('*').single();
   if (!s) return null;

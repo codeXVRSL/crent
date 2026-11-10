@@ -1,4 +1,4 @@
-import { requireViewer } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { ActionForm, SubmitButton } from '@/components/form';
 import { Button, Input, PageHeader, Pill } from '@/components/ui';
@@ -8,7 +8,7 @@ import { setSuspended } from '@/app/actions/admin';
 export const metadata = { title: 'Users' };
 
 export default async function AdminUsers({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const v = await requireViewer(['admin']);
+  const v = await requireAdmin();
   const { q } = await searchParams;
   const supabase = await createClient();
   let query = supabase.from('profiles').select('id, display_name, handle, role, suspended_at, suspended_reason, created_at').order('created_at', { ascending: false }).limit(100);

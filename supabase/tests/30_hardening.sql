@@ -1,0 +1,166 @@
+-- Launch hardening: admin two-step login, rate limits, profile photos. Runs after 10_marketplace_flow.sql.
+\set ON_ERROR_STOP 1
+\set QUIET 1
+\set admin '00000000-0000-0000-0000-00000000000a'
+\set c1    '00000000-0000-0000-0000-0000000000c1'
+\set c2    '00000000-0000-0000-0000-0000000000c2'
+
+-- ---------- admin two-step login ----------
+select set_config('request.jwt.claim.sub', :'admin', false) \gset
+select set_config('request.jwt.claims', '{"aal":"aal1"}', false) \gset
+set role authenticated;
+select not is_admin() as ok \gset
+\if :ok \else \echo 'FAIL: admin with password only (aal1) must not have admin powers' \quit \endif
+do $$ begin perform review_kyc('00000000-0000-0000-0000-0000000000e3', true, null); raise exception 'expected error';
+exception when others then if sqlerrm <> 'NOT_ADMIN' then raise; end if; end $$;
+select set_config('request.jwt.claims', '{"aal":"aal2"}', false) \gset
+select is_admin() as ok \gset
+\if :ok \else \echo 'FAIL: admin with aal2 must have admin powers' \quit \endif
+select set_config('request.jwt.claims', '', false) \gset
+select not is_admin() as ok \gset
+\if :ok \else \echo 'FAIL: missing aal claim must count as aal1' \quit \endif
+reset role;
+update platform_settings set admin_mfa_required = false where id;
+set role authenticated;
+select is_admin() as ok \gset
+\if :ok \else \echo 'FAIL: break-glass setting should allow aal1 admin' \quit \endif
+reset role;
+update platform_settings set admin_mfa_required = true where id;
+select set_config('request.jwt.claim.sub', :'c1', false) \gset
+select set_config('request.jwt.claims', '{"aal":"aal2"}', false) \gset
+set role authenticated;
+select not is_admin() as ok \gset
+\if :ok \else \echo 'FAIL: non-admin with aal2 must not be admin' \quit \endif
+reset role;
+\echo '✓ admin powers need a two-step (aal2) session; break-glass switch works; non-admins unaffected'
+
+-- ---------- rate limits ----------
+set role authenticated;
+do $$ begin perform rate_limit_hit('x', 1, 60); raise exception 'expected error';
+exception when insufficient_privilege then null; end $$;
+do $$ begin perform 1 from rate_limits; raise exception 'expected error';
+exception when insufficient_privilege then null; end $$;
+reset role;
+set role service_role;
+select rate_limit_hit('test:a', 2, 60) and rate_limit_hit('test:a', 2, 60) and not rate_limit_hit('test:a', 2, 60)
+   and rate_limit_hit('test:b', 2, 60) as ok \gset
+\if :ok \else \echo 'FAIL: rate limit should allow 2 hits then block, per key' \quit \endif
+do $$ begin perform rate_limit_hit('x', 0, 60); raise exception 'expected error';
+exception when others then if sqlerrm <> 'INVALID_RATE_LIMIT' then raise; end if; end $$;
+reset role;
+insert into rate_limits(key, window_start, hits) values ('old', now() - interval '2 days', 5);
+set role service_role;
+select purge_rate_limits() >= 1 as ok \gset
+\if :ok \else \echo 'FAIL: purge should delete old windows' \quit \endif
+reset role;
+select not exists (select 1 from rate_limits where key = 'old') and exists (select 1 from rate_limits where key = 'test:a') as ok \gset
+\if :ok \else \echo 'FAIL: purge removed the wrong rows' \quit \endif
+\echo '✓ rate limits: server-only, per-key counting, old windows purged'
+
+-- ---------- profile photos ----------
+select set_config('request.jwt.claim.sub', :'c1', false) \gset
+set role authenticated;
+update profiles set avatar_path = :'c1' || '/avatar-1.webp' where id = auth.uid();
+do $$ begin update profiles set avatar_path = '00000000-0000-0000-0000-0000000000c2/x.png' where id = auth.uid();
+raise exception 'expected error'; exception when check_violation then null; end $$;
+do $$ begin update profiles set avatar_path = auth.uid()::text || '/x.gif' where id = auth.uid();
+raise exception 'expected error'; exception when check_violation then null; end $$;
+do $$ begin update profiles set avatar_path = auth.uid()::text || '/../../etc.png' where id = auth.uid();
+raise exception 'expected error'; exception when check_violation then null; end $$;
+reset role;
+set role anon;
+select avatar_path = :'c1' || '/avatar-1.webp' as ok from public_profiles where id = :'c1' \gset
+\if :ok \else \echo 'FAIL: public_profiles should expose avatar_path' \quit \endif
+reset role;
+\echo '✓ profile photos: own folder only, safe file names, shown on public profiles'
+
+-- ---------- two-step login for everyone who turned it on ----------
+\set r1 '00000000-0000-0000-0000-0000000000e1'
+insert into auth.mfa_factors(user_id, status) values (:'c2', 'verified'), (:'c1', 'unverified');
+select set_config('request.jwt.claim.sub', :'c2', false) \gset
+select set_config('request.jwt.claims', '{"aal":"aal1"}', false) \gset
+set role authenticated;
+select not mfa_satisfied() as ok \gset
+\if :ok \else \echo 'FAIL: verified factor + aal1 must not satisfy two-step' \quit \endif
+do $$ begin perform check_request(); raise exception 'expected error';
+exception when others then if sqlerrm <> 'MFA_REQUIRED' then raise; end if; end $$;
+select set_config('request.jwt.claims', '{"aal":"aal2"}', false) \gset
+select mfa_satisfied() as ok \gset
+\if :ok \else \echo 'FAIL: aal2 must satisfy two-step' \quit \endif
+select check_request();
+reset role;
+-- Chat history is hidden from an aal1 session of a two-step user (this is what Realtime sees too).
+-- c1 has a chat thread; give c1 a verified factor for this check only.
+update auth.mfa_factors set status = 'verified' where user_id = :'c1';
+select set_config('request.jwt.claim.sub', :'c1', false) \gset
+select set_config('request.jwt.claims', '{"aal":"aal2"}', false) \gset
+set role authenticated;
+select count(*) as n_aal2 from messages \gset
+select set_config('request.jwt.claims', '{"aal":"aal1"}', false) \gset
+select count(*) as n_aal1 from messages \gset
+reset role;
+update auth.mfa_factors set status = 'unverified' where user_id = :'c1';
+select :n_aal2 > 0 and :n_aal1 = 0 as ok \gset
+\if :ok \else \echo 'FAIL: two-step user must read chats with a code (aal2) and not without (aal1)' \quit \endif
+-- An unverified (half-finished) setup does not lock anyone out.
+select set_config('request.jwt.claim.sub', :'c1', false) \gset
+set role authenticated;
+select mfa_satisfied() as ok \gset
+\if :ok \else \echo 'FAIL: unverified factor must not require a code' \quit \endif
+select check_request();
+reset role;
+-- Anonymous visitors pass straight through.
+select set_config('request.jwt.claim.sub', '', false) \gset
+set role anon;
+select check_request();
+reset role;
+\echo '✓ two-step users: blocked on every API request and chat until they enter a code; half-finished setups ignored'
+
+-- ---------- direct API write cap ----------
+select set_config('request.jwt.claim.sub', :'r1', false) \gset
+select set_config('request.jwt.claims', '{"aal":"aal1"}', false) \gset
+select set_config('request.method', 'GET', false) \gset
+set role authenticated;
+do $$ begin for i in 1..200 loop perform check_request(); end loop; end $$;
+select set_config('request.method', 'POST', false) \gset
+do $$ begin for i in 1..120 loop perform check_request(); end loop; end $$;
+do $$ begin perform check_request(); raise exception 'expected error';
+exception when others then if sqlerrm <> 'RATE_LIMITED' then raise; end if; end $$;
+reset role;
+select set_config('request.method', '', false) \gset
+\echo '✓ direct API writes capped at 120 a minute per user; reads not counted'
+
+-- ---------- photo storage ----------
+select set_config('request.jwt.claim.sub', :'c1', false) \gset
+set role authenticated;
+insert into storage.objects(bucket_id, name) select 'avatars', :'c1' || '/a' || g || '.png' from generate_series(1, 5) g;
+do $$ begin insert into storage.objects(bucket_id, name) values ('avatars', auth.uid()::text || '/a6.png'); raise exception 'expected error';
+exception when insufficient_privilege then null; end $$;
+do $$ begin insert into storage.objects(bucket_id, name) values ('avatars', '00000000-0000-0000-0000-0000000000c2/x.png'); raise exception 'expected error';
+exception when insufficient_privilege then null; end $$;
+select count(*) = 5 as ok from storage.objects where bucket_id = 'avatars' \gset
+\if :ok \else \echo 'FAIL: owner should list only their own 5 photos' \quit \endif
+reset role;
+set role anon;
+select count(*) = 0 as ok from storage.objects where bucket_id = 'avatars' \gset
+\if :ok \else \echo 'FAIL: anonymous visitors must not list photos' \quit \endif
+reset role;
+\echo '✓ photo storage: own folder only, max 5 files, not listable by others'
+
+-- ---------- storage reads/deletes also need the code; waitlist only via the server ----------
+update auth.mfa_factors set status = 'verified' where user_id = :'c1';
+select set_config('request.jwt.claim.sub', :'c1', false) \gset
+select set_config('request.jwt.claims', '{"aal":"aal1"}', false) \gset
+set role authenticated;
+select count(*) = 0 as ok from storage.objects \gset
+\if :ok \else \echo 'FAIL: aal1 session of a two-step user must not read stored files' \quit \endif
+delete from storage.objects where bucket_id = 'avatars';
+reset role;
+select count(*) = 5 as ok from storage.objects where bucket_id = 'avatars' \gset
+\if :ok \else \echo 'FAIL: aal1 session of a two-step user must not delete stored files' \quit \endif
+update auth.mfa_factors set status = 'unverified' where user_id = :'c1';
+set role anon;
+do $$ begin insert into waitlist(email, side) values ('bot@example.com', 'creator'); raise exception 'expected error';
+exception when insufficient_privilege then null; end $$;
+reset role;
+\echo '✓ stored files (ID scans, proofs, photos) need the code to read, change or delete; waitlist only through the website'

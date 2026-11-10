@@ -1,4 +1,4 @@
-import { requireViewer } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { ActionForm } from '@/components/form';
 import { Card, EmptyState, Input, PageHeader, Pill } from '@/components/ui';
@@ -10,7 +10,7 @@ import { compactViews, formatMultiplier } from '@/lib/outlier';
 export const metadata = { title: 'Verifications' };
 
 export default async function AdminKyc() {
-  await requireViewer(['admin']);
+  await requireAdmin();
   const supabase = await createClient();
   const { data: pending } = await supabase.from('cre_profiles').select('user_id, headline, platforms').eq('kyc_status', 'pending');
   const ids = (pending ?? []).map((p) => p.user_id);

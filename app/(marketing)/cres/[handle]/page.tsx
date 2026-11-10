@@ -1,12 +1,13 @@
 import { notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createPublicClient } from '@/lib/supabase/server';
 import { Pill, Stat } from '@/components/ui';
+import { Avatar } from '@/components/avatar';
 import { platformLabel } from '@/lib/constants';
 import { compactViews, formatMultiplier } from '@/lib/outlier';
 
 export default async function CreProfile({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params;
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data: cre } = await supabase.from('public_cres').select('*').eq('handle', handle.toLowerCase()).maybeSingle();
   if (!cre) notFound();
   const [{ data: portfolio }, { data: reviews }] = await Promise.all([
@@ -19,7 +20,10 @@ export default async function CreProfile({ params }: { params: Promise<{ handle:
     <div className="mx-auto grid max-w-4xl gap-8 px-4 py-14">
       <header className="grid gap-3">
         <div className="flex flex-wrap items-center gap-2"><Pill tone="good">Verified</Pill>{!cre.accepting_work && <Pill tone="muted">Not taking new work</Pill>}</div>
-        <h1 className="text-[40px] font-semibold tracking-tight">{cre.display_name}</h1>
+        <div className="flex items-center gap-4">
+          <Avatar path={cre.avatar_path} name={cre.display_name} size={64} />
+          <h1 className="text-[40px] font-semibold tracking-tight">{cre.display_name}</h1>
+        </div>
         <p className="text-muted">@{cre.handle}{cre.years_experience ? ` · ${cre.years_experience} years researching` : ''}</p>
         {cre.headline && <p className="text-lg">{cre.headline}</p>}
         {cre.bio && <p className="max-w-2xl whitespace-pre-wrap leading-relaxed text-ink-2">{cre.bio}</p>}

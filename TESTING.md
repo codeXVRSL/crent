@@ -16,6 +16,7 @@ Gmail delivers `you+anything@gmail.com` to `you@gmail.com`, so you don't need ex
 
 ## 1 · Set up the admin (Save, once)
 1. Sign up with your admin email. On the "How will you use Outlier Desk?" screen, choose **Continue as admin**.
+1. Open **Admin**. You'll be sent to **Settings → Security** to turn on **two-step login**: scan the QR code with Google Authenticator, Authy or 1Password and enter the 6-digit code. From now on, logging in asks for a code. (Lost your phone? In the Supabase SQL editor run `delete from auth.mfa_factors where user_id = (select id from auth.users where email = 'you@example.com');`, log in, and set it up again.)
 2. Go to **Admin → Settings** and set **Hold period** to **0 hours**. Earnings then become withdrawable as soon as the jobs run, instead of after 72 hours.
 
 ## 2 · Researcher gets verified (Jamaica)
@@ -54,6 +55,9 @@ Gmail delivers `you+anything@gmail.com` to `you@gmail.com`, so you don't need ex
 - Open a **dispute** on an unlocked idea as the creator, reply as the researcher, and decide it as admin.
 - Use it on your **phone**, and try **dark mode**.
 - Press **Ctrl+K / ⌘K** to jump around.
+- Open the same chat on two devices: a message sent on one should appear on the other within a second or two.
+- Add a **profile photo** in Settings; check it shows on your researcher profile and in chats. Try a GIF or a 5 MB photo (both should be refused).
+- Type a wrong password 11 times in 10 minutes: you should see "Too many attempts".
 
 ## Reporting problems
 Use the **Feedback** button (bottom right, on every signed-in page). It records which page you were on. Save reads everything in **Admin → Feedback**.

@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { requireViewer } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { processPendingRefunds, sendPayout } from '@/lib/payments/events';
 import { friendlyError, type ActionResult } from '@/lib/errors';
 import { emailUser } from '@/lib/notify-email';
@@ -11,7 +11,7 @@ import { env } from '@/lib/env';
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
 
 export async function reviewKyc(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
-  await requireViewer(['admin']);
+  await requireAdmin();
   const approve = fd.get('decision') === 'approve';
   const userId = str(fd, 'user_id');
   const supabase = await createClient();
@@ -24,7 +24,7 @@ export async function reviewKyc(_: ActionResult | null, fd: FormData): Promise<A
 }
 
 export async function approvePayout(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
-  await requireViewer(['admin']);
+  await requireAdmin();
   const id = str(fd, 'payout_id');
   const rate = Number(str(fd, 'fx_rate'));
   if (!(rate > 0)) return { ok: false, message: 'Enter the USD→PHP rate your provider quotes, e.g. 58.50.' };
@@ -41,7 +41,7 @@ export async function approvePayout(_: ActionResult | null, fd: FormData): Promi
 }
 
 export async function resolveDispute(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
-  await requireViewer(['admin']);
+  await requireAdmin();
   const id = str(fd, 'dispute_id');
   const note = str(fd, 'note');
   if (note.length < 5) return { ok: false, message: 'Write a short explanation for both sides.' };
@@ -55,7 +55,7 @@ export async function resolveDispute(_: ActionResult | null, fd: FormData): Prom
 
 /** For refunds the provider couldn't process automatically: admin refunds by hand, then records it here. */
 export async function markRefundDone(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
-  const v = await requireViewer(['admin']);
+  const v = await requireAdmin();
   const id = str(fd, 'refund_id');
   const ref = str(fd, 'provider_ref');
   if (!ref) return { ok: false, message: 'Enter the reference from the manual refund.' };
@@ -68,7 +68,7 @@ export async function markRefundDone(_: ActionResult | null, fd: FormData): Prom
 }
 
 export async function retryRefund(fd: FormData) {
-  const v = await requireViewer(['admin']);
+  const v = await requireAdmin();
   const db = createAdminClient();
   await db.from('refunds').update({ status: 'pending', failure_reason: null }).eq('id', str(fd, 'refund_id'));
   await db.from('audit_log').insert({ actor_id: v.id, action: 'refund.retry', entity_type: 'refund', entity_id: str(fd, 'refund_id') });
@@ -77,7 +77,7 @@ export async function retryRefund(fd: FormData) {
 }
 
 export async function setSuspended(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
-  await requireViewer(['admin']);
+  await requireAdmin();
   const suspend = fd.get('suspend') === '1';
   const reason = str(fd, 'reason');
   if (suspend && reason.length < 5) return { ok: false, message: 'Add a reason for the suspension.' };
@@ -89,7 +89,7 @@ export async function setSuspended(_: ActionResult | null, fd: FormData): Promis
 }
 
 export async function updateFlag(fd: FormData) {
-  const v = await requireViewer(['admin']);
+  const v = await requireAdmin();
   const db = createAdminClient();
   const status = fd.get('status') === 'actioned' ? 'actioned' : 'dismissed';
   await db.from('flags').update({ status }).eq('id', str(fd, 'flag_id'));
@@ -98,7 +98,7 @@ export async function updateFlag(fd: FormData) {
 }
 
 export async function updateSettings(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
-  await requireViewer(['admin']);
+  await requireAdmin();
   const supabase = await createClient();
   const { error } = await supabase.rpc('update_settings', {
     p_creator_fee_bps: Math.round(Number(str(fd, 'creator_fee_pct')) * 100),
@@ -114,7 +114,7 @@ export async function updateSettings(_: ActionResult | null, fd: FormData): Prom
 }
 
 export async function runJobsNow(): Promise<ActionResult> {
-  await requireViewer(['admin']);
+  await requireAdmin();
   const { runScheduledJobs } = await import('@/lib/jobs');
   const r = await runScheduledJobs();
   revalidatePath('/admin');
@@ -123,7 +123,7 @@ export async function runJobsNow(): Promise<ActionResult> {
 }
 
 export async function setFeedbackStatus(fd: FormData) {
-  await requireViewer(['admin']);
+  await requireAdmin();
   const supabase = await createClient();
   await supabase.rpc('set_feedback_status', { p_id: String(fd.get('id')), p_status: String(fd.get('status')) });
   revalidatePath('/admin/feedback');
