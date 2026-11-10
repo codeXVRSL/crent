@@ -1,0 +1,294 @@
+{
+  "id": "ODGrowthWelcome1",
+  "name": "Outlier Desk Growth · Waitlist Welcome",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "9c23630e-7e66-5593-8adb-49b6c6d7d131",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ac9710c2-ab1d-5760-b39e-edb912bdd3a1",
+              "name": "app_url",
+              "value": "https://YOUR-APP.vercel.app",
+              "type": "string"
+            },
+            {
+              "id": "eac6c5fe-c5b2-56c2-be21-7436c8281b2d",
+              "name": "admin_email",
+              "value": "PASTE_YOUR_EMAIL",
+              "type": "string"
+            },
+            {
+              "id": "8ecb4c06-f12b-5700-b738-c6abe059d79d",
+              "name": "from_email",
+              "value": "Outlier Desk <hello@YOUR-DOMAIN>",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "291d6a38-fc6f-503e-b7d0-6ae8d5fa96c4",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "notes": "All settings in one place: your live site URL and the email that receives admin mail."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select id, email, side, source\n  from waitlist\n where welcomed_at is null and created_at > now() - interval '7 days'\n order by created_at\n limit 40",
+        "options": {}
+      },
+      "id": "bf4d8eac-6b2c-556a-a63b-f10e1298e10d",
+      "name": "New Signups",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Outlier Desk DB (n8n_admin)"
+        }
+      },
+      "alwaysOutputData": true,
+      "notes": "Everyone who joined (website form or chat) and hasn't had a welcome email yet, 40 per run."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "42ed954a-86e7-5332-8d7f-304bbb663db9",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b0f7e083-0d23-5425-9805-e24c6dfd511a",
+      "name": "Anyone New?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: $('Config').first().json.from_email, to: [$json.email], subject: \"You're on the Outlier Desk waitlist\", text: (() => { const a = $('Config').first().json.app_url; return $json.side === 'cre' ? `Hi!\\n\\nThanks for joining the Outlier Desk waitlist as a researcher.\\n\\nWe're opening spots in small groups. To be ready on day one, prepare at least 3 portfolio finds: short-form videos that beat their channel's usual views, with the view count and the channel's median.\\n\\nSee how researchers earn: ${a}/for-cres\\n\\nWe'll email you when your spot opens.\\n\\n— The Outlier Desk team\\n\\nYou're getting this because you joined the waitlist at ${a}. Reply \"remove\" and we'll take you off.` : `Hi!\\n\\nThanks for joining the Outlier Desk waitlist.\\n\\nWe're opening spots for creators in small groups. When yours opens, you can post a brief (most start around $30), get pitched proven short-form ideas by verified researchers, and only pay for the ones you unlock.\\n\\nHow pricing works: ${a}/pricing\\n\\nWe'll email you when your spot opens.\\n\\n— The Outlier Desk team\\n\\nYou're getting this because you joined the waitlist at ${a}. Reply \"remove\" and we'll take you off.`; })() }) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 600
+            }
+          }
+        }
+      },
+      "id": "add0930c-98e1-544b-b16f-5cc403e08df5",
+      "name": "Send Welcome",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        -100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Resend API"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "Resend credential: Header Auth, name Authorization, value 'Bearer re_…'. Failed sends go to the error output and are retried next run.",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update waitlist set welcomed_at = now() where id = $1 and welcomed_at is null",
+        "options": {
+          "queryReplacement": "={{ [ $('New Signups').item.json.id ] }}"
+        }
+      },
+      "id": "6769fc02-534c-5693-a3a9-2b7b07687466",
+      "name": "Mark Welcomed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1100,
+        -100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Outlier Desk DB (n8n_admin)"
+        }
+      },
+      "notes": "Only after Resend accepted the email, so nobody is skipped or emailed twice."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Config').first().json.admin_email }}",
+        "subject": "Outlier Desk: some waitlist welcome emails failed",
+        "message": "=Resend refused {{ $input.all().length }} welcome email(s). They will be retried in 15 minutes. Last error: {{ $json.error?.message || JSON.stringify($json.error || $json) }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "b3102637-42b0-55bd-992e-071c7eea6499",
+      "name": "Tell Admin: Send Failed",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1100,
+        100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "content": "## Waitlist welcome · every 15 minutes\nEmails each new waitlist signup once (creator or researcher version), then marks them welcomed.\n\n**Setup:** Resend credential (Header Auth `Authorization: Bearer re_…`), your sending address in *Config* (a domain verified in Resend).",
+        "height": 240,
+        "width": 560,
+        "color": 4
+      },
+      "id": "1885eb7f-3583-5ee1-896b-c8bd5a20eb4c",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -320
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "New Signups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New Signups": {
+      "main": [
+        [
+          {
+            "node": "Anyone New?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anyone New?": {
+      "main": [
+        [
+          {
+            "node": "Send Welcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Welcome": {
+      "main": [
+        [
+          {
+            "node": "Mark Welcomed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tell Admin: Send Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Manila",
+    "errorWorkflow": "ODAdminErrors001"
+  },
+  "pinData": {}
+}

@@ -31,6 +31,10 @@ export const env = {
   xenditCallbackToken: () => need('XENDIT_CALLBACK_TOKEN', process.env.XENDIT_CALLBACK_TOKEN),
   cronSecret: () => need('CRON_SECRET', process.env.CRON_SECRET),
   resendKey: process.env.RESEND_API_KEY,
+  /** Website chat assistant (n8n webhook). The chat bubble only shows when both are set. */
+  chatWebhookUrl: process.env.N8N_CHAT_WEBHOOK_URL,
+  chatSecret: process.env.N8N_CHAT_SECRET,
+  get chatEnabled(): boolean { return !!(process.env.N8N_CHAT_WEBHOOK_URL && process.env.N8N_CHAT_SECRET); },
   emailFrom: process.env.EMAIL_FROM ?? 'Outlier Desk <hello@example.com>',
   /** Emails that become admin on first sign-in (comma separated). */
   adminEmails: (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean),
