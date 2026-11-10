@@ -1,0 +1,304 @@
+{
+  "id": "ODAdminHealth001",
+  "name": "Outlier Desk Admin · Health Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "a1b51b1a-df27-4f2e-942b-78fbcd31d17c",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c23bcad1-89a2-4c2a-8f1d-fa325b079643",
+              "name": "app_url",
+              "value": "https://YOUR-APP.vercel.app",
+              "type": "string"
+            },
+            {
+              "id": "052165ed-8a6c-4fd6-b0a3-43d339ec5388",
+              "name": "admin_email",
+              "value": "PASTE_YOUR_EMAIL",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "67dffc8c-f279-4648-9e45-609ef49e5157",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "notes": "All settings in one place: your live site URL and the email that receives admin mail."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config').first().json.app_url }}/api/health",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "f06fcdc5-2a4f-4827-a7de-6251645ec286",
+      "name": "Ping Site",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 10000,
+      "notes": "Errors are kept as data (not failures) so the check below can report them."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with issues as (\n  select 'site_down' as issue, 'Site is not responding' as title, $1::text as detail where $2::boolean = false\n  union all\n  select 'jobs_briefs', 'Scheduled jobs look stuck: briefs past their deadline are still open',\n         count(*) || ' brief(s), oldest ' || round(extract(epoch from now() - min(deadline_at)) / 3600) || 'h overdue'\n    from briefs where status = 'open' and deadline_at < now() - interval '2 hours' having count(*) > 0\n  union all\n  select 'jobs_holds', 'Scheduled jobs look stuck: researcher earnings not released',\n         count(*) || ' earning(s) past their hold by 2h+'\n    from unlocks where status = 'held' and available_at < now() - interval '2 hours' having count(*) > 0\n  union all\n  select 'refunds_pending', 'Refunds stuck in pending for over a day',\n         count(*) || ' refund(s)'\n    from refunds where status = 'pending' and created_at < now() - interval '24 hours' having count(*) > 0\n)\nselect i.*, i.issue || ':' || to_char(now() at time zone 'Asia/Manila', 'YYYY-MM-DD') || '-' || (extract(hour from now() at time zone 'Asia/Manila')::int / 6) as alert_key\n  from issues i\n where not exists (select 1 from admin_alert_log l where l.kind = 'health'\n                     and l.entity_id = i.issue || ':' || to_char(now() at time zone 'Asia/Manila', 'YYYY-MM-DD') || '-' || (extract(hour from now() at time zone 'Asia/Manila')::int / 6))",
+        "options": {
+          "queryReplacement": "={{ [ String($json.error?.message || ($json.ok === true ? 'ok' : 'Unexpected answer from /api/health')).slice(0, 300), $json.ok === true ] }}"
+        }
+      },
+      "id": "497e56aa-c28a-43d6-8db4-71c6950b01dd",
+      "name": "Check Jobs & Site",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        660,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Outlier Desk DB (n8n_admin)"
+        }
+      },
+      "alwaysOutputData": true,
+      "notes": "Each problem alerts at most once every 6 hours while it lasts."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1083fb80-8477-4027-8809-aa9430600f9b",
+              "leftValue": "={{ $json.issue }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "37919110-0bfa-4fc4-9de0-6116eab91029",
+      "name": "Any Problem?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "problems",
+        "options": {}
+      },
+      "id": "b162ef25-22f1-46d3-8fb3-89894ac4ff90",
+      "name": "Bundle Problems",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Config').first().json.admin_email }}",
+        "subject": "={{ 'Outlier Desk health: ' + $json.problems.map(p => p.title).join('; ').slice(0, 120) }}",
+        "message": "={{ (() => { const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); const a = $('Config').first().json.app_url; const items = $json.problems.map(p => `<li><b>${esc(p.title)}</b><br><span style=\"color:#555\">${esc(p.detail)}</span></li>`).join(''); return `<div style=\"font-family:system-ui,sans-serif;max-width:560px\"><h2 style=\"margin:0 0 12px;color:#b42318\">Outlier Desk health problem</h2><ul style=\"padding-left:18px\">${items}</ul>` + `<p>Stuck jobs? Open <a href=\"${a}/admin\">Admin</a> and press <b>Run scheduled jobs now</b>, then check the Vercel cron logs.</p></div>`; })() }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "7b79a6c1-ca0a-4474-8244-442b47bf5850",
+      "name": "Email Problem",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1320,
+        -100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into admin_alert_log(kind, entity_id)\nselect 'health', k from json_array_elements_text($1::json) k\non conflict do nothing",
+        "options": {
+          "queryReplacement": "={{ [ JSON.stringify($('Bundle Problems').first().json.problems.map(p => p.alert_key)) ] }}"
+        }
+      },
+      "id": "84e50bfd-8f81-4d07-8778-616548e81754",
+      "name": "Remember Alert",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1540,
+        -100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Outlier Desk DB (n8n_admin)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Health monitor · every 10 minutes\nAlerts if the site's `/api/health` stops answering, or the scheduled jobs look stuck (overdue briefs still open, earnings not released, refunds stuck). Each problem emails at most once every 6 hours.",
+        "height": 260,
+        "width": 560,
+        "color": 4
+      },
+      "id": "3f5d2728-d3ce-42c7-9c81-3e7443e77e23",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -320
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Ping Site",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ping Site": {
+      "main": [
+        [
+          {
+            "node": "Check Jobs & Site",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Jobs & Site": {
+      "main": [
+        [
+          {
+            "node": "Any Problem?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any Problem?": {
+      "main": [
+        [
+          {
+            "node": "Bundle Problems",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bundle Problems": {
+      "main": [
+        [
+          {
+            "node": "Email Problem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Problem": {
+      "main": [
+        [
+          {
+            "node": "Remember Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Manila",
+    "errorWorkflow": "ODAdminErrors001"
+  },
+  "pinData": {}
+}

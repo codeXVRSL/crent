@@ -1,0 +1,356 @@
+{
+  "id": "ODAdminWeekly001",
+  "name": "Outlier Desk Admin · Weekly Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "id": "ea539eff-9bb2-4d81-866f-ad9a199c9eaa",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0c07a47d-70c4-4e61-b241-a493f8854cb5",
+              "name": "app_url",
+              "value": "https://YOUR-APP.vercel.app",
+              "type": "string"
+            },
+            {
+              "id": "dd26cee6-c3f9-44cb-a6b2-367b6104003e",
+              "name": "admin_email",
+              "value": "PASTE_YOUR_EMAIL",
+              "type": "string"
+            },
+            {
+              "id": "f658c07f-a17c-4880-acd0-3bde2c954559",
+              "name": "sheet_id",
+              "value": "PASTE_GOOGLE_SHEET_ID",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "41d62c3a-9c08-4e03-8402-24a6cdda4da6",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "notes": "All settings in one place: your live site URL and the email that receives admin mail."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with r as (select now() - interval '7 days' as since)\nselect to_char((now() at time zone 'Asia/Manila')::date - 7, 'YYYY-MM-DD') as week_start,\n  (select count(*) from profiles, r where created_at > r.since and role = 'creator')::int        as new_creators,\n  (select count(*) from profiles, r where created_at > r.since and role = 'cre')::int            as new_researchers,\n  (select count(*) from cre_profiles, r where kyc_status = 'approved' and kyc_reviewed_at > r.since)::int as researchers_verified,\n  (select count(*) from briefs, r where opened_at > r.since)::int                                as briefs_live,\n  (select count(*) from briefs, r where opened_at > r.since and invited_cre_id is not null)::int as private_briefs,\n  (select count(*) from pitches, r where submitted_at > r.since)::int                            as pitches,\n  (select count(*) from unlocks, r where created_at > r.since)::int                              as unlocks,\n  (select round(100.0 * count(*) filter (where status = 'unlocked') / nullif(count(*) filter (where status <> 'withdrawn'), 0))\n     from pitches, r where submitted_at > r.since)::int                                          as unlock_rate_pct,\n  (select coalesce(sum(budget_cents), 0) from briefs, r where opened_at > r.since)::bigint       as gmv_cents,\n  (select coalesce(sum(case when credit_account = 'platform:revenue' then amount_cents\n                            when debit_account = 'platform:revenue' then -amount_cents end), 0)\n     from ledger_entries, r where created_at > r.since)::bigint                                  as revenue_cents,\n  (select coalesce(sum(amount_cents), 0) from payouts, r where paid_at > r.since)::bigint        as paid_out_cents,\n  (select count(*) from disputes, r where opened_at > r.since)::int                              as disputes,\n  (select count(*) from flags, r where created_at > r.since)::int                                as flags",
+        "options": {}
+      },
+      "id": "51867e96-0432-4266-b99c-f23135eb9ce6",
+      "name": "Read Week",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Outlier Desk DB (n8n_admin)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Config').first().json.sheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Weekly"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Week starting": "={{ $json.week_start ?? 0 }}",
+            "New creators": "={{ $json.new_creators ?? 0 }}",
+            "New researchers": "={{ $json.new_researchers ?? 0 }}",
+            "Researchers verified": "={{ $json.researchers_verified ?? 0 }}",
+            "Briefs live": "={{ $json.briefs_live ?? 0 }}",
+            "Private briefs": "={{ $json.private_briefs ?? 0 }}",
+            "Pitches": "={{ $json.pitches ?? 0 }}",
+            "Unlocks": "={{ $json.unlocks ?? 0 }}",
+            "Unlock rate %": "={{ $json.unlock_rate_pct ?? 0 }}",
+            "GMV ($)": "={{ (Number($json.gmv_cents || 0) / 100).toFixed(2) }}",
+            "Revenue ($)": "={{ (Number($json.revenue_cents || 0) / 100).toFixed(2) }}",
+            "Paid out ($)": "={{ (Number($json.paid_out_cents || 0) / 100).toFixed(2) }}",
+            "Disputes": "={{ $json.disputes ?? 0 }}",
+            "Flags": "={{ $json.flags ?? 0 }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Week starting",
+              "displayName": "Week starting",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "New creators",
+              "displayName": "New creators",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "New researchers",
+              "displayName": "New researchers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Researchers verified",
+              "displayName": "Researchers verified",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Briefs live",
+              "displayName": "Briefs live",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Private briefs",
+              "displayName": "Private briefs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Pitches",
+              "displayName": "Pitches",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Unlocks",
+              "displayName": "Unlocks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Unlock rate %",
+              "displayName": "Unlock rate %",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "GMV ($)",
+              "displayName": "GMV ($)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Revenue ($)",
+              "displayName": "Revenue ($)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Paid out ($)",
+              "displayName": "Paid out ($)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Disputes",
+              "displayName": "Disputes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Flags",
+              "displayName": "Flags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "68d0e733-a281-4d28-b321-2a269e4d19b3",
+      "name": "Add to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        660,
+        -100
+      ],
+      "notes": "Tab 'Weekly' with these headers in row 1. One row per week, so you can chart growth.",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Config').first().json.admin_email }}",
+        "subject": "={{ 'Outlier Desk weekly: ' + $('Read Week').first().json.unlocks + ' unlocks, $' + (Number($('Read Week').first().json.revenue_cents) / 100).toFixed(2) + ' revenue' }}",
+        "message": "={{ (() => { const m = (c) => '$' + (Number(c || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); const d = $('Read Week').first().json; const L = {\"week_start\": \"Week starting\", \"new_creators\": \"New creators\", \"new_researchers\": \"New researchers\", \"researchers_verified\": \"Researchers verified\", \"briefs_live\": \"Briefs live\", \"private_briefs\": \"Private briefs\", \"pitches\": \"Pitches\", \"unlocks\": \"Unlocks\", \"unlock_rate_pct\": \"Unlock rate %\", \"gmv_cents\": \"GMV ($)\", \"revenue_cents\": \"Revenue ($)\", \"paid_out_cents\": \"Paid out ($)\", \"disputes\": \"Disputes\", \"flags\": \"Flags\"}; const rows = [\"new_creators\", \"new_researchers\", \"researchers_verified\", \"briefs_live\", \"private_briefs\", \"pitches\", \"unlocks\", \"unlock_rate_pct\", \"gmv_cents\", \"revenue_cents\", \"paid_out_cents\", \"disputes\", \"flags\"].map(k => `<tr><td style=\"padding:4px 16px 4px 0\">${L[k].replace(' ($)', '').replace(' %', '')}</td><td style=\"text-align:right;font-weight:600\">${k.endsWith('_cents') ? m(d[k]) : (d[k] ?? '–') + (k === 'unlock_rate_pct' && d[k] != null ? '%' : '')}</td></tr>`).join(''); return `<div style=\"font-family:system-ui,sans-serif;max-width:520px\"><h2 style=\"margin:0 0 12px\">Outlier Desk · week of ${d.week_start}</h2><table>${rows}</table></div>`; })() }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "725c8d22-db47-49cd-a6d8-f6bfe1a4b3d1",
+      "name": "Email Report",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        880,
+        -100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "content": "## Weekly report · Mondays 8:30 Manila\nLast 7 days (sign-ups, verifications, briefs, private briefs, pitches, unlocks, unlock rate, GMV, revenue, payouts, disputes, flags) → a new row in your Google Sheet + an email.\n\n**Setup:** Google Sheets credential; a tab named **Weekly** with the column headers from *Add to Sheet*.",
+        "height": 280,
+        "width": 560,
+        "color": 4
+      },
+      "id": "90201bb7-b13e-42ce-b126-aca1f425c8aa",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -320
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Read Week",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Week": {
+      "main": [
+        [
+          {
+            "node": "Add to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Email Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Manila",
+    "errorWorkflow": "ODAdminErrors001"
+  },
+  "pinData": {}
+}

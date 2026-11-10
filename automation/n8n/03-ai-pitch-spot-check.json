@@ -1,0 +1,492 @@
+{
+  "id": "ODAdminSpotChk01",
+  "name": "Outlier Desk Admin · AI Pitch Spot-Check",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "55eaf04f-c911-4c93-aacb-f0f8cbd0c771",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b899bc0b-613f-4709-b3a3-676fa19e1c59",
+              "name": "app_url",
+              "value": "https://YOUR-APP.vercel.app",
+              "type": "string"
+            },
+            {
+              "id": "87a85a0c-8144-4ee8-9539-ede88c7a1e3a",
+              "name": "admin_email",
+              "value": "PASTE_YOUR_EMAIL",
+              "type": "string"
+            },
+            {
+              "id": "a9a6807f-9479-4d12-9309-455e75612e29",
+              "name": "gemini_model",
+              "value": "gemini-3.5-flash",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "509f179b-d9ba-4422-83fd-482cfa8362e0",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "notes": "All settings in one place: your live site URL and the email that receives admin mail."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select p.id, p.platform, p.format_label, p.hook_category, p.teaser, p.source_views, p.channel_median_views,\n       p.multiplier::float as multiplier, p.source_posted_on::text as source_posted_on, p.duration_seconds,\n       s.source_url, s.hook_text, s.why_it_worked, s.instructions, s.adaptation_notes,\n       pr.id as cre_id, pr.display_name as cre_name, b.title as brief_title, b.platform as brief_platform,\n       (select count(*) from pitches x where x.cre_id = p.cre_id)::int as cre_total_pitches\n  from pitches p\n  join pitch_secrets s on s.pitch_id = p.id\n  join profiles pr on pr.id = p.cre_id\n  join briefs b on b.id = p.brief_id\n where p.submitted_at > now() - interval '7 days'\n   and (select count(*) from pitches x where x.cre_id = p.cre_id and x.submitted_at <= p.submitted_at) <= 20\n   and not exists (select 1 from admin_alert_log l where l.kind = 'pitch_check' and l.entity_id = p.id::text)\n order by p.submitted_at\n limit 10",
+        "options": {}
+      },
+      "id": "9e27d60b-d85b-4972-9430-32b4c3056152",
+      "name": "New Researchers' Pitches",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Outlier Desk DB (n8n_admin)"
+        }
+      },
+      "alwaysOutputData": true,
+      "notes": "The first 20 pitches of every researcher, not yet checked, 10 per run."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5986b1c2-f1ca-4833-99c7-0d9a2be4d3ca",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ff8259b6-efb1-47db-8afe-2b54e6bac91a",
+      "name": "Any to Check?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{ $('Config').first().json.gemini_model }}:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: `You are the trust & safety reviewer for Outlier Desk, a marketplace where researchers sell proven short-form video ideas. Review this pitch from a NEW researcher for signs of fake or low-quality work.\n\nPitch (JSON):\n${JSON.stringify({ platform: $json.platform, brief_platform: $json.brief_platform, format: $json.format_label, hook_type: $json.hook_category,\n  teaser: $json.teaser, views: $json.source_views, channel_median: $json.channel_median_views, score: $json.multiplier,\n  posted: $json.source_posted_on, length_s: $json.duration_seconds, source_url: $json.source_url, hook: $json.hook_text,\n  why_it_worked: $json.why_it_worked, instructions: $json.instructions, adaptation_notes: $json.adaptation_notes })}\n\nCheck:\n1. Numbers: implausible views vs channel median (e.g. median above views, score over 200x, round made-up numbers).\n2. Source: does the URL's site match the stated platform (tiktok.com, instagram.com/reel, youtube.com/shorts, facebook.com)?\n3. Hook leak: does the teaser give away the hook?\n4. Effort: generic, copy-paste or nonsensical \"why it worked\" / instructions.\n5. Contact details or attempts to move off-platform anywhere.\n\nReturn JSON only: {\"risk\": \"low\" | \"medium\" | \"high\", \"kind\": \"fake_proof\" | \"other\", \"reasons\": [\"short, specific reasons\"]}\nUse \"fake_proof\" when the numbers or source look made up. Be fair: most pitches from honest new researchers are \"low\".` }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.2 } }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "f5ec7679-00fa-43c5-bec2-72f38333a76e",
+      "name": "Gemini: Review Pitch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        -100
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "Why HTTP: Gemini JSON mode. Credential = Query Auth, name key. Runs once per pitch. On failure the pitch is left unchecked and retried next run.",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ea70b8ea-9a9e-4dcc-9056-b38f386bbf19",
+              "name": "pitch_id",
+              "value": "={{ $('New Researchers\\' Pitches').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "2f0dd93c-517e-4716-b505-28eb254fb103",
+              "name": "cre_id",
+              "value": "={{ $('New Researchers\\' Pitches').item.json.cre_id }}",
+              "type": "string"
+            },
+            {
+              "id": "a72e163f-5efc-4b03-b4a7-0b2a0d3a2c0f",
+              "name": "cre_name",
+              "value": "={{ $('New Researchers\\' Pitches').item.json.cre_name }}",
+              "type": "string"
+            },
+            {
+              "id": "916d871d-10ee-44d1-a6e2-f777b05972b4",
+              "name": "brief_title",
+              "value": "={{ $('New Researchers\\' Pitches').item.json.brief_title }}",
+              "type": "string"
+            },
+            {
+              "id": "e267e00a-9297-4337-a582-6078c3ae52c5",
+              "name": "verdict",
+              "value": "={{ (() => { try { const v = JSON.parse($json.candidates[0].content.parts[0].text); return { risk: ['low','medium','high'].includes(v.risk) ? v.risk : 'unknown', kind: v.kind === 'fake_proof' ? 'fake_proof' : 'other', reasons: Array.isArray(v.reasons) ? v.reasons.slice(0, 5).map(String) : [] }; } catch (e) { return { risk: 'unknown', kind: 'other', reasons: [] }; } })() }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "46551bc9-929c-47fd-9754-19bd90639daa",
+      "name": "Read Verdict",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1100,
+        -100
+      ],
+      "notes": "Bad or missing AI output becomes risk 'unknown' and is retried next run, never silently passed."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8059350e-2044-444d-a309-c388215713f4",
+              "leftValue": "={{ $json.verdict.risk }}",
+              "rightValue": "unknown",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b51826e3-535a-4f56-a2e3-6d79509ffdd0",
+      "name": "Reviewed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into admin_alert_log(kind, entity_id) values ('pitch_check', $1) on conflict do nothing",
+        "options": {
+          "queryReplacement": "={{ [ $json.pitch_id ] }}"
+        }
+      },
+      "id": "457f4f21-9a98-4f0b-831b-07d402b1ea15",
+      "name": "Mark Checked",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1540,
+        -200
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Outlier Desk DB (n8n_admin)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ec512209-0b4f-438d-8b04-abf6aea24f64",
+              "leftValue": "={{ ['medium','high'].includes($json.verdict.risk) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "87207af1-fcf6-4745-b84b-af48118819d1",
+      "name": "Suspicious?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into flags(kind, subject_user, entity_type, entity_id, excerpt)\nvalues ($1::flag_kind, $2::uuid, 'pitch', $3, $4)",
+        "options": {
+          "queryReplacement": "={{ [ $json.verdict.kind, $json.cre_id, $json.pitch_id, ('AI spot-check (' + $json.verdict.risk + '): ' + $json.verdict.reasons.join(' · ')).slice(0, 1000) ] }}"
+        }
+      },
+      "id": "c7722bfe-2cdb-4de1-866e-fd662af8b57e",
+      "name": "File Flag",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1760,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Outlier Desk DB (n8n_admin)"
+        }
+      },
+      "alwaysOutputData": true,
+      "notes": "Shows up in Admin → Flags with the AI's reasons. alwaysOutputData: an INSERT returns no rows, and the email after it must still run."
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "findings",
+        "options": {}
+      },
+      "id": "7723c7f0-8546-4fdb-888d-a5bfae81da7e",
+      "name": "Bundle Findings",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1980,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Config').first().json.admin_email }}",
+        "subject": "={{ 'Outlier Desk: AI flagged ' + $json.findings.length + ' pitch(es) to review' }}",
+        "message": "={{ (() => { const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); const a = $('Config').first().json.app_url; const f = $('Suspicious?').all().map(i => i.json); const items = f.map(x => `<li style=\"margin-bottom:8px\"><b>${esc(x.cre_name)}</b> on “${esc(x.brief_title)}” · risk <b>${x.verdict.risk}</b><br>${x.verdict.reasons.map(esc).join('<br>')}</li>`).join(''); return `<div style=\"font-family:system-ui,sans-serif;max-width:560px\"><h2 style=\"margin:0 0 12px\">AI spot-check: ${f.length} pitch(es) to look at</h2><ul style=\"padding-left:18px\">${items}</ul><p><a href=\"${a}/admin/flags\">Open flags</a></p></div>`; })() }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "020c1d7f-646d-4c9c-a2fa-67d01b9d6425",
+      "name": "Email Findings",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2200,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "content": "## AI pitch spot-check · every 15 minutes\nChecks the **first 20 pitches of every new researcher** (numbers, source link vs platform, hook leaks, low-effort copy, contact details). Medium/high risk → a flag in **Admin → Flags** + an email. Each pitch is checked once.\n\n**Setup:** Gemini credential (Query Auth `key`).",
+        "height": 280,
+        "width": 560,
+        "color": 4
+      },
+      "id": "ec34fe8b-bf85-47e8-9298-a00f84ccd2b4",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -320
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "New Researchers' Pitches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New Researchers' Pitches": {
+      "main": [
+        [
+          {
+            "node": "Any to Check?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any to Check?": {
+      "main": [
+        [
+          {
+            "node": "Gemini: Review Pitch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: Review Pitch": {
+      "main": [
+        [
+          {
+            "node": "Read Verdict",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Verdict": {
+      "main": [
+        [
+          {
+            "node": "Reviewed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reviewed?": {
+      "main": [
+        [
+          {
+            "node": "Mark Checked",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Suspicious?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suspicious?": {
+      "main": [
+        [
+          {
+            "node": "File Flag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File Flag": {
+      "main": [
+        [
+          {
+            "node": "Bundle Findings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bundle Findings": {
+      "main": [
+        [
+          {
+            "node": "Email Findings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Manila",
+    "errorWorkflow": "ODAdminErrors001"
+  },
+  "pinData": {}
+}

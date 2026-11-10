@@ -1,0 +1,269 @@
+{
+  "id": "ODAdminAlerts001",
+  "name": "Outlier Desk Admin · Live Alerts",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "9e060d40-37c3-4922-90c8-454b6e2af265",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "45f01834-3668-44f9-819f-d0fa3c5a4114",
+              "name": "app_url",
+              "value": "https://YOUR-APP.vercel.app",
+              "type": "string"
+            },
+            {
+              "id": "2ecd4a2f-6696-4042-b8fe-f9e3ca88a57c",
+              "name": "admin_email",
+              "value": "PASTE_YOUR_EMAIL",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d6437958-24d3-46f8-a9ca-089f98dd3251",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "notes": "All settings in one place: your live site URL and the email that receives admin mail."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with ev as (\n  select 'dispute' as kind, d.id::text as entity_id, d.opened_at as at,\n         'Dispute waiting for your decision' as title,\n         d.reason || ': ' || left(coalesce(d.details, ''), 160) as detail, '/admin/disputes' as link\n    from disputes d where d.status = 'awaiting_admin'\n  union all\n  select 'payout', p.id::text, p.requested_at,\n         'Payout requested: $' || to_char(p.amount_cents / 100.0, 'FM999999990.00'),\n         coalesce(pr.display_name, '') || coalesce(' @' || pr.handle, ''), '/admin/payouts'\n    from payouts p left join profiles pr on pr.id = p.cre_id where p.status = 'requested'\n  union all\n  select 'kyc', c.user_id::text || ':' || coalesce((select max(s.submitted_at)::text from kyc_submissions s where s.user_id = c.user_id), ''),\n         coalesce((select max(s.submitted_at) from kyc_submissions s where s.user_id = c.user_id), now()),\n         'New researcher verification', coalesce(pr.display_name, '') || coalesce(' @' || pr.handle, ''), '/admin/kyc'\n    from cre_profiles c join profiles pr on pr.id = c.user_id where c.kyc_status = 'pending'\n  union all\n  select 'refund', r.id::text || ':' || r.status, r.created_at,\n         'Refund needs a hand (' || r.status || '): $' || to_char(r.amount_cents / 100.0, 'FM999999990.00'),\n         coalesce(r.failure_reason, r.reason), '/admin/payouts'\n    from refunds r where r.status in ('manual', 'failed')\n  union all\n  select 'offplatform', f.id::text, f.created_at, 'Possible off-platform deal',\n         coalesce(pr.display_name, '') || ': ' || coalesce(f.excerpt, ''), '/admin/flags'\n    from flags f left join profiles pr on pr.id = f.subject_user\n   where f.kind = 'other' and f.entity_type = 'circumvention_alert' and f.status = 'open'\n  union all\n  select 'bug', fb.id::text, fb.created_at, 'Bug report', left(fb.message, 200) || ' (' || coalesce(fb.page, '') || ')', '/admin/feedback'\n    from feedback fb where fb.kind = 'bug' and fb.status = 'new'\n)\nselect ev.* from ev\n where not exists (select 1 from admin_alert_log l where l.kind = ev.kind and l.entity_id = ev.entity_id)\n order by ev.at limit 50",
+        "options": {}
+      },
+      "id": "f966e3ce-8099-4b42-9340-e4dc9942374c",
+      "name": "Find New Events",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Outlier Desk DB (n8n_admin)"
+        }
+      },
+      "alwaysOutputData": true,
+      "notes": "Everything that needs an admin and hasn't been emailed yet. alwaysOutputData so 'nothing new' still reaches the check."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1d2b7f02-2b89-46a4-9266-275adadcafa1",
+              "leftValue": "={{ $json.kind }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "eecf3d41-b42e-43ab-a6bb-29a274b4a4fe",
+      "name": "Anything New?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "events",
+        "options": {}
+      },
+      "id": "a72f6135-2bd7-48bb-b5fe-0d5f05329136",
+      "name": "Bundle Events",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        880,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Config').first().json.admin_email }}",
+        "subject": "={{ $json.events.length === 1 ? 'Outlier Desk: ' + $json.events[0].title : 'Outlier Desk: ' + $json.events.length + ' things need you' }}",
+        "message": "={{ (() => { const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); const a = $('Config').first().json.app_url; const items = $json.events.map(e => `<li style=\"margin-bottom:8px\"><b>${esc(e.title)}</b><br><span style=\"color:#555\">${esc(e.detail)}</span><br><a href=\"${a}${e.link}\">Open</a></li>`).join(''); return `<div style=\"font-family:system-ui,sans-serif;max-width:560px\"><h2 style=\"margin:0 0 12px\">Needs you now</h2><ul style=\"padding-left:18px\">${items}</ul></div>`; })() }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "654d7572-2ee7-430c-a3b8-42a3e2841c15",
+      "name": "Email Alert",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1100,
+        -100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into admin_alert_log(kind, entity_id)\nselect e->>'kind', e->>'entity_id' from json_array_elements($1::json) e\non conflict do nothing",
+        "options": {
+          "queryReplacement": "={{ [ JSON.stringify($('Bundle Events').first().json.events.map(e => ({ kind: e.kind, entity_id: e.entity_id }))) ] }}"
+        }
+      },
+      "id": "1dd1d323-84c3-4374-85c0-3b6550f232cf",
+      "name": "Mark as Sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1320,
+        -100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Outlier Desk DB (n8n_admin)"
+        }
+      },
+      "notes": "Runs only after the email went out, so a failed send is retried on the next run instead of being lost."
+    },
+    {
+      "parameters": {
+        "content": "## Live alerts · every 5 minutes\nOne email per run listing anything new that needs you: disputes, payout requests, verifications, refunds needing a hand, off-platform attempts, bug reports. Each event is emailed **once** (remembered in `admin_alert_log`).",
+        "height": 260,
+        "width": 560,
+        "color": 4
+      },
+      "id": "b836f8bc-4a5b-49f9-aabd-0abf3463476d",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -320
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Find New Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find New Events": {
+      "main": [
+        [
+          {
+            "node": "Anything New?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything New?": {
+      "main": [
+        [
+          {
+            "node": "Bundle Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bundle Events": {
+      "main": [
+        [
+          {
+            "node": "Email Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Alert": {
+      "main": [
+        [
+          {
+            "node": "Mark as Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Manila",
+    "errorWorkflow": "ODAdminErrors001"
+  },
+  "pinData": {}
+}
