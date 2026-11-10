@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireViewer } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Card, PageHeader, Stat } from '@/components/ui';
 import { formatMoney } from '@/lib/money';
@@ -9,7 +9,7 @@ import { runJobsNow } from '@/app/actions/admin';
 export const metadata = { title: 'Admin' };
 
 export default async function AdminHome() {
-  await requireViewer(['admin']);
+  await requireAdmin();
   const supabase = await createClient();
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
   const [ledger, openBriefs, settledBriefs, kyc, disputes, payouts, flags, refunds] = await Promise.all([

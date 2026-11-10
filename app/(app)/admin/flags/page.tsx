@@ -1,4 +1,4 @@
-import { requireViewer } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Card, EmptyState, PageHeader, Pill } from '@/components/ui';
 import { fmtDate } from '@/components/status';
@@ -7,7 +7,7 @@ import { updateFlag } from '@/app/actions/admin';
 export const metadata = { title: 'Flags' };
 
 export default async function AdminFlags() {
-  await requireViewer(['admin']);
+  await requireAdmin();
   const supabase = await createClient();
   const { data: flags } = await supabase.from('flags').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(100);
   const ids = [...new Set((flags ?? []).map((f) => f.subject_user).filter(Boolean))] as string[];

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { friendlyError, type ActionResult } from '@/lib/errors';
+import { allow, TOO_MANY } from '@/lib/rate-limit';
 import { emailUser } from '@/lib/notify-email';
 import { env } from '@/lib/env';
 
@@ -12,6 +13,8 @@ const num = (fd: FormData, k: string) => Number(str(fd, k).replace(/[,\s]/g, '')
 export async function submitPitch(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   const briefId = str(fd, 'brief_id');
   const supabase = await createClient();
+  const { data: { user: rlUser } } = await supabase.auth.getUser();
+  if (rlUser && !(await allow('pitch', rlUser.id))) return { ok: false, message: TOO_MANY };
   const { data: pitchId, error } = await supabase.rpc('submit_pitch', {
     p_brief_id: briefId,
     p_platform: str(fd, 'platform'),

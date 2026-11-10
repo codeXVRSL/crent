@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getProvider } from '@/lib/payments';
 import { processPendingRefunds } from '@/lib/payments/events';
 import { friendlyError, type ActionResult } from '@/lib/errors';
+import { allow, TOO_MANY } from '@/lib/rate-limit';
 import { parseDollarsToCents } from '@/lib/money';
 import { env } from '@/lib/env';
 
@@ -41,6 +42,8 @@ export async function createBrief(_: ActionResult | null, fd: FormData): Promise
   const maxAge = Number(str(fd, 'max_video_age_days')) || null;
 
   const supabase = await createClient();
+  const { data: { user: rlUser } } = await supabase.auth.getUser();
+  if (rlUser && !(await allow('brief', rlUser.id))) return { ok: false, message: TOO_MANY };
   const { data: briefId, error } = await supabase.rpc('create_brief', {
     p_title: str(fd, 'title'),
     p_description: str(fd, 'description'),

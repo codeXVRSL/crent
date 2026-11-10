@@ -2,12 +2,13 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { EmptyState, Pill, Select, Button } from '@/components/ui';
 import { platformLabel } from '@/lib/constants';
+import { Avatar } from '@/components/avatar';
 
 export const metadata = { title: 'Researchers' };
 
 type Cre = {
   id: string; display_name: string; handle: string; headline: string | null; platforms: string[]; niches: string[];
-  niche_ids: number[]; unlock_rate_pct: number | null; avg_rating: number | null; review_count: number; accepting_work: boolean;
+  niche_ids: number[]; avatar_path: string | null; unlock_rate_pct: number | null; avg_rating: number | null; review_count: number; accepting_work: boolean;
 };
 
 export default async function CreDirectory({ searchParams }: { searchParams: Promise<{ niche?: string }> }) {
@@ -40,9 +41,12 @@ export default async function CreDirectory({ searchParams }: { searchParams: Pro
           {list.map((c) => (
             <Link key={c.id} href={`/cres/${c.handle}`} className="grid content-start gap-3 rounded-2xl border border-line bg-surface shadow-sm p-5 lift">
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="font-semibold">{c.display_name}</div>
-                  <div className="text-xs text-muted">@{c.handle}</div>
+                <div className="flex items-center gap-3">
+                  <Avatar path={c.avatar_path} name={c.display_name} size={40} />
+                  <div>
+                    <div className="font-semibold">{c.display_name}</div>
+                    <div className="text-xs text-muted">@{c.handle}</div>
+                  </div>
                 </div>
                 <Pill tone="good">Verified</Pill>
               </div>

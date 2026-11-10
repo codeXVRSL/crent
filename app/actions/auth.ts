@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { env } from '@/lib/env';
 import type { ActionResult } from '@/lib/errors';
+import { allow, clientIp, TOO_MANY } from '@/lib/rate-limit';
 
 function safeNext(next: FormDataEntryValue | null) {
   const n = typeof next === 'string' ? next : '';
@@ -10,14 +11,20 @@ function safeNext(next: FormDataEntryValue | null) {
 }
 
 export async function signIn(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const email = String(fd.get('email') ?? '').trim();
+  const [byIp, byEmail] = await Promise.all([allow('signIn', await clientIp()), allow('signIn', email || 'blank')]);
+  if (!byIp || !byEmail) return { ok: false, message: TOO_MANY };
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({
-    email: String(fd.get('email') ?? '').trim(),
+    email,
     password: String(fd.get('password') ?? ''),
   });
   if (error) return { ok: false, message: error.message === 'Email not confirmed'
     ? 'Confirm your email first. Check your inbox for the link.' : 'Wrong email or password.' };
-  redirect(safeNext(fd.get('next')));
+  const next = safeNext(fd.get('next'));
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal?.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') redirect(`/auth/mfa?next=${encodeURIComponent(next)}`);
+  redirect(next);
 }
 
 export async function signUp(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
@@ -27,6 +34,7 @@ export async function signUp(_: ActionResult | null, fd: FormData): Promise<Acti
   const as = fd.get('as') === 'cre' ? 'cre' : fd.get('as') === 'creator' ? 'creator' : '';
   if (displayName.length < 2) return { ok: false, message: 'Enter your name (at least 2 characters).' };
   if (password.length < 10) return { ok: false, message: 'Use a password with at least 10 characters.' };
+  if (!(await allow('signUp', await clientIp()))) return { ok: false, message: TOO_MANY };
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email, password,
@@ -43,6 +51,7 @@ export async function signUp(_: ActionResult | null, fd: FormData): Promise<Acti
 export async function requestPasswordReset(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   const email = String(fd.get('email') ?? '').trim();
   if (!email.includes('@')) return { ok: false, message: 'Enter the email you signed up with.' };
+  if (!(await allow('passwordReset', await clientIp()))) return { ok: false, message: TOO_MANY };
   const supabase = await createClient();
   await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${env.appUrl}/auth/callback?next=${encodeURIComponent('/reset-password')}`,

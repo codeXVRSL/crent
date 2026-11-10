@@ -1,4 +1,4 @@
-import { requireViewer } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Card, EmptyState, PageHeader, Pill } from '@/components/ui';
 import { fmtDate } from '@/components/status';
@@ -11,7 +11,7 @@ const kindLabel: Record<string, { l: string; t: 'bad' | 'warn' | 'accent' | 'neu
 };
 
 export default async function AdminFeedback({ searchParams }: { searchParams: Promise<{ all?: string }> }) {
-  await requireViewer(['admin']);
+  await requireAdmin();
   const { all } = await searchParams;
   const supabase = await createClient();
   let q = supabase.from('feedback').select('*').order('created_at', { ascending: false }).limit(200);

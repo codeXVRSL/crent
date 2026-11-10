@@ -4,6 +4,8 @@ import { requireViewer } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { ActionForm, SubmitButton } from '@/components/form';
 import { AutoRefresh } from '@/components/auto-refresh';
+import { LiveThread } from '@/components/live-thread';
+import { Avatar } from '@/components/avatar';
 import { PageHeader, Textarea } from '@/components/ui';
 import { fmtDate } from '@/components/status';
 import { sendMessage } from '@/app/actions/messages';
@@ -17,13 +19,15 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
   const otherId = thread.creator_id === v.id ? thread.cre_id : thread.creator_id;
   const [{ data: messages }, { data: other }] = await Promise.all([
     supabase.from('messages').select('id, sender_id, body, was_masked, created_at').eq('thread_id', id).order('created_at'),
-    supabase.from('public_profiles').select('display_name').eq('id', otherId).maybeSingle(),
+    supabase.from('public_profiles').select('display_name, avatar_path').eq('id', otherId).maybeSingle(),
     supabase.rpc('mark_thread_read', { p_thread_id: id }),
   ]);
   const isMember = v.id === thread.creator_id || v.id === thread.cre_id;
   return (
     <>
-      <AutoRefresh />
+      <LiveThread threadId={id} />
+      <AutoRefresh ms={30000} />
+      <div className="mb-2"><Avatar path={other?.avatar_path} name={other?.display_name ?? '?'} size={40} /></div>
       <PageHeader eyebrow="Conversation" title={other?.display_name ?? 'Conversation'}
         description={<>About <Link href={`/briefs/${thread.brief_id}`} className="underline">{(thread.briefs as { title: string } | null)?.title}</Link></>} />
       <div className="grid max-w-3xl gap-4">

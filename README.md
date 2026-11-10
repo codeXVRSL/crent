@@ -25,6 +25,11 @@ Built with Next.js 15 (App Router, TypeScript), Tailwind CSS v4 and Supabase (Po
 | Disputes: creator opens within 72h → researcher replies → admin decides; reversal refunds the creator | ✅ |
 | Reviews after unlock; public researcher directory and profiles with stats | ✅ |
 | Messaging with automatic hiding of emails, phone numbers, links and handles (+ admin flags) | ✅ |
+| Live chat: new messages appear instantly (Supabase Realtime), with a 30-second refresh as fallback | ✅ |
+| Two-step login (authenticator app) for everyone; **required for admin pages** and enforced in the database | ✅ (tested) |
+| Rate limits on log-in, sign-up, password reset, waitlist, messages, pitches, briefs, disputes, feedback, photos | ✅ (tested) |
+| Profile photos (own folder only, 2 MB, JPG/PNG/WebP) on settings, researcher directory, profiles and chat | ✅ (tested) |
+| Error monitoring with Sentry (switches on when `SENTRY_DSN` is set) | ✅ |
 | In-app notifications; transactional emails via Resend (printed to the log if no key) | ✅ |
 | Admin: overview metrics, verifications, disputes, payouts & manual refunds, flags, users/suspension, fee settings, audit log | ✅ |
 | Append-only money ledger; escrow balances to zero per brief | ✅ (tested) |
@@ -35,7 +40,7 @@ Built with Next.js 15 (App Router, TypeScript), Tailwind CSS v4 and Supabase (Po
 | Open Graph image, sitemap, robots, security headers | ✅ |
 
 ### Not built yet (from the spec's later phases)
-Idea Packs, research retainers, featured briefs, researcher Pro subscription, referral codes, admin two-factor login, rate limiting, Sentry/PostHog, live (websocket) chat — chat refreshes every few seconds instead — and avatar uploads.
+Idea Packs, research retainers, featured briefs, researcher Pro subscription, referral codes, and PostHog product analytics.
 
 ---
 

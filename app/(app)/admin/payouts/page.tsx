@@ -1,4 +1,4 @@
-import { requireViewer } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { ActionForm, SubmitButton } from '@/components/form';
 import { Card, EmptyState, Input, PageHeader, Pill } from '@/components/ui';
@@ -9,7 +9,7 @@ import { formatMoney } from '@/lib/money';
 export const metadata = { title: 'Payouts & refunds' };
 
 export default async function AdminPayouts() {
-  await requireViewer(['admin']);
+  await requireAdmin();
   const supabase = await createClient();
   const [{ data: payouts }, { data: refunds }] = await Promise.all([
     supabase.from('payouts').select('*, payout_methods(kind, bank_code, account_name, account_last4)').order('requested_at', { ascending: false }).limit(100),

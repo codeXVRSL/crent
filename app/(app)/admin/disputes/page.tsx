@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireViewer } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { EmptyState, PageHeader, Pill } from '@/components/ui';
 import { fmtDate } from '@/components/status';
@@ -8,7 +8,7 @@ import { DISPUTE_REASONS } from '@/lib/constants';
 export const metadata = { title: 'Disputes' };
 
 export default async function AdminDisputes() {
-  await requireViewer(['admin']);
+  await requireAdmin();
   const supabase = await createClient();
   const { data } = await supabase.from('disputes').select('id, reason, status, opened_at, cre_deadline_at').order('opened_at', { ascending: false }).limit(100);
   return (
