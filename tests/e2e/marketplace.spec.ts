@@ -154,6 +154,16 @@ test('brief → pitch → locked → unlock → close/refund → payout → chat
   await expect(creator.page.getByText(HOOK)).toBeVisible({ timeout: 15_000 });
   await expect(creator.page.getByText(SOURCE)).toBeVisible();
 
+  // ---------- Master sheet: unlocked idea downloads ready to film ----------
+  const xlsx = await creator.page.request.get('/unlocks/export');
+  expect(xlsx.status()).toBe(200);
+  expect(xlsx.headers()['content-type']).toContain('spreadsheetml');
+  expect((await xlsx.body()).subarray(0, 2).toString()).toBe('PK'); // a real .xlsx (zip) file
+  const csv = await (await creator.page.request.get('/unlocks/export?format=csv')).text();
+  expect(csv).toContain('Hook (say / show on screen)');
+  expect(csv).toContain(HOOK);
+  expect(csv).toContain(SOURCE);
+
   // ---------- Chat masks contact details ----------
   await creator.page.getByRole('button', { name: 'Message' }).first().click();
   await creator.page.waitForURL(/\/messages\//);

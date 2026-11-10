@@ -60,7 +60,7 @@ export async function unlockPitch(_: ActionResult | null, fd: FormData): Promise
   const supabase = await createClient();
   const { error } = await supabase.rpc('unlock_pitch', { p_pitch_id: pitchId });
   if (error) return { ok: false, message: friendlyError(error) };
-  const { data: p } = await supabase.from('pitches').select('cre_id, brief_id').eq('id', pitchId).single();
+  const { data: p } = await supabase.from('unlocks').select('cre_id, brief_id').eq('pitch_id', pitchId).neq('status', 'reversed').maybeSingle();
   if (p) {
     await emailUser(p.cre_id, 'Your pitch was unlocked',
       `A creator unlocked your pitch. Your earning becomes available after the 72-hour hold.\n${env.appUrl}/pitches`);

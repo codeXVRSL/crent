@@ -9,6 +9,7 @@ import { friendlyError, type ActionResult } from '@/lib/errors';
 import { allow, TOO_MANY } from '@/lib/rate-limit';
 import { parseDollarsToCents } from '@/lib/money';
 import { env } from '@/lib/env';
+import { emailUser } from '@/lib/notify-email';
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
 
@@ -57,6 +58,7 @@ export async function createBrief(_: ActionResult | null, fd: FormData): Promise
     p_price_per_idea_cents: price,
     p_max_unlocks: Number(str(fd, 'max_unlocks')),
     p_deadline_at: new Date(Date.now() + days * 86_400_000).toISOString(),
+    p_invited_cre_id: /^[0-9a-f-]{36}$/.test(str(fd, 'invited_cre_id')) ? str(fd, 'invited_cre_id') : null,
   });
   if (error) return { ok: false, message: friendlyError(error) };
 
@@ -78,8 +80,16 @@ export async function payBrief(fd: FormData) {
 export async function closeBrief(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   const id = str(fd, 'brief_id');
   const supabase = await createClient();
+  const { data: before } = await supabase.from('unlocks').select('id').eq('brief_id', id);
   const { error } = await supabase.rpc('close_brief', { p_brief_id: id });
   if (error) return { ok: false, message: friendlyError(error) };
+  // If closing auto-unlocked the top pitch, email that researcher like a normal unlock.
+  const known = new Set((before ?? []).map((u) => u.id));
+  const { data: after } = await supabase.from('unlocks').select('id, cre_id').eq('brief_id', id);
+  for (const u of (after ?? []).filter((x) => !known.has(x.id))) {
+    await emailUser(u.cre_id, 'Your pitch was unlocked',
+      `Your pitch was unlocked when the creator closed their brief. Your earning becomes available after the 72-hour hold.\n${env.appUrl}/pitches`);
+  }
   await processPendingRefunds().catch((e) => console.error('[refunds]', e));
   revalidatePath(`/briefs/${id}`);
   return { ok: true, message: 'Brief closed. Unused budget is being refunded.' };

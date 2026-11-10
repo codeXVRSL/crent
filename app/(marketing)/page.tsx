@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, BadgeCheck, Banknote, EyeOff, Fingerprint, Lock, ShieldCheck, Timer } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Banknote, EyeOff, Fingerprint, Lock, Repeat, ShieldCheck, Sheet, Timer } from 'lucide-react';
 import { LinkButton, Input, Select } from '@/components/ui';
 import { PitchDemo } from '@/components/pitch-demo';
 import { ActionForm, SubmitButton } from '@/components/form';
@@ -34,12 +34,17 @@ export default function Home() {
               Pay only for the ideas you unlock <ArrowRight className="size-3.5" aria-hidden="true" />
             </Link>
             <h1 className="text-[44px] font-semibold leading-[1.02] tracking-[-0.04em] sm:text-[60px]">
-              <span className="accent-word text-accent">Proven</span> content ideas, researched by people who find them every day.
+              <span className="accent-word text-accent">Proven</span> short-form ideas, picked by people who find them every day.
             </h1>
             <p className="max-w-lg text-[17px] leading-relaxed text-ink-2">
               Post what you need. Verified Content Research Experts pitch outlier videos with the numbers to prove them.
-              You see the proof first and pay only when you unlock the idea.
+              You see the proof first, pay only for the ideas you unlock, and get each one ready to film.
             </p>
+            <ul className="flex flex-wrap gap-1.5" aria-label="Platforms">
+              {['TikTok', 'Instagram Reels', 'YouTube Shorts', 'Facebook Reels'].map((p) => (
+                <li key={p} className="rounded-full border border-line bg-surface px-3 py-1 text-[13px] text-ink-2 shadow-sm">{p}</li>
+              ))}
+            </ul>
             <div className="flex flex-wrap gap-3">
               <LinkButton href="/signup?as=creator" size="lg">Post a brief <ArrowRight className="size-4" aria-hidden="true" /></LinkButton>
               <LinkButton href="/signup?as=cre" size="lg" variant="secondary">I&apos;m a researcher</LinkButton>
@@ -132,6 +137,50 @@ export default function Home() {
           <BentoTile className="md:col-span-2" icon={<Banknote className="size-4" />} title="Paid in pesos">
             Researchers keep 90% of each unlock and withdraw to GCash, Maya or a Philippine bank.
           </BentoTile>
+          <BentoTile className="md:col-span-3" icon={<Sheet className="size-4" />} title="Ready to film"
+            visual={
+              <div className="num grid grid-cols-[1.4fr_1fr_1fr] gap-px overflow-hidden rounded-xl border border-line bg-line text-[11px]" aria-hidden="true">
+                {['Hook', 'Reference', 'How to film', 'I tracked every peso…', 'tiktok.com/@…', 'Receipts on table…'].map((c, i) => (
+                  <span key={i} className={`truncate px-2 py-1.5 ${i < 3 ? 'bg-surface-2 font-semibold' : 'bg-surface text-ink-2'}`}>{c}</span>
+                ))}
+              </div>
+            }>
+            Every unlocked idea comes in the CRE master-sheet format: hook, reference video, why it works and how to film it. Download it and start shooting.
+          </BentoTile>
+          <BentoTile className="md:col-span-3" icon={<Repeat className="size-4" />} title="Work with them again">
+            Found a researcher who gets your niche? Send them a private brief. Same escrow, same proof-first pitches, and you still pay per idea, with no retainer to negotiate.
+          </BentoTile>
+        </div>
+      </section>
+
+      {/* ---------- Why people, not another AI tool ---------- */}
+      <section className="mx-auto grid max-w-6xl gap-8 px-4 pb-20 sm:px-6">
+        <div className="grid max-w-2xl gap-3">
+          <span className="label">Why people, not another tool</span>
+          <h2 className="text-[34px] font-semibold leading-tight tracking-tight">Outlier tools show you videos. Researchers hand you ideas.</h2>
+          <p className="text-muted">Most outlier finders are built around YouTube and stop at a list of links. Outlier Desk researchers live in short-form feeds, filter out the flukes, and adapt each idea to what you can actually film.</p>
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">
+          <table className="w-full min-w-[620px] text-sm">
+            <thead><tr className="border-b border-line text-left">
+              <th className="label p-4"> </th><th className="label p-4 text-accent">Outlier Desk</th><th className="label p-4">Typical outlier tool</th>
+            </tr></thead>
+            <tbody>
+              {[
+                ['Platforms', 'TikTok, Instagram Reels, YouTube Shorts, Facebook Reels', 'Mostly YouTube'],
+                ['Who filters', 'An ID-verified researcher who knows your niche', 'An algorithm sorting by views'],
+                ['What you get', 'Hook, reference video, why it works and how to film it', 'A list of videos to study yourself'],
+                ['Fit to you', 'Adapted to your niche and what you can film', 'The same results everyone else sees'],
+                ['How you pay', 'Per idea you unlock, after seeing the proof', 'A monthly subscription'],
+              ].map(([k, a, b]) => (
+                <tr key={k} className="border-b border-line last:border-0">
+                  <th scope="row" className="p-4 text-left font-medium">{k}</th>
+                  <td className="p-4">{a}</td>
+                  <td className="p-4 text-muted">{b}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 

@@ -7,7 +7,7 @@ export default function ForCres() {
       <div className="grid gap-3">
         <span className="label">For Content Research Experts</span>
         <h1 className="text-[40px] font-semibold tracking-tight">Get paid for the outliers you find.</h1>
-        <p className="text-[17px] leading-relaxed text-ink-2">Creators post briefs with the budget already paid in. You pitch proven videos with the proof visible and the idea locked. When they unlock it, you earn.</p>
+        <p className="text-[17px] leading-relaxed text-ink-2">Creators post briefs with the budget already paid in. You pitch proven short-form videos from TikTok, Reels, Shorts and Facebook Reels with the proof visible and the idea locked. When they unlock it, you earn, and creators who like your work can send you private briefs.</p>
       </div>
       <section className="grid gap-3">
         <h2 className="text-lg font-semibold tracking-tight">How you get verified</h2>

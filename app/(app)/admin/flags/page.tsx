@@ -13,9 +13,29 @@ export default async function AdminFlags() {
   const ids = [...new Set((flags ?? []).map((f) => f.subject_user).filter(Boolean))] as string[];
   const { data: people } = ids.length ? await supabase.from('profiles').select('id, display_name, handle, role').in('id', ids) : { data: [] };
   const pMap = new Map((people ?? []).map((p) => [p.id, p]));
+  const since = Date.now() - 30 * 86_400_000;
+  const repeat = new Map<string, number>();
+  for (const f of flags ?? []) {
+    if (f.kind === 'contact_leak' && f.subject_user && new Date(f.created_at).getTime() >= since) {
+      repeat.set(f.subject_user, (repeat.get(f.subject_user) ?? 0) + 1);
+    }
+  }
+  const offenders = [...repeat.entries()].filter(([, n]) => n >= 3).sort((x, y) => y[1] - x[1]);
   return (
     <>
       <PageHeader eyebrow="Admin" title="Flags" description="Contact-detail attempts and user reports. Three in 30 days is a pattern worth a warning." />
+      {offenders.length > 0 && (
+        <Card className="mb-4 grid gap-2 border-warn/40 text-sm">
+          <h2 className="font-semibold">Possible off-platform deals (3+ contact attempts in 30 days)</h2>
+          <ul className="grid gap-1">
+            {offenders.map(([id, n]) => {
+              const p = pMap.get(id);
+              return <li key={id}><Pill tone="bad">{n} attempts</Pill> {p?.display_name} {p?.handle ? `@${p.handle}` : ''} <span className="text-muted">({p?.role})</span></li>;
+            })}
+          </ul>
+          <p className="text-xs text-muted">They were warned automatically. Review the messages below, then dismiss or suspend from Users.</p>
+        </Card>
+      )}
       {!flags?.length ? <EmptyState title="No open flags" /> : (
         <div className="grid gap-3">
           {flags.map((f) => {

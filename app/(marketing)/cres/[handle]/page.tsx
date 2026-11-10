@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createPublicClient } from '@/lib/supabase/server';
-import { Pill, Stat } from '@/components/ui';
+import { LinkButton, Pill, Stat } from '@/components/ui';
 import { Avatar } from '@/components/avatar';
 import { platformLabel } from '@/lib/constants';
 import { compactViews, formatMultiplier } from '@/lib/outlier';
@@ -29,6 +29,9 @@ export default async function CreProfile({ params }: { params: Promise<{ handle:
         {cre.bio && <p className="max-w-2xl whitespace-pre-wrap leading-relaxed text-ink-2">{cre.bio}</p>}
         <div className="flex flex-wrap gap-1">{(cre.niches as string[]).map((n) => <Pill key={n}>{n}</Pill>)}</div>
         <p className="text-sm text-muted">{(cre.platforms as string[]).map(platformLabel).join(' · ')}</p>
+        {cre.accepting_work && (
+          <LinkButton href={`/briefs/new?invite=${cre.handle}`} className="justify-self-start">Send {cre.display_name} a private brief</LinkButton>
+        )}
       </header>
 
       <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">

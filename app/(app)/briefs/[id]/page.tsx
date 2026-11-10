@@ -35,6 +35,7 @@ export default async function BriefPage({ params, searchParams }: {
   const details = (
     <Card className="grid gap-4">
       <div className="flex flex-wrap gap-2">
+        {brief.invited_cre_id && <Pill tone="accent">Private brief</Pill>}
         <Pill>{platformLabel(brief.platform)}</Pill>{nicheName && <Pill>{nicheName}</Pill>}
         <Pill>min {Number(brief.min_multiplier).toFixed(1)}×</Pill>
         {brief.max_video_age_days && <Pill>source ≤ {brief.max_video_age_days} days old</Pill>}
@@ -73,7 +74,8 @@ export default async function BriefPage({ params, searchParams }: {
   // ---------------- Creator (owner) view ----------------
   if (isOwner || v.role === 'admin') {
     const [{ data: pitches }, { data: unlocks }, { data: refunds }] = await Promise.all([
-      supabase.from('pitches').select('*').eq('brief_id', id).order('submitted_at'),
+      // Creators see locked cards with rounded numbers (exact after unlock); admins see the raw rows.
+      supabase.from(isOwner ? 'creator_pitch_cards' : 'pitches').select('*').eq('brief_id', id).order('submitted_at'),
       supabase.from('unlocks').select('id, pitch_id, status, available_at').eq('brief_id', id),
       supabase.from('refunds').select('id, amount_cents, status, reason').eq('brief_id', id),
     ]);
@@ -92,6 +94,9 @@ export default async function BriefPage({ params, searchParams }: {
     const order: Record<string, number> = { submitted: 0, unlocked: 1, refunded: 2, expired: 3, withdrawn: 4 };
     const sorted = [...(pitches ?? [])].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
     const visible = sorted.filter((p) => p.status !== 'withdrawn');
+    const waitingCount = visible.filter((p) => p.status === 'submitted').length;
+    const { data: ps } = await supabase.from('platform_settings').select('guarantee_first_unlock').maybeSingle();
+    const guaranteeOn = ps?.guarantee_first_unlock ?? true;
 
     return (
       <>
@@ -160,7 +165,9 @@ export default async function BriefPage({ params, searchParams }: {
               )}
               {brief.status === 'open' && (
                 <ActionForm action={closeBrief} className="grid gap-2 border-t border-line pt-3"
-                  confirmText={`Close now and refund ${formatMoney(left * brief.price_per_idea_cents, brief.currency)} of unused budget. Waiting pitches won't be unlockable.`}>
+                  confirmText={guaranteeOn && !(unlocks ?? []).length && waitingCount > 0
+                    ? `Close now. You haven't unlocked any of the ${waitingCount} waiting pitch${waitingCount === 1 ? '' : 'es'}, so the highest-scoring one will be unlocked for ${formatMoney(brief.price_per_idea_cents, brief.currency)} and the rest of the unused budget refunded.`
+                    : `Close now and refund ${formatMoney(left * brief.price_per_idea_cents, brief.currency)} of unused budget. Waiting pitches won't be unlockable.`}>
                   <input type="hidden" name="brief_id" value={id} />
                   <SubmitButton variant="secondary">Close brief</SubmitButton>
                 </ActionForm>

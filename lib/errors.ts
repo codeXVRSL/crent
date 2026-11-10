@@ -47,6 +47,7 @@ const MESSAGES: Record<string, string> = {
   DISPUTE_NOT_AWAITING_RESPONSE: 'This dispute is no longer waiting for your reply.',
   DISPUTE_NOT_OPEN: 'This dispute is already resolved.',
   ALREADY_REVIEWED: "You've already reviewed this.",
+  INVITED_CRE_NOT_AVAILABLE: 'That researcher isn\'t taking private briefs right now. Post a public brief instead, or pick another researcher.',
   MFA_REQUIRED: 'Enter your two-step login code first. Log out and back in if this keeps happening.',
   RATE_LIMITED: 'You are doing that very fast. Wait a minute and try again.',
 };
