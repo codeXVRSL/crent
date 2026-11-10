@@ -57,6 +57,7 @@ export async function createBrief(_: ActionResult | null, fd: FormData): Promise
     p_price_per_idea_cents: price,
     p_max_unlocks: Number(str(fd, 'max_unlocks')),
     p_deadline_at: new Date(Date.now() + days * 86_400_000).toISOString(),
+    p_invited_cre_id: /^[0-9a-f-]{36}$/.test(str(fd, 'invited_cre_id')) ? str(fd, 'invited_cre_id') : null,
   });
   if (error) return { ok: false, message: friendlyError(error) };
 

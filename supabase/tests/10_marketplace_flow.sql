@@ -165,7 +165,9 @@ reset role;
 
 -- ---------- THE RULE: secrets hidden before unlock ----------
 select set_config('request.jwt.claim.sub', :'c1', false); set role authenticated;
-select (select count(*) from pitches where brief_id = :'b1') = 4 and (select count(*) from pitch_secrets) = 0 as ok \gset
+select (select count(*) from creator_pitch_cards where brief_id = :'b1') = 4
+   and (select count(*) from pitches where brief_id = :'b1') = 0
+   and (select count(*) from pitch_secrets) = 0 as ok \gset
 \if :ok \else \echo 'FAIL: creator can read secrets before unlock' \quit \endif
 reset role;
 select set_config('request.jwt.claim.sub', :'r2', false); set role authenticated;

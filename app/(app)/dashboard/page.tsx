@@ -20,8 +20,8 @@ export default async function Dashboard() {
     const [{ data: briefs }, { count: unlocksMonth }, { data: recent }] = await Promise.all([
       supabase.from('briefs').select('id, title, status, max_unlocks, unlocks_used, price_per_idea_cents, currency, deadline_at').eq('creator_id', v.id).order('created_at', { ascending: false }),
       supabase.from('unlocks').select('id', { count: 'exact', head: true }).eq('creator_id', v.id).gte('created_at', monthStart.toISOString()),
-      supabase.from('pitches').select('id, brief_id, multiplier, format_label, submitted_at, briefs!inner(title, creator_id)')
-        .eq('status', 'submitted').eq('briefs.creator_id', v.id).order('submitted_at', { ascending: false }).limit(8),
+      supabase.from('creator_pitch_cards').select('id, brief_id, multiplier, format_label, submitted_at, brief_title')
+        .eq('status', 'submitted').order('submitted_at', { ascending: false }).limit(8),
     ]);
     const open = (briefs ?? []).filter((b) => b.status === 'open');
     const remaining = open.reduce((s, b) => s + (b.max_unlocks - b.unlocks_used) * b.price_per_idea_cents, 0);
@@ -57,7 +57,7 @@ export default async function Dashboard() {
               {recent.map((p) => (
                 <li key={p.id}><Link href={`/briefs/${p.brief_id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-surface shadow-sm p-4 lift">
                   <span><span className="num font-semibold text-accent">{formatMultiplier(p.multiplier)}</span> · {p.format_label}</span>
-                  <span className="text-sm text-muted">{(p.briefs as unknown as { title: string }).title} · {fmtDate(p.submitted_at, true)}</span>
+                  <span className="text-sm text-muted">{p.brief_title} · {fmtDate(p.submitted_at, true)}</span>
                 </Link></li>
               ))}
             </ul>

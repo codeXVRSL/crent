@@ -13,9 +13,14 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<{
   const supabase = await createClient();
 
   if (v.role === 'creator') {
-    const { data: briefs } = await supabase.from('briefs')
-      .select('id, title, status, platform, price_per_idea_cents, currency, max_unlocks, unlocks_used, deadline_at, created_at, pitches(count)')
-      .eq('creator_id', v.id).order('created_at', { ascending: false });
+    const [{ data: briefs }, { data: cards }] = await Promise.all([
+      supabase.from('briefs')
+        .select('id, title, status, platform, price_per_idea_cents, currency, max_unlocks, unlocks_used, deadline_at, created_at')
+        .eq('creator_id', v.id).order('created_at', { ascending: false }),
+      supabase.from('creator_pitch_cards').select('brief_id').neq('status', 'withdrawn'),
+    ]);
+    const pitchCount = new Map<string, number>();
+    for (const c of cards ?? []) pitchCount.set(c.brief_id, (pitchCount.get(c.brief_id) ?? 0) + 1);
     return (
       <>
         <PageHeader title="My briefs"><LinkButton href="/briefs/new">Post a brief</LinkButton></PageHeader>
@@ -35,7 +40,7 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<{
                   <tr key={b.id} className="border-b border-line last:border-0">
                     <td className="p-3"><Link href={`/briefs/${b.id}`} className="font-semibold hover:text-accent">{b.title}</Link><div className="text-xs text-muted">{platformLabel(b.platform)}</div></td>
                     <td className="p-3"><BriefStatus status={b.status} /></td>
-                    <td className="num p-3">{(b.pitches as unknown as { count: number }[])[0]?.count ?? 0}</td>
+                    <td className="num p-3">{pitchCount.get(b.id) ?? 0}</td>
                     <td className="num p-3">{b.unlocks_used} / {b.max_unlocks}</td>
                     <td className="num p-3">{formatMoney(b.price_per_idea_cents, b.currency)}</td>
                     <td className="num p-3">{b.status === 'open' ? timeLeft(b.deadline_at) : '—'}</td>
@@ -54,9 +59,10 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<{
   const { data: myNiches } = await supabase.from('cre_niches').select('niche_id').eq('user_id', v.id);
   const nicheIds = (myNiches ?? []).map((n) => n.niche_id);
   let q = supabase.from('briefs')
-    .select('id, title, description, platform, niche_id, price_per_idea_cents, currency, max_unlocks, unlocks_used, deadline_at, min_multiplier, creator_id, niches(name)')
+    .select('id, title, description, platform, niche_id, price_per_idea_cents, currency, max_unlocks, unlocks_used, deadline_at, min_multiplier, creator_id, invited_cre_id, niches(name)')
     .eq('status', 'open').gt('deadline_at', new Date().toISOString()).order('opened_at', { ascending: false }).limit(100);
-  if (!all && nicheIds.length) q = q.in('niche_id', nicheIds);
+  // My niches, plus any private brief sent to me (whatever its niche).
+  if (!all && nicheIds.length) q = q.or(`niche_id.in.(${nicheIds.join(',')}),invited_cre_id.eq.${v.id}`);
   const { data: briefs } = v.kycStatus === 'approved' ? await q : { data: [] };
   const creatorIds = [...new Set((briefs ?? []).map((b) => b.creator_id))];
   const { data: creators } = creatorIds.length
@@ -88,6 +94,7 @@ export default async function Briefs({ searchParams }: { searchParams: Promise<{
                 <h2 className="text-lg font-semibold">{b.title}</h2>
                 <p className="line-clamp-2 text-sm text-muted">{b.description}</p>
                 <div className="flex flex-wrap gap-2 text-xs">
+                  {b.invited_cre_id && <Pill tone="accent">Private · just for you</Pill>}
                   <Pill>{platformLabel(b.platform)}</Pill>
                   <Pill>{(b.niches as unknown as { name: string } | null)?.name}</Pill>
                   <Pill>min {Number(b.min_multiplier).toFixed(1)}×</Pill>

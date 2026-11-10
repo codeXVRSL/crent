@@ -19,6 +19,8 @@ export type PitchPublic = {
   source_posted_on: string;
   source_channel_size_band: string | null;
   submitted_at: string;
+  /** True on a creator's card before unlock: numbers are rounded so the source video can't be searched for. */
+  is_locked?: boolean;
 };
 
 export type PitchSecret = {
@@ -30,6 +32,8 @@ export type PitchSecret = {
   adaptation_notes: string | null;
   proof_path?: string | null;
 };
+
+const fmtMonth = (iso: string) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
 
 const statusPill: Record<string, { tone: 'neutral' | 'accent' | 'good' | 'muted' | 'bad'; label: string }> = {
   submitted: { tone: 'neutral', label: 'Waiting' },
@@ -101,8 +105,8 @@ export function PitchCard({
       <div className="flex flex-wrap gap-1.5">
         <Pill>{pitch.format_label}</Pill>
         <Pill>{hookLabel(pitch.hook_category)} hook</Pill>
-        {pitch.duration_seconds && <Pill><Clock className="size-3" aria-hidden="true" /><span className="num">{pitch.duration_seconds}s</span></Pill>}
-        <Pill><span className="num">Posted {fmtDate(pitch.source_posted_on)}</span></Pill>
+        {pitch.duration_seconds && <Pill><Clock className="size-3" aria-hidden="true" /><span className="num">{pitch.is_locked ? '~' : ''}{pitch.duration_seconds}s</span></Pill>}
+        <Pill><span className="num">Posted {pitch.is_locked ? fmtMonth(pitch.source_posted_on) : fmtDate(pitch.source_posted_on)}</span></Pill>
         {pitch.source_channel_size_band && <Pill><span className="num">{pitch.source_channel_size_band}</span> channel</Pill>}
       </div>
 

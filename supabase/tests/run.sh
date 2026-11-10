@@ -14,6 +14,9 @@ if [ $status -ne 0 ] || echo "$out" | grep -q "FAIL"; then echo "DATABASE TESTS 
 out=$(psql -X -v ON_ERROR_STOP=1 -d $DB -f tests/30_hardening.sql 2>&1); status=$?
 echo "$out" | grep -E "✓|FAIL|ERROR|CONTEXT|LINE"
 if [ $status -ne 0 ] || echo "$out" | grep -q "FAIL"; then echo "DATABASE TESTS FAILED"; exit 1; fi
+out=$(psql -X -v ON_ERROR_STOP=1 -d $DB -f tests/40_idea_protection.sql 2>&1); status=$?
+echo "$out" | grep -E "✓|FAIL|ERROR|CONTEXT|LINE"
+if [ $status -ne 0 ] || echo "$out" | grep -q "FAIL"; then echo "DATABASE TESTS FAILED"; exit 1; fi
 # Race: two sessions unlock different pitches for the last slot at the same time. Exactly one may win.
 psql -q -X -v ON_ERROR_STOP=1 -d $DB -f tests/20_concurrency_setup.sql >/dev/null || { echo "race setup failed"; exit 1; }
 P1=$(psql -X -tA -d $DB -c "select p1 from race_ids"); P2=$(psql -X -tA -d $DB -c "select p2 from race_ids")

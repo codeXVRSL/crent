@@ -1,15 +1,17 @@
 'use client';
 import { useState } from 'react';
 import { ActionForm, SubmitButton } from './form';
-import { Field, Input, Select, Textarea } from './ui';
+import { Field, Input, Select, Textarea, Notice } from './ui';
 import { createBrief } from '@/app/actions/briefs';
 import { PLATFORMS } from '@/lib/constants';
 import { briefCharge, formatMoney, parseDollarsToCents } from '@/lib/money';
 
-export function BriefForm({ niches, creatorFeeBps, defaultPlatform }: {
+export function BriefForm({ niches, creatorFeeBps, defaultPlatform, invite }: {
   niches: { id: number; name: string }[];
   creatorFeeBps: number;
   defaultPlatform?: string | null;
+  /** Private brief: only this researcher sees it and can pitch. */
+  invite?: { id: string; name: string; handle: string } | null;
 }) {
   const [price, setPrice] = useState('8');
   const [max, setMax] = useState('5');
@@ -21,6 +23,15 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform }: {
   return (
     <ActionForm action={createBrief} className="grid gap-6 lg:grid-cols-[1fr_300px]">
       <div className="grid content-start gap-5">
+        {invite && (
+          <>
+            <input type="hidden" name="invited_cre_id" value={invite.id} />
+            <Notice tone="accent">
+              <strong>Private brief for {invite.name} (@{invite.handle}).</strong> Only they will see it and can pitch.
+              You still pay per idea through escrow and see the proof before unlocking.
+            </Notice>
+          </>
+        )}
         <Field label="Title" htmlFor="title" hint="8–100 characters.">
           <Input id="title" name="title" required minLength={8} maxLength={100} placeholder="10 TikTok ideas for a personal finance coach" />
         </Field>
@@ -80,7 +91,7 @@ export function BriefForm({ niches, creatorFeeBps, defaultPlatform }: {
             </>
           ) : <p className="text-bad">Enter a price between $3 and $500 and up to 100 ideas.</p>}
         </dl>
-        <p className="text-xs text-muted">Unused budget and its share of the fee are refunded when the brief closes.</p>
+        <p className="text-xs text-muted">Unused budget and its share of the fee are refunded when the brief closes. If you get pitches but close without unlocking any, your top-scoring pitch is unlocked automatically, so researchers are always paid for at least one idea.</p>
         <SubmitButton pendingText="Going to payment…">Continue to payment</SubmitButton>
       </aside>
     </ActionForm>

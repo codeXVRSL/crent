@@ -15,7 +15,7 @@ const instrument = localFont({
 
 export const metadata: Metadata = {
   title: { default: 'Outlier Desk', template: '%s · Outlier Desk' },
-  description: 'Post a research brief. Verified Content Research Experts pitch proven, data-backed content ideas. Pay only for the ideas you unlock.',
+  description: 'Proven short-form ideas for TikTok, Reels, Shorts and Facebook Reels. Verified Content Research Experts pitch outliers with proof; pay only for the ideas you unlock, delivered ready to film.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
 };
 
