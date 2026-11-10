@@ -17,6 +17,9 @@ describe('buildCsp', () => {
     expect(csp).toContain('upgrade-insecure-requests');
     expect(buildCsp('n', { supabaseUrl: 'http://127.0.0.1:54321' })).not.toContain('upgrade-insecure-requests');
   });
+  it('allows the Sentry ingest host from the DSN', () => {
+    expect(buildCsp('n', { sentryDsn: 'https://k@o1.ingest.de.sentry.io/2' })).toContain('https://o1.ingest.de.sentry.io');
+  });
   it('makes a fresh nonce each time', () => {
     expect(makeNonce()).not.toBe(makeNonce());
     expect(makeNonce()).toMatch(/^[A-Za-z0-9+/]{22}==$/);

@@ -31,7 +31,7 @@ export function PitchForm({ briefId, userId, platform, minMultiplier, maxAgeDays
       const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
       const path = `${userId}/${crypto.randomUUID()}.${ext}`;
       const { error } = await createBrowserSupabase().storage.from('pitch-proof').upload(path, file, { contentType: file.type });
-      if (error) return { ok: false, message: `Screenshot upload failed: ${error.message}` };
+      if (error) return { ok: false, message: /row-level security/i.test(error.message) ? "You've uploaded 100 screenshots today. Submit without one, or try again tomorrow." : `Screenshot upload failed: ${error.message}` };
       fd.set('proof_path', path);
     }
     return submitPitch(null, fd);

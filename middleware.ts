@@ -10,7 +10,7 @@ export async function middleware(request: NextRequest) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   // A fresh nonce per request; Next.js reads it from the request's CSP header and stamps its own scripts.
   const nonce = makeNonce();
-  const csp = buildCsp(nonce, { supabaseUrl: url, dev: process.env.NODE_ENV !== 'production' });
+  const csp = buildCsp(nonce, { supabaseUrl: url, sentryDsn: process.env.NEXT_PUBLIC_SENTRY_DSN, dev: process.env.NODE_ENV !== 'production' });
   request.headers.set('x-nonce', nonce);
   request.headers.set('content-security-policy', csp);
   const withCsp = (res: NextResponse) => { res.headers.set('Content-Security-Policy', csp); return res; };

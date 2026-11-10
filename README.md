@@ -175,8 +175,8 @@ app/api/               payment webhook, scheduled job, health check
 - Payment webhooks are only accepted from Xendit with its callback token; test-mode checkouts never use webhooks, and a production build refuses test payments unless `ALLOW_TEST_PAYMENTS=true`. Events missing an amount are refused, and a webhook that fails is retried and emailed to admins (n8n live alerts).
 - Adding a payout account needs a login in the last 15 minutes and emails the owner; a researcher who has withdrawn before must wait 72 hours before withdrawing to a new account. The admin payout page shows the verified legal name next to the account name.
 - Admin access needs a confirmed email on the `ADMIN_EMAILS` list plus two-step login. Payout exchange rates outside 30–100 PHP/USD are refused.
-- Every page sends a strict Content-Security-Policy with a per-request nonce, so injected scripts cannot run. Stored links must be https.
-- Private uploads are capped per person (ID photos 10, pitch proof 300); public listings hide admins and suspended accounts.
+- Every page sends a strict Content-Security-Policy with a per-request nonce, so injected scripts cannot run. Stored links must be https (older http links were upgraded by the migration).
+- Private uploads are capped per person per day (ID photos 10, pitch-proof screenshots 100); public listings hide admins and suspended accounts.
 - The n8n role can't read ID details, payout accounts or webhook payloads.
 
 ## Before launch

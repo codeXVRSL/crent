@@ -109,33 +109,51 @@ begin
   perform audit('payout.approve', 'payout', po.id::text, jsonb_build_object('fx_rate', p_fx_rate, 'amount_cents', po.amount_cents));
 end $$;
 
--- L3: per-person file caps on private uploads (ID photos, pitch proof), like the photo cap.
-create or replace function storage_file_count(p_bucket text, p_user uuid)
+-- L3: per-person daily caps on private uploads (ID photos, pitch proof). A rolling 24-hour window,
+-- so failed or rejected attempts never lock anyone out for good. Counts only the caller's own files.
+create or replace function my_recent_upload_count(p_bucket text)
 returns integer language plpgsql volatile security definer set search_path = public, storage as $$
 declare n integer;
 begin
-  perform pg_advisory_xact_lock(hashtext(p_bucket || ':' || p_user::text));
-  select count(*)::int into n from storage.objects where bucket_id = p_bucket and (storage.foldername(name))[1] = p_user::text;
+  if auth.uid() is null or p_bucket not in ('kyc', 'pitch-proof') then return 0; end if;
+  perform pg_advisory_xact_lock(hashtext(p_bucket || ':' || auth.uid()::text));
+  select count(*)::int into n from storage.objects
+   where bucket_id = p_bucket and (storage.foldername(name))[1] = auth.uid()::text
+     and created_at > now() - interval '24 hours';
   return n;
 end $$;
-revoke execute on function storage_file_count(text, uuid) from public, anon;
-grant execute on function storage_file_count(text, uuid) to authenticated, service_role;
-create policy "kyc_file_cap" on storage.objects as restrictive for insert to authenticated
-  with check (bucket_id <> 'kyc' or public.storage_file_count('kyc', auth.uid()) < 10);
-create policy "proof_file_cap" on storage.objects as restrictive for insert to authenticated
-  with check (bucket_id <> 'pitch-proof' or public.storage_file_count('pitch-proof', auth.uid()) < 300);
+revoke execute on function my_recent_upload_count(text) from public, anon;
+grant execute on function my_recent_upload_count(text) to authenticated;
+create policy "kyc_daily_cap" on storage.objects as restrictive for insert to authenticated
+  with check (bucket_id <> 'kyc' or public.my_recent_upload_count('kyc') < 10);
+create policy "proof_daily_cap" on storage.objects as restrictive for insert to authenticated
+  with check (bucket_id <> 'pitch-proof' or public.my_recent_upload_count('pitch-proof') < 100);
 
 -- L4: links must be https (blocks javascript: and other schemes written straight through the API).
--- NOT VALID: existing rows are left alone; every new or edited row is checked.
+-- Existing links are upgraded first so every row passes and later updates to old rows keep working.
 create or replace function all_https(p text[])
 returns boolean language sql immutable as $$
   select coalesce(bool_and(u ~ '^https://[^\s]+$'), true) from unnest(coalesce(p, '{}')) u
 $$;
-alter table briefs add constraint briefs_example_urls_https check (all_https(example_urls)) not valid;
-alter table portfolio_items add constraint portfolio_source_https check (source_url ~ '^https://') not valid;
-alter table creator_profiles add constraint creator_channel_https check (channel_url is null or channel_url = '' or channel_url ~ '^https://') not valid;
-alter table pitch_secrets add constraint secrets_source_https check (source_url ~ '^https://') not valid;
-alter table pitch_secrets add constraint secrets_channel_https check (source_channel_url is null or source_channel_url = '' or source_channel_url ~ '^https://') not valid;
+create or replace function to_https(u text)
+returns text language sql immutable as $$
+  select case when u is null or btrim(u) = '' then null
+              when btrim(u) ~* '^https?://\S+$' then regexp_replace(btrim(u), '^https?://', 'https://', 'i')
+              when btrim(u) ~* '^[a-z0-9-]+(\.[a-z0-9-]+)+(/\S*)?$' then 'https://' || btrim(u)
+              else null end
+$$;
+update briefs set example_urls = coalesce(array(select x from (select to_https(e) x from unnest(example_urls) e) t where x is not null), '{}')
+ where not all_https(example_urls);
+update creator_profiles set channel_url = to_https(channel_url) where channel_url is not null and channel_url !~ '^https://';
+update pitch_secrets set source_channel_url = to_https(source_channel_url) where source_channel_url is not null and source_channel_url !~ '^https://';
+-- Required links: upgrade what can be upgraded; anything else is kept, but as an inert https link.
+update pitch_secrets set source_url = coalesce(to_https(source_url), 'https://invalid.example/' || md5(source_url)) where source_url !~ '^https://';
+update portfolio_items set source_url = coalesce(to_https(source_url), 'https://invalid.example/' || md5(source_url)) where source_url !~ '^https://';
+alter table briefs add constraint briefs_example_urls_https check (all_https(example_urls));
+alter table portfolio_items add constraint portfolio_source_https check (source_url ~ '^https://');
+alter table creator_profiles add constraint creator_channel_https check (channel_url is null or channel_url ~ '^https://');
+alter table pitch_secrets add constraint secrets_source_https check (source_url ~ '^https://');
+alter table pitch_secrets add constraint secrets_channel_https check (source_channel_url is null or source_channel_url ~ '^https://');
 
 -- L5: public views stop listing admin accounts and suspended creators.
 create or replace view public_profiles as

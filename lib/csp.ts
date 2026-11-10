@@ -3,7 +3,7 @@
  * loaded by one that does), so injected HTML can't run code even if a bug lets it through.
  * Network access is limited to our own origin, Supabase, Sentry and the Xendit checkout.
  */
-export function buildCsp(nonce: string, opts: { supabaseUrl?: string; dev?: boolean } = {}): string {
+export function buildCsp(nonce: string, opts: { supabaseUrl?: string; sentryDsn?: string; dev?: boolean } = {}): string {
   let supa = '';
   let supaWs = '';
   try {
@@ -13,13 +13,16 @@ export function buildCsp(nonce: string, opts: { supabaseUrl?: string; dev?: bool
       supaWs = `${u.protocol === 'https:' ? 'wss' : 'ws'}://${u.host}`;
     }
   } catch { /* ignore a malformed URL; Supabase calls will fail loudly instead */ }
+  // Sentry ingest host comes from the DSN, so any region works.
+  let sentry = '';
+  try { if (opts.sentryDsn) sentry = new URL(opts.sentryDsn).origin; } catch { /* no Sentry */ }
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
     'script-src': ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(opts.dev ? ["'unsafe-eval'"] : [])],
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': ["'self'", 'data:', 'blob:', supa].filter(Boolean),
     'font-src': ["'self'", 'data:'],
-    'connect-src': ["'self'", supa, supaWs, 'https://*.ingest.sentry.io', 'https://*.ingest.us.sentry.io', ...(opts.dev ? ['ws:'] : [])].filter(Boolean),
+    'connect-src': ["'self'", supa, supaWs, sentry, ...(opts.dev ? ['ws:'] : [])].filter(Boolean),
     'frame-src': ["'none'"],
     'frame-ancestors': ["'none'"],
     'object-src': ["'none'"],

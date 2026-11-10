@@ -39,7 +39,15 @@ reset role;
 delete from payouts where id = :'po2';
 \echo '✓ payouts: an out-of-range exchange rate is refused'
 
--- Links must be https.
+-- Links must be https; rows with old http links are upgraded so status changes keep working.
+select id as bx from briefs order by id limit 1 \gset
+alter table briefs drop constraint briefs_example_urls_https;
+update briefs set example_urls = array['http://youtube.com/x'] where id = :'bx';
+update briefs set example_urls = coalesce(array(select to_https(e) from unnest(example_urls) e), '{}') where not all_https(example_urls);
+alter table briefs add constraint briefs_example_urls_https check (all_https(example_urls));
+select example_urls = array['https://youtube.com/x'] as ok from briefs where id = :'bx' \gset
+\if :ok \else \echo 'FAIL: http link not upgraded' \quit \endif
+update briefs set status = status where id = :'bx';
 do $$ begin update creator_profiles set channel_url = 'javascript:alert(1)' where user_id = '00000000-0000-0000-0000-0000000000c1';
   raise exception 'expected error';
 exception when check_violation then null; end $$;
@@ -59,7 +67,12 @@ select set_config('request.jwt.claim.sub', :'r1', false); set role authenticated
 do $$ begin insert into storage.objects(bucket_id, name) values ('kyc', auth.uid()::text || '/id11.jpg'); raise exception 'expected error';
 exception when insufficient_privilege then null; end $$;
 reset role;
-\echo '✓ public views hide admins; ID-photo uploads capped at 10 per person'
+-- Older uploads fall out of the 24-hour window.
+update storage.objects set created_at = now() - interval '2 days' where bucket_id = 'kyc';
+select set_config('request.jwt.claim.sub', :'r1', false); set role authenticated;
+insert into storage.objects(bucket_id, name) values ('kyc', auth.uid()::text || '/id12.jpg');
+reset role;
+\echo '✓ public views hide admins; ID-photo uploads capped at 10 per day per person'
 
 -- The n8n role sees only the ID-check columns it needs, and can see stuck webhooks without payloads.
 set role n8n_admin_test;
