@@ -11,6 +11,8 @@ export const LIMITS = {
   dispute:       { max: 10, windowSeconds: 3600 },  // per user
   feedback:      { max: 10, windowSeconds: 3600 },  // per user
   avatar:        { max: 10, windowSeconds: 3600 },  // per user
+  chat:          { max: 20, windowSeconds: 600 },   // per IP, website chat assistant
+  chatDaily:     { max: 150, windowSeconds: 86400 }, // per IP, so one visitor can't run up the AI bill
 } as const;
 
 export type LimitName = keyof typeof LIMITS;

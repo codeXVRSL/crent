@@ -3,6 +3,8 @@ import { Logo } from '@/components/logo';
 import { LinkButton } from '@/components/ui';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { getViewer } from '@/lib/auth';
+import { SiteChat } from '@/components/site-chat';
+import { env } from '@/lib/env';
 
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
   const viewer = await getViewer().catch(() => null);
@@ -31,6 +33,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
         </div>
       </header>
       <main className="flex-1">{children}</main>
+      {env.chatEnabled && <SiteChat />}
       <footer className="border-t border-line bg-surface">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div className="grid content-start gap-3">

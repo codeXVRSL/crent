@@ -33,5 +33,8 @@ if [ $status -ne 0 ] || echo "$out" | grep -q "FAIL"; then echo "DATABASE TESTS 
 out=$(psql -X -v ON_ERROR_STOP=1 -d $DB -f tests/60_security_fixes.sql 2>&1); status=$?
 echo "$out" | grep -E "✓|FAIL|ERROR|CONTEXT|LINE"
 if [ $status -ne 0 ] || echo "$out" | grep -q "FAIL"; then echo "DATABASE TESTS FAILED"; exit 1; fi
+out=$(psql -X -v ON_ERROR_STOP=1 -d $DB -f tests/70_growth.sql 2>&1); status=$?
+echo "$out" | grep -E "✓|FAIL|ERROR|CONTEXT|LINE"
+if [ $status -ne 0 ] || echo "$out" | grep -q "FAIL"; then echo "DATABASE TESTS FAILED"; exit 1; fi
 DB=$DB bash tests/45_close_unlock_race.sh || { echo "DATABASE TESTS FAILED"; exit 1; }
 echo "ALL DATABASE TESTS PASSED"
