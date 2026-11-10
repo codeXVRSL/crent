@@ -36,6 +36,14 @@ if (head.test(s)) {
 }
 fs.writeFileSync(p, s);'
 
+say "Moving Outlier Desk's local Supabase to its own ports (553xx) so it can run next to your other projects"
+node -e '
+const fs = require("fs"); const p = "supabase/config.toml";
+let s = fs.readFileSync(p, "utf8");
+s = s.replace(/^(\s*#?\s*(?:port|shadow_port|smtp_port|pop3_port|inspector_port)\s*=\s*)54(\d{3})\b/gm, "$155$2");
+s = s.replace(/127\.0\.0\.1:54(\d{3})/g, "127.0.0.1:55$1");
+fs.writeFileSync(p, s);'
+
 say "Starting local Supabase (first run downloads images, can take several minutes)"
 npx -y supabase start
 
@@ -60,6 +68,9 @@ set -a; . /tmp/sb-e2e.env; set +a
 say "Building the app"
 npm run build
 
+if curl -s -o /dev/null --max-time 3 http://localhost:3000; then
+  fail "Something else is already running on http://localhost:3000. Stop it (Ctrl+C in its window), then run this again."
+fi
 say "Starting the app on http://localhost:3000"
 npx next start -p 3000 > /tmp/outlier-e2e-app.log 2>&1 &
 APP_PID=$!
