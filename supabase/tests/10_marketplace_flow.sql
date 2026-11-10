@@ -273,8 +273,15 @@ reset role;
 select set_config('request.jwt.claim.sub', :'r1', false); set role authenticated;
 select available_cents = 1170 as ok from cre_balances where cre_id = auth.uid() \gset
 \if :ok \else \echo 'FAIL: r1 available balance (expected 720 + 450)' \quit \endif
+-- Adding a payout account needs a recent login (amr timestamp in the token).
+select set_config('request.jwt.claims', '{"aal":"aal2","amr":[{"method":"password","timestamp":1}]}', false) \gset
+do $$ begin insert into payout_methods(user_id, kind, account_name, account_last4, account_number_enc)
+  values (auth.uid(), 'gcash', 'X', '0000', 'enc'); raise exception 'expected error';
+exception when insufficient_privilege then null; end $$;
+select set_config('request.jwt.claims', json_build_object('aal','aal2','amr',json_build_array(json_build_object('method','password','timestamp',extract(epoch from now())::bigint)))::text, false) \gset
 insert into payout_methods(user_id, kind, account_name, account_last4, account_number_enc)
   values (auth.uid(), 'gcash', 'Juan Dela Cruz', '4567', 'enc') returning id as pm \gset
+\echo '✓ payout accounts: stale login refused, fresh login allowed'
 select request_payout(:'pm') as po \gset
 do $$ begin perform request_payout((select id from payout_methods limit 1)); raise exception 'expected error';
 exception when others then if sqlerrm <> 'PAYOUT_ALREADY_PENDING' then raise; end if; end $$;

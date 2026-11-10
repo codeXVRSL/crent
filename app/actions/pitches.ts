@@ -1,4 +1,5 @@
 'use server';
+import { toHttps } from '@/lib/url';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
@@ -26,8 +27,8 @@ export async function submitPitch(_: ActionResult | null, fd: FormData): Promise
     p_channel_median_views: num(fd, 'channel_median_views'),
     p_source_posted_on: str(fd, 'source_posted_on'),
     p_source_channel_size_band: str(fd, 'source_channel_size_band') || null,
-    p_source_url: str(fd, 'source_url'),
-    p_source_channel_url: str(fd, 'source_channel_url'),
+    p_source_url: toHttps(str(fd, 'source_url')),
+    p_source_channel_url: toHttps(str(fd, 'source_channel_url')),
     p_hook_text: str(fd, 'hook_text'),
     p_why_it_worked: str(fd, 'why_it_worked'),
     p_instructions: str(fd, 'instructions'),

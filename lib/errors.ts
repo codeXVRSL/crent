@@ -49,6 +49,10 @@ const MESSAGES: Record<string, string> = {
   ALREADY_REVIEWED: "You've already reviewed this.",
   INVITED_CRE_NOT_AVAILABLE: 'That researcher isn\'t taking private briefs right now. Post a public brief instead, or pick another researcher.',
   MFA_REQUIRED: 'Enter your two-step login code first. Log out and back in if this keeps happening.',
+  PAYOUT_METHOD_TOO_NEW: 'For your safety, a newly added payout account can be used 72 hours after it was added. Your earnings are safe in the meantime.',
+  FX_RATE_OUT_OF_RANGE: 'That exchange rate looks wrong. Enter PHP per USD, for example 58.50.',
+  AMOUNT_REQUIRED: 'The payment provider did not report an amount.',
+  RECENT_LOGIN_REQUIRED: 'For your safety, log out and log back in, then add the payout account within 15 minutes.',
   RATE_LIMITED: 'You are doing that very fast. Wait a minute and try again.',
 };
 
@@ -57,6 +61,8 @@ export function friendlyError(err: unknown): string {
   const code = Object.keys(MESSAGES).find((k) => raw === k || raw.startsWith(k));
   if (code) return MESSAGES[code];
   if (raw.includes('duplicate key') && raw.includes('handle')) return 'That handle is taken. Try another.';
+  if (raw.includes('pm_recent_login')) return MESSAGES.RECENT_LOGIN_REQUIRED;
+  if (/_https"?$|_https"/.test(raw)) return 'Links must be full web addresses starting with https://';
   if (raw.includes('violates check constraint')) return 'Some fields are too short or too long. Check the limits under each field.';
   console.error('[unmapped error]', raw);
   Sentry.captureMessage(`Unmapped error: ${raw.slice(0, 300)}`, 'warning');

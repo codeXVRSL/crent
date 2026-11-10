@@ -5,7 +5,7 @@ Six n8n workflows that run the admin side of Outlier Desk for you. They read the
 | File | Runs | What it does |
 |---|---|---|
 | `01-daily-digest.json` | 8:00 Manila, daily | Your to-do list (verifications, disputes, payouts, refunds, flags, feedback), 24h and 7-day numbers, and briefs where creators are sitting on pitches. |
-| `02-live-alerts.json` | Every 5 min | One email listing anything new that needs you: disputes, payout requests, verifications, refunds needing a hand, off-platform attempts, bug reports. Each event is emailed once. |
+| `02-live-alerts.json` | Every 5 min | One email listing anything new that needs you: disputes, payout requests, verifications, refunds needing a hand, off-platform attempts, bug reports, payment webhooks that failed to process. Each event is emailed once. |
 | `03-ai-pitch-spot-check.json` | Every 15 min | Gemini checks the first 20 pitches of every new researcher (fake-looking numbers, link vs platform, hook leaks, low-effort copy, contact details). Medium or high risk becomes a flag in **Admin → Flags** plus an email. |
 | `04-health-monitor.json` | Every 10 min | Alerts if the site stops answering or the scheduled jobs look stuck (overdue briefs still open, earnings not released, refunds stuck). At most one email per problem every 6 hours. |
 | `05-weekly-report.json` | Mondays 8:30 Manila | Last week's numbers added as a row to a Google Sheet, plus an email. |
@@ -24,7 +24,7 @@ Six n8n workflows that run the admin side of Outlier Desk for you. They read the
 ### 2. Credentials in n8n
 - **Postgres**, named `Outlier Desk DB (n8n_admin)`: the pooler host, port 5432, database `postgres`, the user from step 1.3, your password, SSL **require**.
 - **Gmail** (OAuth2): the account that sends you the emails.
-- **Gemini**: *Query Auth*, name `key`, value = your Gemini API key (for workflow 03).
+- **Gemini**: *Header Auth*, name `x-goog-api-key`, value = your Gemini API key (for workflow 03). A header keeps the key out of URLs, which end up in logs.
 - **Google Sheets** (OAuth2): for workflow 05.
 
 ### 3. Import and connect

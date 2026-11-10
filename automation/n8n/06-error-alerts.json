@@ -4,7 +4,7 @@
   "nodes": [
     {
       "parameters": {},
-      "id": "bc9a18de-3c97-4f9e-99e7-602a9e6c0ab1",
+      "id": "d552e4f2-0cd7-5877-8853-b2b94d185309",
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
@@ -22,7 +22,7 @@
           "appendAttribution": false
         }
       },
-      "id": "a6e64dd5-e4a2-4355-bbdc-f638d51c7a2a",
+      "id": "0e2e39f0-7d76-50b3-9dee-b732d3a2bb1b",
       "name": "Email Error",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
@@ -41,7 +41,7 @@
         "width": 560,
         "color": 4
       },
-      "id": "a7d0c0bb-d216-49f3-bab9-5ed52b6696aa",
+      "id": "153e4dc1-dded-539b-9094-c3a47a0349e5",
       "name": "About",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,

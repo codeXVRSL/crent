@@ -1,4 +1,5 @@
 'use server';
+import { isHttps, toHttps } from '@/lib/url';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
@@ -39,7 +40,7 @@ export async function createBrief(_: ActionResult | null, fd: FormData): Promise
   if (price == null) return { ok: false, message: 'Enter the price per idea in dollars, e.g. 8 or 8.50.' };
   const days = Number(str(fd, 'deadline_days'));
   if (!(days >= 1 && days <= 30)) return { ok: false, message: 'Pick a deadline between 1 and 30 days.' };
-  const exampleUrls = str(fd, 'example_urls').split(/\s+/).filter((u) => /^https?:\/\//i.test(u)).slice(0, 5);
+  const exampleUrls = str(fd, 'example_urls').split(/\s+/).map(toHttps).filter(isHttps).slice(0, 5);
   const maxAge = Number(str(fd, 'max_video_age_days')) || null;
 
   const supabase = await createClient();

@@ -59,7 +59,7 @@ if (fs.existsSync(".env.local")) fs.copyFileSync(".env.local", ".env.local.backu
 fs.writeFileSync(".env.local", [
   "NEXT_PUBLIC_APP_URL=http://localhost:3000",
   `NEXT_PUBLIC_SUPABASE_URL=${url}`, `NEXT_PUBLIC_SUPABASE_ANON_KEY=${anon}`, `SUPABASE_SERVICE_ROLE_KEY=${svc}`,
-  "PAYOUT_ENCRYPTION_KEY=local-e2e-only-not-a-real-secret", "PAYMENT_PROVIDER=mock", "MOCK_WEBHOOK_TOKEN=dev-mock-token",
+  "PAYOUT_ENCRYPTION_KEY=local-e2e-only-not-a-real-secret", "PAYMENT_PROVIDER=mock", "ALLOW_TEST_PAYMENTS=true",
   "CRON_SECRET=local-cron", "ADMIN_EMAILS=", "",
 ].join("\n"));
 fs.writeFileSync("/tmp/sb-e2e.env", `SUPABASE_URL=${url}\nSUPABASE_SERVICE_ROLE_KEY=${svc}\n`);'

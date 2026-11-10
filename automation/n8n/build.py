@@ -1,7 +1,11 @@
 import json, uuid
 import os
 OUT = os.path.dirname(os.path.abspath(__file__))
-def nid(): return str(uuid.uuid4())
+# Deterministic IDs: rebuilding without changes produces identical files, so diffs show only real edits.
+_seq = [0]
+def nid():
+    _seq[0] += 1
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"outlier-desk-n8n/{_seq[0]}"))
 RETRY = dict(retryOnFail=True, maxTries=3, waitBetweenTries=5000)
 PG_CRED = {"postgres": {"id": "", "name": "Outlier Desk DB (n8n_admin)"}}
 
@@ -147,6 +151,10 @@ ALERT_SQL = """with ev as (
     from flags f left join profiles pr on pr.id = f.subject_user
    where f.kind = 'other' and f.entity_type = 'circumvention_alert' and f.status = 'open'
   union all
+  select 'webhook', w.id, w.received_at, 'Payment webhook failed (' || w.provider || ' ' || w.type || ')',
+         'Not processed after 10 minutes: ' || left(coalesce(w.error, 'no error recorded'), 200) || '. A payment may be paid but not credited — check the provider dashboard.', '/admin'
+    from webhook_events w where w.processed_at is null and w.received_at < now() - interval '10 minutes'
+  union all
   select 'bug', fb.id::text, fb.created_at, 'Bug report', left(fb.message, 200) || ' (' || coalesce(fb.page, '') || ')', '/admin/feedback'
     from feedback fb where fb.kind = 'bug' and fb.status = 'new'
 )
@@ -169,7 +177,7 @@ pg(w, "Mark as Sent", [1320, -100],
 w.chain("Schedule", "Config", "Find New Events", "Anything New?")
 w.link("Anything New?", "Bundle Events", 0)
 w.chain("Bundle Events", "Email Alert", "Mark as Sent")
-sticky(w, "## Live alerts · every 5 minutes\nOne email per run listing anything new that needs you: disputes, payout requests, verifications, refunds needing a hand, off-platform attempts, bug reports. Each event is emailed **once** (remembered in `admin_alert_log`).")
+sticky(w, "## Live alerts · every 5 minutes\nOne email per run listing anything new that needs you: disputes, payout requests, verifications, refunds needing a hand, off-platform attempts, bug reports, failed payment webhooks. Each event is emailed **once** (remembered in `admin_alert_log`).")
 w.save("02-live-alerts.json")
 
 # ================= 3. AI pitch spot-check =================
@@ -213,11 +221,11 @@ Use "fake_proof" when the numbers or source look made up. Be fair: most pitches 
 w.node("Gemini: Review Pitch", "n8n-nodes-base.httpRequest", 4.2, [880, -100], {
     "method": "POST",
     "url": f"=https://generativelanguage.googleapis.com/v1beta/models/{{{{ {C}.gemini_model }}}}:generateContent",
-    "authentication": "genericCredentialType", "genericAuthType": "httpQueryAuth",
+    "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth",
     "sendBody": True, "specifyBody": "json",
     "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: " + REVIEW_PROMPT + " }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.2 } }) }}",
     "options": {"timeout": 60000}},
-    onError="continueRegularOutput", notes="Why HTTP: Gemini JSON mode. Credential = Query Auth, name key. Runs once per pitch. On failure the pitch is left unchecked and retried next run.", **RETRY)
+    onError="continueRegularOutput", notes="Why HTTP: Gemini JSON mode. Credential = Header Auth, name x-goog-api-key (keeps the key out of URLs and logs). Runs once per pitch. On failure the pitch is left unchecked and retried next run.", **RETRY)
 w.node("Read Verdict", "n8n-nodes-base.set", 3.4, [1100, -100], {"assignments": {"assignments": [
     a("pitch_id", "={{ $('New Researchers\\' Pitches').item.json.id }}"),
     a("cre_id", "={{ $('New Researchers\\' Pitches').item.json.cre_id }}"),
@@ -248,7 +256,7 @@ w.link("Reviewed?", "Suspicious?", 0)
 w.link("Suspicious?", "File Flag", 0)
 w.chain("File Flag", "Bundle Findings", "Email Findings")
 w.nodes = [n for n in w.nodes if n["name"] != "Collect Flagged"]
-sticky(w, "## AI pitch spot-check · every 15 minutes\nChecks the **first 20 pitches of every new researcher** (numbers, source link vs platform, hook leaks, low-effort copy, contact details). Medium/high risk → a flag in **Admin → Flags** + an email. Each pitch is checked once.\n\n**Setup:** Gemini credential (Query Auth `key`).", h=280)
+sticky(w, "## AI pitch spot-check · every 15 minutes\nChecks the **first 20 pitches of every new researcher** (numbers, source link vs platform, hook leaks, low-effort copy, contact details). Medium/high risk → a flag in **Admin → Flags** + an email. Each pitch is checked once.\n\n**Setup:** Gemini credential (Header Auth `x-goog-api-key`).", h=280)
 w.save("03-ai-pitch-spot-check.json")
 
 # ================= 4. Health monitor =================
