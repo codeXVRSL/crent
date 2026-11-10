@@ -1,0 +1,199 @@
+{
+  "id": "ODAdminDigest001",
+  "name": "Outlier Desk Admin · Daily Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "c2b2ac66-e768-4d88-a053-bacd4fe60d1e",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9e695270-46d3-4f77-903b-f08b86adaec1",
+              "name": "app_url",
+              "value": "https://YOUR-APP.vercel.app",
+              "type": "string"
+            },
+            {
+              "id": "440b9675-ff97-4168-b195-e6c968fd3e84",
+              "name": "admin_email",
+              "value": "PASTE_YOUR_EMAIL",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "99390ebf-4b91-43b0-ad74-2959eeca95b3",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "notes": "All settings in one place: your live site URL and the email that receives admin mail."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  (select count(*) from cre_profiles where kyc_status = 'pending')::int                         as kyc_pending,\n  (select count(*) from disputes where status = 'awaiting_admin')::int                          as disputes_admin,\n  (select count(*) from disputes where status = 'awaiting_cre')::int                            as disputes_cre,\n  (select count(*) from payouts where status = 'requested')::int                                as payouts_requested,\n  (select coalesce(sum(amount_cents), 0) from payouts where status = 'requested')::bigint       as payouts_requested_cents,\n  (select count(*) from refunds where status in ('manual', 'failed'))::int                      as refunds_attention,\n  (select count(*) from flags where status = 'open')::int                                       as flags_open,\n  (select count(*) from feedback where status = 'new')::int                                     as feedback_new,\n  (select count(*) from briefs where status = 'open')::int                                      as briefs_open,\n  (select count(*) from briefs where status = 'open' and deadline_at < now() + interval '24 hours')::int as briefs_closing_24h,\n  (select count(*) from profiles where created_at > now() - interval '24 hours')::int           as signups_24h,\n  (select count(*) from briefs where opened_at > now() - interval '24 hours')::int              as briefs_24h,\n  (select count(*) from pitches where submitted_at > now() - interval '24 hours')::int          as pitches_24h,\n  (select count(*) from unlocks where created_at > now() - interval '24 hours')::int            as unlocks_24h,\n  (select coalesce(sum(budget_cents), 0) from briefs where opened_at > now() - interval '24 hours')::bigint as gmv_24h_cents,\n  (select coalesce(sum(case when credit_account = 'platform:revenue' then amount_cents\n                            when debit_account = 'platform:revenue' then -amount_cents end), 0)\n     from ledger_entries where created_at > now() - interval '24 hours')::bigint                as revenue_24h_cents,\n  (select count(*) from profiles where created_at > now() - interval '7 days')::int             as signups_7d,\n  (select count(*) from unlocks where created_at > now() - interval '7 days')::int              as unlocks_7d,\n  (select coalesce(sum(budget_cents), 0) from briefs where opened_at > now() - interval '7 days')::bigint as gmv_7d_cents,\n  (select coalesce(sum(case when credit_account = 'platform:revenue' then amount_cents\n                            when debit_account = 'platform:revenue' then -amount_cents end), 0)\n     from ledger_entries where created_at > now() - interval '7 days')::bigint                  as revenue_7d_cents,\n  (select coalesce(json_agg(x order by x.waiting_hours desc), '[]'::json) from (\n     select b.id, b.title, count(p.id)::int as waiting,\n            round(extract(epoch from now() - min(p.submitted_at)) / 3600)::int as waiting_hours\n       from briefs b join pitches p on p.brief_id = b.id and p.status = 'submitted'\n      where b.status = 'open' group by b.id, b.title\n     having min(p.submitted_at) < now() - interval '48 hours' limit 5) x)                       as stale_briefs",
+        "options": {}
+      },
+      "id": "e9fe6c74-6034-4d54-9041-262450acd51a",
+      "name": "Read Admin Numbers",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Outlier Desk DB (n8n_admin)"
+        }
+      },
+      "notes": "One read-only query: today's to-do counts plus 24h and 7-day numbers."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "735486a3-2af7-4728-ac9b-49db326db97f",
+              "name": "html",
+              "value": "={{ (() => { const m = (c) => '$' + (Number(c || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); const d = $json; const a = $('Config').first().json.app_url; const todo = [['Verifications to review', d.kyc_pending, '/admin/kyc'], ['Disputes waiting for you', d.disputes_admin, '/admin/disputes'], ['Payouts to approve (' + m(d.payouts_requested_cents) + ')', d.payouts_requested, '/admin/payouts'], ['Refunds needing a hand', d.refunds_attention, '/admin/payouts'], ['Open flags', d.flags_open, '/admin/flags'], ['New feedback', d.feedback_new, '/admin/feedback']]; const total = todo.reduce((s, t) => s + Number(t[1]), 0); const row = (l, v, link) => `<tr><td style=\"padding:6px 12px 6px 0\">${link ? `<a href=\"${a}${link}\">${l}</a>` : l}</td><td style=\"padding:6px 0;text-align:right;font-weight:600\">${v}</td></tr>`; const stale = (d.stale_briefs || []).map(b => `<li><a href=\"${a}/briefs/${b.id}\">${esc(b.title)}</a>: ${b.waiting} pitch(es) waiting ${b.waiting_hours}h</li>`).join(''); return `<div style=\"font-family:system-ui,sans-serif;max-width:560px\"><h2 style=\"margin:0 0 4px\">Outlier Desk · daily digest</h2>` + `<p style=\"color:#666;margin:0 0 16px\">${total ? total + ' thing(s) need you today.' : 'Nothing needs you today.'}</p>` + `<h3>To do</h3><table>${todo.map(t => row(t[0], t[1], t[2])).join('')}</table>` + `<h3>Last 24 hours</h3><table>${row('Sign-ups', d.signups_24h)}${row('Briefs live', d.briefs_24h)}${row('Pitches', d.pitches_24h)}${row('Unlocks', d.unlocks_24h)}${row('Briefs funded (GMV)', m(d.gmv_24h_cents))}${row('Revenue', m(d.revenue_24h_cents))}</table>` + `<h3>Last 7 days</h3><table>${row('Sign-ups', d.signups_7d)}${row('Unlocks', d.unlocks_7d)}${row('GMV', m(d.gmv_7d_cents))}${row('Revenue', m(d.revenue_7d_cents))}</table>` + `<h3>Marketplace</h3><table>${row('Open briefs', d.briefs_open)}${row('Closing within 24h', d.briefs_closing_24h)}</table>` + (stale ? `<h3>Creators sitting on pitches (48h+)</h3><ul>${stale}</ul><p style=\"color:#666\">Worth a nudge: researchers wait on these.</p>` : '') + `<p><a href=\"${a}/admin\">Open admin</a></p></div>`; })() }}",
+              "type": "string"
+            },
+            {
+              "id": "bc6039f3-bd96-402f-9a69-0e8b7c637257",
+              "name": "subject",
+              "value": "={{ 'Outlier Desk digest: ' + ([$json.kyc_pending, $json.disputes_admin, $json.payouts_requested, $json.refunds_attention, $json.flags_open, $json.feedback_new].reduce((s, n) => s + Number(n), 0) || 'nothing') + ' to do · ' + $now.setZone('Asia/Manila').toFormat('MMM d') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5aa0eaaa-cd46-4a70-88ee-51679e51477c",
+      "name": "Build Email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Config').first().json.admin_email }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "4ac6edda-978a-4fa2-8584-017cac084476",
+      "name": "Email Digest",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        880,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "content": "## Daily digest · 8:00 Manila\nYour admin to-do list (verifications, disputes, payouts, refunds, flags, feedback) plus 24-hour and 7-day numbers, and briefs where creators are sitting on pitches.\n\n**Setup:** Postgres credential (n8n_admin), Gmail credential, fill **Config**.",
+        "height": 260,
+        "width": 560,
+        "color": 4
+      },
+      "id": "2627e648-ca7a-4b57-9bec-6ce8b919bf97",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -320
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Read Admin Numbers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Admin Numbers": {
+      "main": [
+        [
+          {
+            "node": "Build Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Email": {
+      "main": [
+        [
+          {
+            "node": "Email Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Manila",
+    "errorWorkflow": "ODAdminErrors001"
+  },
+  "pinData": {}
+}

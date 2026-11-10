@@ -1,0 +1,72 @@
+{
+  "id": "ODAdminErrors001",
+  "name": "Outlier Desk Admin · Error Alerts",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "bc9a18de-3c97-4f9e-99e7-602a9e6c0ab1",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "PASTE_YOUR_EMAIL",
+        "subject": "=n8n workflow failed: {{ $json.workflow.name }}",
+        "message": "=<b>Workflow:</b> {{ $json.workflow.name }}<br><b>Failed step:</b> {{ $json.execution.lastNodeExecuted }}<br><b>Error:</b> {{ $json.execution.error.message }}<br><a href=\"{{ $json.execution.url }}\">Open the execution</a>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a6e64dd5-e4a2-4355-bbdc-f638d51c7a2a",
+      "name": "Email Error",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "content": "## Error alerts\nAll Outlier Desk admin workflows send failures here. **Publish this workflow** (n8n 2.x skips unpublished error workflows) and put your email in *Email Error*.",
+        "height": 200,
+        "width": 560,
+        "color": 4
+      },
+      "id": "a7d0c0bb-d216-49f3-bab9-5ed52b6696aa",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -320
+      ]
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Email Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Manila"
+  },
+  "pinData": {}
+}
