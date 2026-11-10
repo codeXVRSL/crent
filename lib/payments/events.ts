@@ -12,8 +12,11 @@ export async function handlePaymentEvent(event: PaymentEvent): Promise<string> {
     id: event.eventId, provider: getProvider().name, type: event.type, payload: event.raw ?? {},
   });
   if (dupErr) {
-    if (dupErr.code === '23505') return 'duplicate';
-    throw dupErr;
+    if (dupErr.code !== '23505') throw dupErr;
+    // Seen before. If it was applied, stop. If an earlier attempt failed, apply it again: every money
+    // function below is safe to repeat, and giving up here would strand a paid brief or a refund.
+    const { data: prev } = await db.from('webhook_events').select('processed_at').eq('id', event.eventId).single();
+    if (prev?.processed_at) return 'duplicate';
   }
 
   let result = 'ignored';
@@ -60,7 +63,7 @@ export async function handlePaymentEvent(event: PaymentEvent): Promise<string> {
         break;
       }
     }
-    await db.from('webhook_events').update({ processed_at: new Date().toISOString() }).eq('id', event.eventId);
+    await db.from('webhook_events').update({ processed_at: new Date().toISOString(), error: null }).eq('id', event.eventId);
   } catch (e) {
     await db.from('webhook_events').update({ error: (e as Error).message }).eq('id', event.eventId);
     throw e;

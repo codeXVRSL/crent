@@ -1,4 +1,5 @@
 'use server';
+import { isHttps, toHttps } from '@/lib/url';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
@@ -15,7 +16,8 @@ export async function setRole(fd: FormData) {
     // Only for emails listed in ADMIN_EMAILS, and only while the account has no role yet.
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.email || !env.adminEmails.includes(user.email.toLowerCase())) throw new Error('Not allowed.');
+    // The email must be confirmed, so someone can't sign up with an admin's address before they do.
+    if (!user?.email || !user.email_confirmed_at || !env.adminEmails.includes(user.email.toLowerCase())) throw new Error('Not allowed.');
     const db = createAdminClient();
     const { data: p } = await db.from('profiles').select('role').eq('id', user.id).single();
     if (p?.role) throw new Error(friendlyError('ROLE_ALREADY_SET'));
@@ -37,7 +39,7 @@ export async function saveCreatorProfile(_: ActionResult | null, fd: FormData): 
   const { error } = await supabase.from('creator_profiles').update({
     brand_name: str(fd, 'brand_name') || null,
     main_platform: PLATFORM_VALUES.includes(platform) ? platform : null,
-    channel_url: str(fd, 'channel_url') || null,
+    channel_url: toHttps(str(fd, 'channel_url')) || null,
     follower_band: str(fd, 'follower_band') || null,
     is_agency: fd.get('is_agency') === 'on',
   }).eq('user_id', user.id);
@@ -90,8 +92,8 @@ export async function addPortfolioItem(_: ActionResult | null, fd: FormData): Pr
   const median = Number(str(fd, 'channel_median_views').replace(/[,\s]/g, ''));
   if (!(views > 0) || !(median > 0)) return { ok: false, message: 'Enter views and median views as whole numbers.' };
   if (views / median < 3) return { ok: false, message: 'Portfolio finds need an outlier score of at least 3×.' };
-  const url = str(fd, 'source_url');
-  if (!/^https?:\/\//i.test(url)) return { ok: false, message: 'Enter the full link, starting with https://' };
+  const url = toHttps(str(fd, 'source_url'));
+  if (!isHttps(url)) return { ok: false, message: 'Enter the full link, starting with https://' };
   const { error } = await supabase.from('portfolio_items').insert({
     cre_id: user.id, platform: str(fd, 'platform'), title: str(fd, 'title'),
     niche_id: Number(str(fd, 'niche_id')) || null, source_url: url, source_views: views, channel_median_views: median,

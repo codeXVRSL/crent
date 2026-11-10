@@ -129,6 +129,7 @@ Log out and back in. You'll land on `/admin`. Use a **different** email for your
 ## Switching to real payments (Xendit)
 1. Talk to Xendit sales first and confirm: USD card payments on your account, partial refunds on invoice payments, and payouts to GCash/Maya/PH banks. Record the answers in `DECISIONS.md`.
 2. Set `PAYMENT_PROVIDER=xendit`, `XENDIT_SECRET_KEY`, `XENDIT_CALLBACK_TOKEN`.
+   For a hosted **closed beta in test mode** instead, set `PAYMENT_PROVIDER=mock` and `ALLOW_TEST_PAYMENTS=true` (and remove `ALLOW_TEST_PAYMENTS` before real payments). A production build refuses to start payments with any other combination.
 3. In the Xendit dashboard, set the webhook URL for invoices, refunds and payouts to `https://YOUR_DOMAIN/api/webhooks/payments`.
 4. Test with Xendit's test keys, then do one real $1 payment, refund and ₱50 payout to yourself.
 
@@ -170,8 +171,18 @@ app/api/               payment webhook, scheduled job, health check
 - Briefs are only visible to researchers once a verified payment webhook has opened them.
 - The service-role key is only used in `lib/supabase/admin.ts` (webhooks, scheduled job, admin payout/refund calls).
 
+**Security protections** (audited before launch; tests in `supabase/tests/60_security_fixes.sql`)
+- Payment webhooks are only accepted from Xendit with its callback token; test-mode checkouts never use webhooks, and a production build refuses test payments unless `ALLOW_TEST_PAYMENTS=true`. Events missing an amount are refused, and a webhook that fails is retried and emailed to admins (n8n live alerts).
+- Adding a payout account needs a login in the last 15 minutes and emails the owner; a researcher who has withdrawn before must wait 72 hours before withdrawing to a new account. The admin payout page shows the verified legal name next to the account name.
+- Admin access needs a confirmed email on the `ADMIN_EMAILS` list plus two-step login. Payout exchange rates outside 30–100 PHP/USD are refused.
+- Every page sends a strict Content-Security-Policy with a per-request nonce, so injected scripts cannot run. Stored links must be https (older http links were upgraded by the migration).
+- Private uploads are capped per person per day (ID photos 10, pitch-proof screenshots 100); public listings hide admins and suspended accounts.
+- The n8n role can't read ID details, payout accounts or webhook payloads.
+
 ## Before launch
 - Have a Philippine lawyer review `app/(marketing)/legal/[slug]/page.tsx` (drafts) and the escrow setup.
 - Register the business (DTI or SEC) and with the BIR; put the registration numbers in the site footer.
 - Check the trade name "Outlier Desk" with IPOPHL before buying a domain.
 - Set up SPF/DKIM for your email domain in Resend.
+- Before real money: raise **Hold period** in Admin → Settings to 7 days (168 hours) for the first months, so chargebacks and fraud surface before researchers can withdraw. Turn on two-step login for every admin, and keep `ALLOW_TEST_PAYMENTS` unset.
+- Run `npm audit --omit=dev` before each release (it reports 0 issues today).

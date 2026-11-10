@@ -13,7 +13,7 @@
           ]
         }
       },
-      "id": "55eaf04f-c911-4c93-aacb-f0f8cbd0c771",
+      "id": "6da99efe-1caa-56d5-9eb2-1e4c96f9d2a4",
       "name": "Schedule",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -27,19 +27,19 @@
         "assignments": {
           "assignments": [
             {
-              "id": "b899bc0b-613f-4709-b3a3-676fa19e1c59",
+              "id": "fc218985-0600-5145-a139-5054c8d9a181",
               "name": "app_url",
               "value": "https://YOUR-APP.vercel.app",
               "type": "string"
             },
             {
-              "id": "87a85a0c-8144-4ee8-9539-ede88c7a1e3a",
+              "id": "c24bb886-631e-53c3-b1d1-7b53b27ae681",
               "name": "admin_email",
               "value": "PASTE_YOUR_EMAIL",
               "type": "string"
             },
             {
-              "id": "a9a6807f-9479-4d12-9309-455e75612e29",
+              "id": "890dfd7a-0ebb-51a4-819a-7976aa0ed3d0",
               "name": "gemini_model",
               "value": "gemini-3.5-flash",
               "type": "string"
@@ -48,7 +48,7 @@
         },
         "options": {}
       },
-      "id": "509f179b-d9ba-4422-83fd-482cfa8362e0",
+      "id": "c1634c23-51e6-576e-a881-6c87f9e4b338",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -64,7 +64,7 @@
         "query": "select p.id, p.platform, p.format_label, p.hook_category, p.teaser, p.source_views, p.channel_median_views,\n       p.multiplier::float as multiplier, p.source_posted_on::text as source_posted_on, p.duration_seconds,\n       s.source_url, s.hook_text, s.why_it_worked, s.instructions, s.adaptation_notes,\n       pr.id as cre_id, pr.display_name as cre_name, b.title as brief_title, b.platform as brief_platform,\n       (select count(*) from pitches x where x.cre_id = p.cre_id)::int as cre_total_pitches\n  from pitches p\n  join pitch_secrets s on s.pitch_id = p.id\n  join profiles pr on pr.id = p.cre_id\n  join briefs b on b.id = p.brief_id\n where p.submitted_at > now() - interval '7 days'\n   and (select count(*) from pitches x where x.cre_id = p.cre_id and x.submitted_at <= p.submitted_at) <= 20\n   and not exists (select 1 from admin_alert_log l where l.kind = 'pitch_check' and l.entity_id = p.id::text)\n order by p.submitted_at\n limit 10",
         "options": {}
       },
-      "id": "9e27d60b-d85b-4972-9430-32b4c3056152",
+      "id": "647f75f0-ae84-5766-9dc9-9392073a9a86",
       "name": "New Researchers' Pitches",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
@@ -95,7 +95,7 @@
           },
           "conditions": [
             {
-              "id": "5986b1c2-f1ca-4833-99c7-0d9a2be4d3ca",
+              "id": "63825ebe-14bf-556c-9fc2-bba1d965fbcf",
               "leftValue": "={{ $json.id }}",
               "rightValue": "",
               "operator": {
@@ -108,7 +108,7 @@
         },
         "options": {}
       },
-      "id": "ff8259b6-efb1-47db-8afe-2b54e6bac91a",
+      "id": "0ab71998-186a-53d2-bfbd-2e335971388a",
       "name": "Any to Check?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -122,7 +122,7 @@
         "method": "POST",
         "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{ $('Config').first().json.gemini_model }}:generateContent",
         "authentication": "genericCredentialType",
-        "genericAuthType": "httpQueryAuth",
+        "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: `You are the trust & safety reviewer for Outlier Desk, a marketplace where researchers sell proven short-form video ideas. Review this pitch from a NEW researcher for signs of fake or low-quality work.\n\nPitch (JSON):\n${JSON.stringify({ platform: $json.platform, brief_platform: $json.brief_platform, format: $json.format_label, hook_type: $json.hook_category,\n  teaser: $json.teaser, views: $json.source_views, channel_median: $json.channel_median_views, score: $json.multiplier,\n  posted: $json.source_posted_on, length_s: $json.duration_seconds, source_url: $json.source_url, hook: $json.hook_text,\n  why_it_worked: $json.why_it_worked, instructions: $json.instructions, adaptation_notes: $json.adaptation_notes })}\n\nCheck:\n1. Numbers: implausible views vs channel median (e.g. median above views, score over 200x, round made-up numbers).\n2. Source: does the URL's site match the stated platform (tiktok.com, instagram.com/reel, youtube.com/shorts, facebook.com)?\n3. Hook leak: does the teaser give away the hook?\n4. Effort: generic, copy-paste or nonsensical \"why it worked\" / instructions.\n5. Contact details or attempts to move off-platform anywhere.\n\nReturn JSON only: {\"risk\": \"low\" | \"medium\" | \"high\", \"kind\": \"fake_proof\" | \"other\", \"reasons\": [\"short, specific reasons\"]}\nUse \"fake_proof\" when the numbers or source look made up. Be fair: most pitches from honest new researchers are \"low\".` }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.2 } }) }}",
@@ -130,7 +130,7 @@
           "timeout": 60000
         }
       },
-      "id": "f5ec7679-00fa-43c5-bec2-72f38333a76e",
+      "id": "e5601171-c35a-5903-b487-67db74dca8e0",
       "name": "Gemini: Review Pitch",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -139,7 +139,7 @@
         -100
       ],
       "onError": "continueRegularOutput",
-      "notes": "Why HTTP: Gemini JSON mode. Credential = Query Auth, name key. Runs once per pitch. On failure the pitch is left unchecked and retried next run.",
+      "notes": "Why HTTP: Gemini JSON mode. Credential = Header Auth, name x-goog-api-key (keeps the key out of URLs and logs). Runs once per pitch. On failure the pitch is left unchecked and retried next run.",
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 5000
@@ -149,31 +149,31 @@
         "assignments": {
           "assignments": [
             {
-              "id": "ea70b8ea-9a9e-4dcc-9056-b38f386bbf19",
+              "id": "bc809f47-b22c-5d3e-861c-589e064a5d63",
               "name": "pitch_id",
               "value": "={{ $('New Researchers\\' Pitches').item.json.id }}",
               "type": "string"
             },
             {
-              "id": "2f0dd93c-517e-4716-b505-28eb254fb103",
+              "id": "5f17235b-6d57-5edd-b89d-a132ad65dfc5",
               "name": "cre_id",
               "value": "={{ $('New Researchers\\' Pitches').item.json.cre_id }}",
               "type": "string"
             },
             {
-              "id": "a72e163f-5efc-4b03-b4a7-0b2a0d3a2c0f",
+              "id": "ea88634e-6eed-56d3-810b-dda26607b9dc",
               "name": "cre_name",
               "value": "={{ $('New Researchers\\' Pitches').item.json.cre_name }}",
               "type": "string"
             },
             {
-              "id": "916d871d-10ee-44d1-a6e2-f777b05972b4",
+              "id": "fc02804d-836c-5eab-85ad-6bc2d0bf5b27",
               "name": "brief_title",
               "value": "={{ $('New Researchers\\' Pitches').item.json.brief_title }}",
               "type": "string"
             },
             {
-              "id": "e267e00a-9297-4337-a582-6078c3ae52c5",
+              "id": "2924265b-8b57-59d1-a65d-74819805fae2",
               "name": "verdict",
               "value": "={{ (() => { try { const v = JSON.parse($json.candidates[0].content.parts[0].text); return { risk: ['low','medium','high'].includes(v.risk) ? v.risk : 'unknown', kind: v.kind === 'fake_proof' ? 'fake_proof' : 'other', reasons: Array.isArray(v.reasons) ? v.reasons.slice(0, 5).map(String) : [] }; } catch (e) { return { risk: 'unknown', kind: 'other', reasons: [] }; } })() }}",
               "type": "object"
@@ -182,7 +182,7 @@
         },
         "options": {}
       },
-      "id": "46551bc9-929c-47fd-9754-19bd90639daa",
+      "id": "4ba03515-e129-5bf5-93b1-b7c27d8a3cc7",
       "name": "Read Verdict",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -203,7 +203,7 @@
           },
           "conditions": [
             {
-              "id": "8059350e-2044-444d-a309-c388215713f4",
+              "id": "6b0e693c-c695-50b7-a051-f9823f26dac1",
               "leftValue": "={{ $json.verdict.risk }}",
               "rightValue": "unknown",
               "operator": {
@@ -216,7 +216,7 @@
         },
         "options": {}
       },
-      "id": "b51826e3-535a-4f56-a2e3-6d79509ffdd0",
+      "id": "c55c6029-e6ab-51de-812b-649c1f67fcb5",
       "name": "Reviewed?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -233,7 +233,7 @@
           "queryReplacement": "={{ [ $json.pitch_id ] }}"
         }
       },
-      "id": "457f4f21-9a98-4f0b-831b-07d402b1ea15",
+      "id": "0b1bbecc-2070-5423-9957-176d29aad4b6",
       "name": "Mark Checked",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
@@ -262,7 +262,7 @@
           },
           "conditions": [
             {
-              "id": "ec512209-0b4f-438d-8b04-abf6aea24f64",
+              "id": "a9528f33-06cc-5b18-a2d0-74a18e6a10d6",
               "leftValue": "={{ ['medium','high'].includes($json.verdict.risk) }}",
               "rightValue": "",
               "operator": {
@@ -275,7 +275,7 @@
         },
         "options": {}
       },
-      "id": "87207af1-fcf6-4745-b84b-af48118819d1",
+      "id": "3396555d-c596-5115-a6b7-5ed121360c10",
       "name": "Suspicious?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -292,7 +292,7 @@
           "queryReplacement": "={{ [ $json.verdict.kind, $json.cre_id, $json.pitch_id, ('AI spot-check (' + $json.verdict.risk + '): ' + $json.verdict.reasons.join(' · ')).slice(0, 1000) ] }}"
         }
       },
-      "id": "c7722bfe-2cdb-4de1-866e-fd662af8b57e",
+      "id": "df65d450-0e78-5341-b46e-0c0a49e022f6",
       "name": "File Flag",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
@@ -318,7 +318,7 @@
         "destinationFieldName": "findings",
         "options": {}
       },
-      "id": "7723c7f0-8546-4fdb-888d-a5bfae81da7e",
+      "id": "6a009f55-a43e-56bb-880d-d8c62cccb16c",
       "name": "Bundle Findings",
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
@@ -336,7 +336,7 @@
           "appendAttribution": false
         }
       },
-      "id": "020c1d7f-646d-4c9c-a2fa-67d01b9d6425",
+      "id": "92665694-36d3-51d6-980b-6858e49743d5",
       "name": "Email Findings",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
@@ -351,12 +351,12 @@
     },
     {
       "parameters": {
-        "content": "## AI pitch spot-check · every 15 minutes\nChecks the **first 20 pitches of every new researcher** (numbers, source link vs platform, hook leaks, low-effort copy, contact details). Medium/high risk → a flag in **Admin → Flags** + an email. Each pitch is checked once.\n\n**Setup:** Gemini credential (Query Auth `key`).",
+        "content": "## AI pitch spot-check · every 15 minutes\nChecks the **first 20 pitches of every new researcher** (numbers, source link vs platform, hook leaks, low-effort copy, contact details). Medium/high risk → a flag in **Admin → Flags** + an email. Each pitch is checked once.\n\n**Setup:** Gemini credential (Header Auth `x-goog-api-key`).",
         "height": 280,
         "width": 560,
         "color": 4
       },
-      "id": "ec34fe8b-bf85-47e8-9298-a00f84ccd2b4",
+      "id": "735682f1-cfd9-5454-bb1d-5a3c097d9e9f",
       "name": "About",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,

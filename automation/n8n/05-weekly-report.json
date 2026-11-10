@@ -17,7 +17,7 @@
           ]
         }
       },
-      "id": "ea539eff-9bb2-4d81-866f-ad9a199c9eaa",
+      "id": "cef3173f-cc4f-579e-b336-b3345cdb1aaa",
       "name": "Schedule",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -31,19 +31,19 @@
         "assignments": {
           "assignments": [
             {
-              "id": "0c07a47d-70c4-4e61-b241-a493f8854cb5",
+              "id": "63051c17-70be-5614-822f-6d9cf8c5a434",
               "name": "app_url",
               "value": "https://YOUR-APP.vercel.app",
               "type": "string"
             },
             {
-              "id": "dd26cee6-c3f9-44cb-a6b2-367b6104003e",
+              "id": "028534da-7b4f-5ca9-9ee1-32d9ceff1596",
               "name": "admin_email",
               "value": "PASTE_YOUR_EMAIL",
               "type": "string"
             },
             {
-              "id": "f658c07f-a17c-4880-acd0-3bde2c954559",
+              "id": "d7ef2bc4-698f-5b79-a818-8635251fbd30",
               "name": "sheet_id",
               "value": "PASTE_GOOGLE_SHEET_ID",
               "type": "string"
@@ -52,7 +52,7 @@
         },
         "options": {}
       },
-      "id": "41d62c3a-9c08-4e03-8402-24a6cdda4da6",
+      "id": "047e478e-99f7-5501-975a-4f9721650a81",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -68,7 +68,7 @@
         "query": "with r as (select now() - interval '7 days' as since)\nselect to_char((now() at time zone 'Asia/Manila')::date - 7, 'YYYY-MM-DD') as week_start,\n  (select count(*) from profiles, r where created_at > r.since and role = 'creator')::int        as new_creators,\n  (select count(*) from profiles, r where created_at > r.since and role = 'cre')::int            as new_researchers,\n  (select count(*) from cre_profiles, r where kyc_status = 'approved' and kyc_reviewed_at > r.since)::int as researchers_verified,\n  (select count(*) from briefs, r where opened_at > r.since)::int                                as briefs_live,\n  (select count(*) from briefs, r where opened_at > r.since and invited_cre_id is not null)::int as private_briefs,\n  (select count(*) from pitches, r where submitted_at > r.since)::int                            as pitches,\n  (select count(*) from unlocks, r where created_at > r.since)::int                              as unlocks,\n  (select round(100.0 * count(*) filter (where status = 'unlocked') / nullif(count(*) filter (where status <> 'withdrawn'), 0))\n     from pitches, r where submitted_at > r.since)::int                                          as unlock_rate_pct,\n  (select coalesce(sum(budget_cents), 0) from briefs, r where opened_at > r.since)::bigint       as gmv_cents,\n  (select coalesce(sum(case when credit_account = 'platform:revenue' then amount_cents\n                            when debit_account = 'platform:revenue' then -amount_cents end), 0)\n     from ledger_entries, r where created_at > r.since)::bigint                                  as revenue_cents,\n  (select coalesce(sum(amount_cents), 0) from payouts, r where paid_at > r.since)::bigint        as paid_out_cents,\n  (select count(*) from disputes, r where opened_at > r.since)::int                              as disputes,\n  (select count(*) from flags, r where created_at > r.since)::int                                as flags",
         "options": {}
       },
-      "id": "51867e96-0432-4266-b99c-f23135eb9ce6",
+      "id": "7cc767f0-9f86-54c3-82d8-b4ba19bc1083",
       "name": "Read Week",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
@@ -249,7 +249,7 @@
         },
         "options": {}
       },
-      "id": "68d0e733-a281-4d28-b321-2a269e4d19b3",
+      "id": "4f2c4272-0f7a-5aaa-9a75-e0a424356944",
       "name": "Add to Sheet",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
@@ -271,7 +271,7 @@
           "appendAttribution": false
         }
       },
-      "id": "725c8d22-db47-49cd-a6d8-f6bfe1a4b3d1",
+      "id": "bcfbdcfd-f7cb-58a4-95ef-d97ec636b2f2",
       "name": "Email Report",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
@@ -291,7 +291,7 @@
         "width": 560,
         "color": 4
       },
-      "id": "90201bb7-b13e-42ce-b126-aca1f425c8aa",
+      "id": "5fe21d4b-f6ae-5600-9f43-fc4481db3f9e",
       "name": "About",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,

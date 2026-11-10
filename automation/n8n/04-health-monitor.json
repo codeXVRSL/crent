@@ -13,7 +13,7 @@
           ]
         }
       },
-      "id": "a1b51b1a-df27-4f2e-942b-78fbcd31d17c",
+      "id": "1a73690f-ab09-52b4-99b4-e6f525356f31",
       "name": "Schedule",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -27,13 +27,13 @@
         "assignments": {
           "assignments": [
             {
-              "id": "c23bcad1-89a2-4c2a-8f1d-fa325b079643",
+              "id": "4bcaaae7-6c67-5c5a-9d99-94b8330bd07a",
               "name": "app_url",
               "value": "https://YOUR-APP.vercel.app",
               "type": "string"
             },
             {
-              "id": "052165ed-8a6c-4fd6-b0a3-43d339ec5388",
+              "id": "791e2a1d-fd88-5413-b8e3-8e4c63e63455",
               "name": "admin_email",
               "value": "PASTE_YOUR_EMAIL",
               "type": "string"
@@ -42,7 +42,7 @@
         },
         "options": {}
       },
-      "id": "67dffc8c-f279-4648-9e45-609ef49e5157",
+      "id": "8d8b6f37-71b0-541c-aa5b-c3ce3a6a4dd0",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -60,7 +60,7 @@
           "timeout": 15000
         }
       },
-      "id": "f06fcdc5-2a4f-4827-a7de-6251645ec286",
+      "id": "cb5a4c8f-de88-50ff-aaad-514002f94c95",
       "name": "Ping Site",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -83,7 +83,7 @@
           "queryReplacement": "={{ [ String($json.error?.message || ($json.ok === true ? 'ok' : 'Unexpected answer from /api/health')).slice(0, 300), $json.ok === true ] }}"
         }
       },
-      "id": "497e56aa-c28a-43d6-8db4-71c6950b01dd",
+      "id": "8d026b1d-f3f8-54ec-8c9f-c08008c89d0c",
       "name": "Check Jobs & Site",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
@@ -114,7 +114,7 @@
           },
           "conditions": [
             {
-              "id": "1083fb80-8477-4027-8809-aa9430600f9b",
+              "id": "e908010c-64f4-5ac8-a5f2-7b167e9c7751",
               "leftValue": "={{ $json.issue }}",
               "rightValue": "",
               "operator": {
@@ -127,7 +127,7 @@
         },
         "options": {}
       },
-      "id": "37919110-0bfa-4fc4-9de0-6116eab91029",
+      "id": "60b1d77a-7556-531b-ae48-e786dddda4ce",
       "name": "Any Problem?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -142,7 +142,7 @@
         "destinationFieldName": "problems",
         "options": {}
       },
-      "id": "b162ef25-22f1-46d3-8fb3-89894ac4ff90",
+      "id": "3d9b5edc-3781-5201-8f9b-319cbbe815ff",
       "name": "Bundle Problems",
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
@@ -160,7 +160,7 @@
           "appendAttribution": false
         }
       },
-      "id": "7b79a6c1-ca0a-4474-8244-442b47bf5850",
+      "id": "f5dc2301-bd18-5d5a-9860-2c4a36cb814e",
       "name": "Email Problem",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
@@ -181,7 +181,7 @@
           "queryReplacement": "={{ [ JSON.stringify($('Bundle Problems').first().json.problems.map(p => p.alert_key)) ] }}"
         }
       },
-      "id": "84e50bfd-8f81-4d07-8778-616548e81754",
+      "id": "bc8770a4-ecd8-5203-b821-8c594f9ea4f8",
       "name": "Remember Alert",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
@@ -206,7 +206,7 @@
         "width": 560,
         "color": 4
       },
-      "id": "3f5d2728-d3ce-42c7-9c81-3e7443e77e23",
+      "id": "afeb233d-0433-513c-8188-2ee59c15b917",
       "name": "About",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,

@@ -22,7 +22,7 @@ export function KycForm({ userId }: { userId: string }) {
       const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
       const path = `${userId}/${crypto.randomUUID()}-${field}.${ext}`;
       const { error } = await supabase.storage.from('kyc').upload(path, file, { contentType: file.type, upsert: false });
-      if (error) return { ok: false, message: `Upload failed: ${error.message}` };
+      if (error) return { ok: false, message: /row-level security/i.test(error.message) ? 'Too many ID uploads today. Try again tomorrow, or contact support.' : `Upload failed: ${error.message}` };
       fd.set(pathField, path);
       fd.delete(field);
     }

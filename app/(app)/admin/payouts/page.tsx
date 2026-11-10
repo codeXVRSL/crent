@@ -12,12 +12,17 @@ export default async function AdminPayouts() {
   await requireAdmin();
   const supabase = await createClient();
   const [{ data: payouts }, { data: refunds }] = await Promise.all([
-    supabase.from('payouts').select('*, payout_methods(kind, bank_code, account_name, account_last4)').order('requested_at', { ascending: false }).limit(100),
+    supabase.from('payouts').select('*, payout_methods(kind, bank_code, account_name, account_last4, created_at)').order('requested_at', { ascending: false }).limit(100),
     supabase.from('refunds').select('*').in('status', ['manual', 'failed', 'pending', 'processing']).order('created_at'),
   ]);
   const ids = [...new Set((payouts ?? []).map((p) => p.cre_id))];
   const { data: people } = ids.length ? await supabase.from('profiles').select('id, display_name, handle').in('id', ids) : { data: [] };
   const pMap = new Map((people ?? []).map((p) => [p.id, p]));
+  // Verified legal names, newest submission first, so the payout account name can be compared.
+  const { data: kyc } = ids.length ? await supabase.from('kyc_submissions').select('user_id, legal_name, submitted_at').in('user_id', ids).order('submitted_at', { ascending: false }) : { data: [] };
+  const legal = new Map<string, string>();
+  for (const k of kyc ?? []) if (!legal.has(k.user_id)) legal.set(k.user_id, k.legal_name);
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '');
   const todo = (payouts ?? []).filter((p) => p.status === 'requested' || p.status === 'failed');
   const rest = (payouts ?? []).filter((p) => !(p.status === 'requested' || p.status === 'failed'));
 
@@ -27,8 +32,10 @@ export default async function AdminPayouts() {
       <section className="grid gap-3">
         <h2 className="text-lg font-semibold tracking-tight">Payouts to approve</h2>
         {!todo.length ? <EmptyState title="Nothing to approve" /> : todo.map((p) => {
-          const m = p.payout_methods as { kind: string; bank_code: string | null; account_name: string; account_last4: string };
+          const m = p.payout_methods as { kind: string; bank_code: string | null; account_name: string; account_last4: string; created_at: string };
           const who = pMap.get(p.cre_id);
+          const legalName = legal.get(p.cre_id);
+          const nameMatches = !!legalName && norm(legalName) === norm(m.account_name);
           return (
             <Card key={p.id} className="grid gap-3">
               <div className="flex flex-wrap justify-between gap-2">
@@ -36,7 +43,11 @@ export default async function AdminPayouts() {
                 <span className="text-xs text-muted">{fmtDate(p.requested_at, true)} {p.status === 'failed' && <Pill tone="bad">failed: {p.failure_reason}</Pill>}</span>
               </div>
               <p className="text-sm">{m.kind === 'bank' ? `Bank ${m.bank_code}` : m.kind.toUpperCase()} ···{m.account_last4} · {m.account_name}</p>
-              <p className="text-xs text-muted">Check that the account name matches the verified legal name before approving.</p>
+              <p className="text-sm">
+                Verified legal name: <strong>{legalName ?? 'none on file'}</strong>{' '}
+                {nameMatches ? <Pill tone="good">matches</Pill> : <Pill tone="bad">does not match — confirm before sending</Pill>}
+              </p>
+              <p className="text-xs text-muted">Account added {fmtDate(m.created_at, true)}.</p>
               <ActionForm action={approvePayout} className="flex flex-wrap items-end gap-2">
                 <input type="hidden" name="payout_id" value={p.id} />
                 <label className="grid gap-1 text-sm"><span>USD → PHP rate</span><Input name="fx_rate" id={`fx-${p.id}`} inputMode="decimal" required placeholder="58.50" className="w-32" /></label>
