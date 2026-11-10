@@ -146,3 +146,21 @@ select count(*) = 0 as ok from storage.objects where bucket_id = 'avatars' \gset
 \if :ok \else \echo 'FAIL: anonymous visitors must not list photos' \quit \endif
 reset role;
 \echo '✓ photo storage: own folder only, max 5 files, not listable by others'
+
+-- ---------- storage reads/deletes also need the code; waitlist only via the server ----------
+update auth.mfa_factors set status = 'verified' where user_id = :'c1';
+select set_config('request.jwt.claim.sub', :'c1', false) \gset
+select set_config('request.jwt.claims', '{"aal":"aal1"}', false) \gset
+set role authenticated;
+select count(*) = 0 as ok from storage.objects \gset
+\if :ok \else \echo 'FAIL: aal1 session of a two-step user must not read stored files' \quit \endif
+delete from storage.objects where bucket_id = 'avatars';
+reset role;
+select count(*) = 5 as ok from storage.objects where bucket_id = 'avatars' \gset
+\if :ok \else \echo 'FAIL: aal1 session of a two-step user must not delete stored files' \quit \endif
+update auth.mfa_factors set status = 'unverified' where user_id = :'c1';
+set role anon;
+do $$ begin insert into waitlist(email, side) values ('bot@example.com', 'creator'); raise exception 'expected error';
+exception when insufficient_privilege then null; end $$;
+reset role;
+\echo '✓ stored files (ID scans, proofs, photos) need the code to read, change or delete; waitlist only through the website'

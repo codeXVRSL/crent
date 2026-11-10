@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { createPublicClient } from '@/lib/supabase/server';
 import { EmptyState, Pill, Select, Button } from '@/components/ui';
 import { platformLabel } from '@/lib/constants';
 import { Avatar } from '@/components/avatar';
@@ -13,7 +13,7 @@ type Cre = {
 
 export default async function CreDirectory({ searchParams }: { searchParams: Promise<{ niche?: string }> }) {
   const { niche } = await searchParams;
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const [{ data: niches }, { data: cres }] = await Promise.all([
     supabase.from('niches').select('id, name').order('name'),
     supabase.from('public_cres').select('*').order('pitches_unlocked', { ascending: false, nullsFirst: false }).limit(60),

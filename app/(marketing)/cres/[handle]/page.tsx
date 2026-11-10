@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createPublicClient } from '@/lib/supabase/server';
 import { Pill, Stat } from '@/components/ui';
 import { Avatar } from '@/components/avatar';
 import { platformLabel } from '@/lib/constants';
@@ -7,7 +7,7 @@ import { compactViews, formatMultiplier } from '@/lib/outlier';
 
 export default async function CreProfile({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params;
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data: cre } = await supabase.from('public_cres').select('*').eq('handle', handle.toLowerCase()).maybeSingle();
   if (!cre) notFound();
   const [{ data: portfolio }, { data: reviews }] = await Promise.all([

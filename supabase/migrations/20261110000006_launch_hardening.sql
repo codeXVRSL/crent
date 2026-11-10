@@ -98,8 +98,11 @@ end $$;
 -- Realtime and Storage don't use the pre-request hook, so the same rule goes into their policies.
 create policy "messages_mfa" on messages as restrictive for select to authenticated
   using ((select mfa_satisfied()));
-create policy "storage_mfa_insert" on storage.objects as restrictive for insert to authenticated
-  with check ((select public.mfa_satisfied()));
+create policy "storage_mfa" on storage.objects as restrictive for all to authenticated
+  using ((select public.mfa_satisfied())) with check ((select public.mfa_satisfied()));
+
+-- The waitlist is joined only through the website's rate-limited server action (service role).
+drop policy if exists "waitlist_insert" on waitlist;
 
 -- ---------------------------------------------------------------
 -- 3. Live chat: stream new messages over Supabase Realtime (RLS still decides who receives them).
@@ -136,9 +139,15 @@ create policy "avatars_owner_read" on storage.objects for select to authenticate
 
 -- At most 5 files per person, so the public bucket can't be used as free file hosting.
 create or replace function avatar_file_count(p_user uuid)
-returns integer language sql stable security definer set search_path = public, storage as $$
-  select count(*)::int from storage.objects where bucket_id = 'avatars' and (storage.foldername(name))[1] = p_user::text
-$$;
+returns integer language plpgsql volatile security definer set search_path = public, storage as $$
+declare n integer;
+begin
+  -- Serialise uploads per person so parallel uploads can't slip past the cap.
+  perform pg_advisory_xact_lock(hashtext('avatars:' || p_user::text));
+  select count(*)::int into n from storage.objects
+   where bucket_id = 'avatars' and (storage.foldername(name))[1] = p_user::text;
+  return n;
+end $$;
 revoke execute on function avatar_file_count(uuid) from public, anon;
 grant execute on function avatar_file_count(uuid) to authenticated, service_role;
 create policy "avatars_file_cap" on storage.objects as restrictive for insert to authenticated

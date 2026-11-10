@@ -21,6 +21,11 @@ Choices made while building, where the spec left room. Change them here when you
 | 15 | Profile photos live in a public `avatars` bucket (served by URL, not listable); paths must be inside the user's own folder; max 5 files per person | Photos are meant to be public; the rules stop overwriting other people's photos and using the bucket as free hosting |
 | 16 | Sentry is optional and off without a DSN; the browser SDK loads only when configured | No cost or bundle weight until you want monitoring |
 
+## Check on the live Supabase project before launch
+- Authentication → Providers → Email: turn on **Secure email change** and **Secure password change**, then confirm that changing the password of an account with two-step login asks for the code (so a stolen password alone can't take over the account).
+- Authentication → Rate Limits: keep sign-in / sign-up limits on (they cover direct calls to the auth API).
+- Run `select public.avatar_file_count(id) from auth.users limit 1;` once as a sanity check that the photo cap can count files.
+
 ## Open questions for you
 - Xendit: USD invoices, partial refunds, GCash/Maya payout channel codes on your account.
 - Which countries creators may sign up from at launch.

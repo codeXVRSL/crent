@@ -21,3 +21,13 @@ export async function createClient() {
     },
   });
 }
+
+/**
+ * Supabase client with no user session, for public pages (researcher directory and profiles).
+ * Everyone sees the same public data, whether or not they are signed in or have entered their two-step code.
+ */
+export function createPublicClient() {
+  return createServerClient(env.supabaseUrl(), env.supabaseAnonKey(), {
+    cookies: { getAll: () => [], setAll: () => {} },
+  });
+}
